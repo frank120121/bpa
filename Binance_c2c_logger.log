@@ -1,95 +1,74 @@
-2024-03-11 18:39:26,815:common_utils:INFO:Updated server timestamp: 1710207567398
-2024-03-11 18:39:27,097:common_utils:INFO:Updated server timestamp: 1710207567681
-2024-03-11 18:39:36,218:binance_update_ads:INFO:Competitor ad - spot: 1, price: 1250922.25, base: 1214487.63, ratio: 102.99999926718068. Not enough diff: 0.03999926718068991
-2024-03-11 18:39:41,231:binance_update_ads:INFO:Competitor ad - spot: 2, price: 1263067.13, base: 1214487.62, ratio: 104.00000042816409. Not enough diff: 0.04000042816409177
-2024-03-11 18:39:51,621:binance_update_ads:INFO:Competitor ad - spot: 1, price: 17.09, base: 16.8, ratio: 101.72619047619047. Not enough diff: 0.03619047619046967
-2024-03-11 18:40:12,958:binance_update_ads:INFO:Competitor ad - spot: 1, price: 17.34, base: 16.8, ratio: 103.21428571428571. Not enough diff: 0.04428571428570649
-2024-03-11 18:40:23,285:binance_update_ads:INFO:Competitor ad - spot: 1, price: 69890.11, base: 68232.07, ratio: 102.43000102444495. Not enough diff: 0.040001024444947575
-2024-03-11 18:40:32,336:common_utils:INFO:Updated server timestamp: 1710207632914
-2024-03-11 18:40:32,603:common_utils:INFO:Updated server timestamp: 1710207633184
-2024-03-11 18:41:19,184:binance_c2c:INFO:Message sent
-2024-03-11 18:43:25,956:common_utils:INFO:Updated server timestamp: 1710207806541
-2024-03-11 18:43:26,239:common_utils:INFO:Updated server timestamp: 1710207806829
-2024-03-11 18:44:02,735:common_utils:INFO:Updated server timestamp: 1710207843323
-2024-03-11 18:44:03,022:common_utils:INFO:Updated server timestamp: 1710207843608
-2024-03-11 18:44:14,989:binance_c2c:INFO:Message sent
-2024-03-11 18:45:10,992:common_utils:INFO:Updated server timestamp: 1710207911574
-2024-03-11 18:45:11,242:common_utils:INFO:Updated server timestamp: 1710207911832
-2024-03-11 18:45:45,265:common_utils:INFO:Updated server timestamp: 1710207945844
-2024-03-11 18:45:45,529:common_utils:INFO:Updated server timestamp: 1710207946110
-2024-03-11 18:45:47,325:__main__:ERROR:An error occurred: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
-2024-03-11 18:45:47,325:__main__:ERROR:Traceback (most recent call last):
-  File "c:\Users\p7016\Documents\bpa\binance_orders.py", line 33, in binance_buy_order
-    missing_balance = wallets.check_asset_balance(asset_type, btc_target)
-TypeError: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
-
-2024-03-11 18:46:51,099:common_utils:INFO:Updated server timestamp: 1710208011682
-2024-03-11 18:46:51,355:common_utils:INFO:Updated server timestamp: 1710208011939
-2024-03-11 18:46:52,779:__main__:ERROR:An error occurred: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
-2024-03-11 18:46:52,779:__main__:ERROR:Traceback (most recent call last):
-  File "c:\Users\p7016\Documents\bpa\binance_orders.py", line 33, in binance_buy_order
-    missing_balance = wallets.check_asset_balance(asset_type, btc_target)
-TypeError: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
-
-2024-03-11 18:48:03,318:common_utils:INFO:Updated server timestamp: 1710208083912
-2024-03-11 18:48:03,578:common_utils:INFO:Updated server timestamp: 1710208084173
-2024-03-11 18:48:05,246:__main__:INFO:Missing balance for BTC: 1.7380000000011275e-05
-2024-03-11 18:48:05,246:__main__:INFO:No missing balance for BTC; 1.7380000000011275e-05
-2024-03-11 18:49:14,237:common_utils:INFO:Updated server timestamp: 1710208154817
-2024-03-11 18:49:14,503:common_utils:INFO:Updated server timestamp: 1710208155100
-2024-03-11 18:49:15,926:__main__:INFO:Missing balance for BTC: 1.7380000000011275e-05
-2024-03-11 18:49:15,926:__main__:INFO:No missing balance for BTC; 1.7380000000011275e-05
-2024-03-11 18:56:57,830:common_utils:INFO:Updated server timestamp: 1710208618416
-2024-03-11 18:56:58,093:common_utils:INFO:Updated server timestamp: 1710208618677
-2024-03-11 19:26:58,377:common_utils:INFO:Updated server timestamp: 1710210418965
-2024-03-11 19:52:11,270:binance_c2c:INFO:Message sent
-2024-03-11 19:52:16,276:binance_c2c:INFO:Message sent
-2024-03-11 19:52:16,276:binance_c2c:INFO:Message sent
-2024-03-11 19:52:19,313:fetch_outlook:ERROR:Failed to load tokens
-2024-03-11 19:52:19,313:binance_c2c:ERROR:Database operation failed, rolled back: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
+2024-03-12 14:31:54,506:common_utils:INFO:Updated server timestamp: 1710279113791
+2024-03-12 14:31:54,822:common_utils:INFO:Updated server timestamp: 1710279114099
+2024-03-12 14:32:19,310:common_utils:INFO:Updated server timestamp: 1710279138583
+2024-03-12 14:32:19,566:common_utils:INFO:Updated server timestamp: 1710279138844
+2024-03-12 14:32:28,405:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '12600600153974718464', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'BTC', 'fiatUnit': 'MXN', 'price': '1220316.00', 'surplusAmount': '0.03753378', 'maxSingleTransAmount': '500000.00', 'minSingleTransAmount': '1500.00', 'payTimeLimit': 30, 'tradeMethods': [{'identifier': 'BANK', 'tradeMethodName': 'Bank Transfer'}, {'identifier': 'BANK'}], 'tradableQuantity': '0.03747382', 'commissionRate': '0.0016', 'takerAdditionalKycRequired': 0, 'assetScale': 8, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '45803.07', 'minSingleTransQuantity': '0.00122918', 'maxSingleTransQuantity': '0.40972993', 'dynamicMaxSingleTransQuantity': '0.03753378'}, 'advertiser': {'userNo': 's74e77be3e1f53c7f93b675c4a7a7c990', 'nickName': 'Vic Snim', 'monthOrderCount': 120, 'monthFinishRate': '0.984', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:32:32,107:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '12593307338986668032', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'BTC', 'fiatUnit': 'MXN', 'price': '1237687.44', 'surplusAmount': '0.05041856', 'maxSingleTransAmount': '8000.00', 'minSingleTransAmount': '1000.00', 'payTimeLimit': 15, 'tradeMethods': [{'identifier': 'CitiBanamex', 'tradeMethodName': 'Citibanamex'}, {'identifier': 'Banorte', 'tradeMethodName': 'Banorte'}], 'tradableQuantity': '0.05033801', 'commissionRate': '0.0016', 'takerAdditionalKycRequired': 0, 'assetScale': 8, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '8000.00', 'minSingleTransQuantity': '0.00080795', 'maxSingleTransQuantity': '0.00646366', 'dynamicMaxSingleTransQuantity': '0.00646366'}, 'advertiser': {'userNo': 's2cd9ad1d09d33b489f51c326f590a331', 'nickName': 'Eldmty', 'monthOrderCount': 1552, 'monthFinishRate': '0.99', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:32:38,068:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '11423727566614999040', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'USDT', 'fiatUnit': 'MXN', 'price': '17.09', 'surplusAmount': '2756.12', 'maxSingleTransAmount': '33333.00', 'minSingleTransAmount': '555.00', 'payTimeLimit': 15, 'tradeMethods': [{'identifier': 'BBVABank', 'tradeMethodName': 'BBVA'}, {'identifier': 'BANK', 'tradeMethodName': 'Bank Transfer'}, {'identifier': 'SantanderMexico', 'tradeMethodName': 'Santander Mexico'}], 'tradableQuantity': '2751.71725239', 'commissionRate': '0.0016', 'takerAdditionalKycRequired': 0, 'assetScale': 2, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '33333.00', 'minSingleTransQuantity': '32.47', 'maxSingleTransQuantity': '1950.43', 'dynamicMaxSingleTransQuantity': '1950.43'}, 'advertiser': {'userNo': 's5daef3348be63a0d9305264d943af291', 'nickName': 'Alquimista333', 'monthOrderCount': 813, 'monthFinishRate': '0.993', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:32:40,836:__main__:ERROR:KeyboardInterrupt received. Exiting...
+2024-03-12 14:32:40,868:asyncio:ERROR:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001AFF80EE110>
+2024-03-12 14:32:40,884:asyncio:ERROR:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x000001AFF80EE1A0>
+2024-03-12 14:32:40,884:asyncio:ERROR:Unclosed connector
+connections: ['[(<aiohttp.client_proto.ResponseHandler object at 0x000001AFF81A8400>, 814129.64)]']
+connector: <aiohttp.connector.TCPConnector object at 0x000001AFF80EE0E0>
+2024-03-12 14:32:40,884:asyncio:ERROR:Unclosed connector
+connections: ['[(<aiohttp.client_proto.ResponseHandler object at 0x000001AFF80ABC40>, 814135.656)]']
+connector: <aiohttp.connector.TCPConnector object at 0x000001AFF80EE2F0>
+2024-03-12 14:32:40,884:asyncio:ERROR:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x000001AFF8090AF0>
+transport: <_SelectorSocketTransport closing fd=692>
 Traceback (most recent call last):
-  File "c:\Users\p7016\Documents\bpa\binance_c2c.py", line 58, in on_message
-    await merchant_account.handle_message_by_type(connection_manager, KEY, SECRET, msg_json, msg_type, conn)
-  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 27, in handle_message_by_type
-    await self._handle_system_type(connection_manager, msg_json, conn, order_no, order_details, buyer_name)
-  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 47, in _handle_system_type
-    await handle_system_notifications(connection_manager, order_no, order_details, conn, order_status)
-  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 86, in handle_system_notifications
-    await handle_order_status_1(connection_manager, conn, order_no, order_details)
-  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 62, in handle_order_status_1
-    if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
-  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 31, in check_and_handle_country_restrictions
-    country = await fetch_ip(order_no[-4:], seller_name)
-  File "c:\Users\p7016\Documents\bpa\verify_client_ip.py", line 22, in fetch_ip
-    ip = await outlook_fetch_ip(last_four_digits)
-  File "c:\Users\p7016\Documents\bpa\fetch_outlook.py", line 91, in outlook_fetch_ip
-    if datetime.datetime.now() >= expiration_time:
-TypeError: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
-2024-03-11 19:55:02,002:binance_c2c:INFO:Message sent
-2024-03-11 19:55:07,030:binance_c2c:INFO:Message sent
-2024-03-11 19:55:07,030:binance_c2c:INFO:Message sent
-2024-03-11 19:55:10,052:fetch_outlook:ERROR:Failed to load tokens
-2024-03-11 19:55:10,054:binance_c2c:ERROR:Database operation failed, rolled back: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 924, in write
+    n = self._sock.send(data)
+OSError: [WinError 10038] An operation was attempted on something that is not a socket
+
+During handling of the above exception, another exception occurred:
+
 Traceback (most recent call last):
-  File "c:\Users\p7016\Documents\bpa\binance_c2c.py", line 58, in on_message
-    await merchant_account.handle_message_by_type(connection_manager, KEY, SECRET, msg_json, msg_type, conn)
-  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 27, in handle_message_by_type
-    await self._handle_system_type(connection_manager, msg_json, conn, order_no, order_details, buyer_name)
-  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 47, in _handle_system_type
-    await handle_system_notifications(connection_manager, order_no, order_details, conn, order_status)
-  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 86, in handle_system_notifications
-    await handle_order_status_1(connection_manager, conn, order_no, order_details)
-  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 62, in handle_order_status_1
-    if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
-  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 31, in check_and_handle_country_restrictions
-    country = await fetch_ip(order_no[-4:], seller_name)
-  File "c:\Users\p7016\Documents\bpa\verify_client_ip.py", line 22, in fetch_ip
-    ip = await outlook_fetch_ip(last_four_digits)
-  File "c:\Users\p7016\Documents\bpa\fetch_outlook.py", line 91, in outlook_fetch_ip
-    if datetime.datetime.now() >= expiration_time:
-TypeError: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
-2024-03-11 19:56:58,673:common_utils:INFO:Updated server timestamp: 1710212219268
-2024-03-11 20:07:09,822:binance_c2c:INFO:Message sent
-2024-03-11 20:07:14,826:binance_c2c:INFO:Message sent
-2024-03-11 20:10:01,456:binance_c2c:INFO:Message sent
-2024-03-11 20:10:06,473:binance_c2c:INFO:Message sent
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\sslproto.py", line 690, in _process_write_backlog
+    self._transport.write(chunk)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 930, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 725, in _fatal_error
+    self._force_close(exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 737, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 753, in call_soon
+    self._check_closed()
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 515, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+2024-03-12 14:32:40,915:asyncio:ERROR:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x000001AFF80ED120>
+transport: <_SelectorSocketTransport closing fd=1164>
+Traceback (most recent call last):
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 924, in write
+    n = self._sock.send(data)
+OSError: [WinError 10038] An operation was attempted on something that is not a socket
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\sslproto.py", line 690, in _process_write_backlog
+    self._transport.write(chunk)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 930, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 725, in _fatal_error
+    self._force_close(exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 737, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 753, in call_soon
+    self._check_closed()
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 515, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+2024-03-12 14:32:44,890:common_utils:INFO:Updated server timestamp: 1710279164175
+2024-03-12 14:32:45,159:common_utils:INFO:Updated server timestamp: 1710279164436
+2024-03-12 14:32:55,213:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '12600600153974718464', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'BTC', 'fiatUnit': 'MXN', 'price': '1220316.00', 'surplusAmount': '0.03753378', 'maxSingleTransAmount': '500000.00', 'minSingleTransAmount': '1500.00', 'payTimeLimit': 30, 'tradeMethods': [{'identifier': 'BANK', 'tradeMethodName': 'Bank Transfer'}, {'identifier': 'BANK'}], 'tradableQuantity': '0.03747382', 'commissionRate': '0.0016', 'takerAdditionalKycRequired': 0, 'assetScale': 8, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '45803.07', 'minSingleTransQuantity': '0.00122918', 'maxSingleTransQuantity': '0.40972993', 'dynamicMaxSingleTransQuantity': '0.03753378'}, 'advertiser': {'userNo': 's74e77be3e1f53c7f93b675c4a7a7c990', 'nickName': 'Vic Snim', 'monthOrderCount': 120, 'monthFinishRate': '0.984', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:32:59,369:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '12593307338986668032', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'BTC', 'fiatUnit': 'MXN', 'price': '1237687.44', 'surplusAmount': '0.05041856', 'maxSingleTransAmount': '8000.00', 'minSingleTransAmount': '1000.00', 'payTimeLimit': 15, 'tradeMethods': [{'identifier': 'CitiBanamex', 'tradeMethodName': 'Citibanamex'}, {'identifier': 'Banorte', 'tradeMethodName': 'Banorte'}], 'tradableQuantity': '0.05033801', 'commissionRate': '0.0016', 'takerAdditionalKycRequired': 0, 'assetScale': 8, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '8000.00', 'minSingleTransQuantity': '0.00080795', 'maxSingleTransQuantity': '0.00646366', 'dynamicMaxSingleTransQuantity': '0.00646366'}, 'advertiser': {'userNo': 's2cd9ad1d09d33b489f51c326f590a331', 'nickName': 'Eldmty', 'monthOrderCount': 1552, 'monthFinishRate': '0.99', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:33:05,828:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '11506469139286073344', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'USDT', 'fiatUnit': 'MXN', 'price': '17.08', 'surplusAmount': '6224.05', 'maxSingleTransAmount': '190000.00', 'minSingleTransAmount': '1500.00', 'payTimeLimit': 15, 'tradeMethods': [{'identifier': 'MercadoPagoNew', 'tradeMethodName': 'Mercadopago'}, {'identifier': 'BBVABank', 'tradeMethodName': 'BBVA'}, {'identifier': 'BANK', 'tradeMethodName': 'Bank Transfer'}, {'identifier': 'Banorte', 'tradeMethodName': 'Banorte'}, {'identifier': 'STP', 'tradeMethodName': 'STP'}], 'tradableQuantity': '6215.34851208', 'commissionRate': '0.0014', 'takerAdditionalKycRequired': 0, 'assetScale': 2, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '106306.77', 'minSingleTransQuantity': '87.82', 'maxSingleTransQuantity': '11124.12', 'dynamicMaxSingleTransQuantity': '6224.05'}, 'advertiser': {'userNo': 'sf215c83290763941880405747b31c428', 'nickName': 'HyperMoneyMx', 'monthOrderCount': 355, 'monthFinishRate': '0.984', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:33:10,079:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '11423727566614999040', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'USDT', 'fiatUnit': 'MXN', 'price': '17.09', 'surplusAmount': '2756.12', 'maxSingleTransAmount': '33333.00', 'minSingleTransAmount': '555.00', 'payTimeLimit': 15, 'tradeMethods': [{'identifier': 'BBVABank', 'tradeMethodName': 'BBVA'}, {'identifier': 'BANK', 'tradeMethodName': 'Bank Transfer'}, {'identifier': 'SantanderMexico', 'tradeMethodName': 'Santander Mexico'}], 'tradableQuantity': '2751.71725239', 'commissionRate': '0.0016', 'takerAdditionalKycRequired': 0, 'assetScale': 2, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '33333.00', 'minSingleTransQuantity': '32.47', 'maxSingleTransQuantity': '1950.43', 'dynamicMaxSingleTransQuantity': '1950.43'}, 'advertiser': {'userNo': 's5daef3348be63a0d9305264d943af291', 'nickName': 'Alquimista333', 'monthOrderCount': 813, 'monthFinishRate': '0.993', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:33:16,278:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '12570851348768059392', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'USDT', 'fiatUnit': 'MXN', 'price': '17.40', 'surplusAmount': '990.12', 'maxSingleTransAmount': '17228.00', 'minSingleTransAmount': '500.00', 'payTimeLimit': 30, 'tradeMethods': [{'identifier': 'OXXO', 'tradeMethodName': 'OXXO'}, {'identifier': 'CashDeposit', 'tradeMethodName': 'Cash Deposit to Bank'}, {'identifier': 'STP', 'tradeMethodName': 'STP'}, {'identifier': 'BANK', 'tradeMethodName': 'Bank Transfer'}, {'identifier': '7Eleven', 'tradeMethodName': '7-Eleven'}], 'tradableQuantity': '988.53833865', 'commissionRate': '0.0016', 'takerAdditionalKycRequired': 0, 'assetScale': 2, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '17228.00', 'minSingleTransQuantity': '28.73', 'maxSingleTransQuantity': '990.11', 'dynamicMaxSingleTransQuantity': '990.11'}, 'advertiser': {'userNo': 's96ddc6ceb0a43c458ed6f509e366844a', 'nickName': 'ICHIMOYKUNAVA', 'monthOrderCount': 348, 'monthFinishRate': '0.992', 'userType': 'merchant', 'tagIconUrls': []}}
+2024-03-12 14:33:19,658:binance_update_ads:INFO:Competitor ad: {'adv': {'advNo': '12591565820213092352', 'classify': 'profession', 'tradeType': 'SELL', 'asset': 'ETH', 'fiatUnit': 'MXN', 'price': '68414.26', 'surplusAmount': '0.34331110', 'maxSingleTransAmount': '50000.00', 'minSingleTransAmount': '500.00', 'payTimeLimit': 15, 'tradeMethods': [{'identifier': 'BANK', 'tradeMethodName': 'Bank Transfer'}], 'tradableQuantity': '0.34296813', 'commissionRate': '0.001', 'takerAdditionalKycRequired': 0, 'assetScale': 8, 'fiatScale': 2, 'priceScale': 2, 'fiatSymbol': 'Mex$', 'isTradable': True, 'dynamicMaxSingleTransAmount': '23487.37', 'minSingleTransQuantity': '0.00730841', 'maxSingleTransQuantity': '0.73084178', 'dynamicMaxSingleTransQuantity': '0.34331110'}, 'advertiser': {'userNo': 's85b195c6d2c63288b9fd7bc733077e07', 'nickName': 'Rockefugger', 'monthOrderCount': 15381, 'monthFinishRate': '0.995', 'userType': 'merchant', 'tagIconUrls': []}}
