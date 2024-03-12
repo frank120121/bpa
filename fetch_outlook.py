@@ -119,7 +119,7 @@ async def outlook_fetch_ip(last_four):
 async def main():
     access_token, refresh_token, expiration_time = await load_tokens()
     try:
-        last_four = '7184'
+        last_four = '7632'
         ip_info = await outlook_fetch_ip(last_four)
         print(f'IP info:{ip_info}')
         # print("Fetching a new token.")

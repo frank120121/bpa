@@ -35,3 +35,61 @@ TypeError: BinanceWallets.check_asset_balance() takes 2 positional arguments but
 2024-03-11 18:48:03,578:common_utils:INFO:Updated server timestamp: 1710208084173
 2024-03-11 18:48:05,246:__main__:INFO:Missing balance for BTC: 1.7380000000011275e-05
 2024-03-11 18:48:05,246:__main__:INFO:No missing balance for BTC; 1.7380000000011275e-05
+2024-03-11 18:49:14,237:common_utils:INFO:Updated server timestamp: 1710208154817
+2024-03-11 18:49:14,503:common_utils:INFO:Updated server timestamp: 1710208155100
+2024-03-11 18:49:15,926:__main__:INFO:Missing balance for BTC: 1.7380000000011275e-05
+2024-03-11 18:49:15,926:__main__:INFO:No missing balance for BTC; 1.7380000000011275e-05
+2024-03-11 18:56:57,830:common_utils:INFO:Updated server timestamp: 1710208618416
+2024-03-11 18:56:58,093:common_utils:INFO:Updated server timestamp: 1710208618677
+2024-03-11 19:26:58,377:common_utils:INFO:Updated server timestamp: 1710210418965
+2024-03-11 19:52:11,270:binance_c2c:INFO:Message sent
+2024-03-11 19:52:16,276:binance_c2c:INFO:Message sent
+2024-03-11 19:52:16,276:binance_c2c:INFO:Message sent
+2024-03-11 19:52:19,313:fetch_outlook:ERROR:Failed to load tokens
+2024-03-11 19:52:19,313:binance_c2c:ERROR:Database operation failed, rolled back: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
+Traceback (most recent call last):
+  File "c:\Users\p7016\Documents\bpa\binance_c2c.py", line 58, in on_message
+    await merchant_account.handle_message_by_type(connection_manager, KEY, SECRET, msg_json, msg_type, conn)
+  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 27, in handle_message_by_type
+    await self._handle_system_type(connection_manager, msg_json, conn, order_no, order_details, buyer_name)
+  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 47, in _handle_system_type
+    await handle_system_notifications(connection_manager, order_no, order_details, conn, order_status)
+  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 86, in handle_system_notifications
+    await handle_order_status_1(connection_manager, conn, order_no, order_details)
+  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 62, in handle_order_status_1
+    if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
+  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 31, in check_and_handle_country_restrictions
+    country = await fetch_ip(order_no[-4:], seller_name)
+  File "c:\Users\p7016\Documents\bpa\verify_client_ip.py", line 22, in fetch_ip
+    ip = await outlook_fetch_ip(last_four_digits)
+  File "c:\Users\p7016\Documents\bpa\fetch_outlook.py", line 91, in outlook_fetch_ip
+    if datetime.datetime.now() >= expiration_time:
+TypeError: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
+2024-03-11 19:55:02,002:binance_c2c:INFO:Message sent
+2024-03-11 19:55:07,030:binance_c2c:INFO:Message sent
+2024-03-11 19:55:07,030:binance_c2c:INFO:Message sent
+2024-03-11 19:55:10,052:fetch_outlook:ERROR:Failed to load tokens
+2024-03-11 19:55:10,054:binance_c2c:ERROR:Database operation failed, rolled back: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
+Traceback (most recent call last):
+  File "c:\Users\p7016\Documents\bpa\binance_c2c.py", line 58, in on_message
+    await merchant_account.handle_message_by_type(connection_manager, KEY, SECRET, msg_json, msg_type, conn)
+  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 27, in handle_message_by_type
+    await self._handle_system_type(connection_manager, msg_json, conn, order_no, order_details, buyer_name)
+  File "c:\Users\p7016\Documents\bpa\binance_merchant_handler.py", line 47, in _handle_system_type
+    await handle_system_notifications(connection_manager, order_no, order_details, conn, order_status)
+  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 86, in handle_system_notifications
+    await handle_order_status_1(connection_manager, conn, order_no, order_details)
+  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 62, in handle_order_status_1
+    if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
+  File "c:\Users\p7016\Documents\bpa\binance_msg_handler.py", line 31, in check_and_handle_country_restrictions
+    country = await fetch_ip(order_no[-4:], seller_name)
+  File "c:\Users\p7016\Documents\bpa\verify_client_ip.py", line 22, in fetch_ip
+    ip = await outlook_fetch_ip(last_four_digits)
+  File "c:\Users\p7016\Documents\bpa\fetch_outlook.py", line 91, in outlook_fetch_ip
+    if datetime.datetime.now() >= expiration_time:
+TypeError: '>=' not supported between instances of 'datetime.datetime' and 'NoneType'
+2024-03-11 19:56:58,673:common_utils:INFO:Updated server timestamp: 1710212219268
+2024-03-11 20:07:09,822:binance_c2c:INFO:Message sent
+2024-03-11 20:07:14,826:binance_c2c:INFO:Message sent
+2024-03-11 20:10:01,456:binance_c2c:INFO:Message sent
+2024-03-11 20:10:06,473:binance_c2c:INFO:Message sent
