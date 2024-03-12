@@ -1,16 +1,21 @@
 from datetime import date
 from cep import Transferencia
+from datetime import datetime
+
 
 today = date.today()
+fecha_str = '2024-03-09'
+# Convert the string to a date object
+fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
 
 print("Validating transfer...")
 tr = Transferencia.validar(
-    fecha=today,
-    clave_rastreo='085904246950305946',
-    emisor='40072',  # Banorte
+    fecha=fecha,
+    clave_rastreo='MBAN01002403110087494802',
+    emisor='40012',  # BBVA
     receptor='90646',  # STP
-    cuenta='646180204200033494',
-    monto=50000.00,
+    cuenta='646180146006124571',
+    monto=28500.00,
 )
 
 if tr is not None:
