@@ -1690,3 +1690,14 @@ TypeError: argument of type 'NoneType' is not iterable
 2024-03-11 16:37:34,805:binance_c2c:INFO:Message sent
 2024-03-11 16:43:04,333:binance_c2c:INFO:Message sent
 2024-03-11 16:43:09,336:binance_c2c:INFO:Message sent
+2024-03-11 16:53:38,184:common_utils:INFO:Updated server timestamp: 1710201218471
+2024-03-11 17:02:23,407:binance_c2c:INFO:Message sent
+2024-03-11 17:02:30,310:binance_orders:INFO:Missing balance for ETH: 0.22851420999999994
+2024-03-11 17:02:30,561:binance_wallets:INFO:Order successfully placed: {'symbol': 'ETHUSDT', 'orderId': 16505669130, 'orderListId': -1, 'clientOrderId': 'fA9DGBvNFoWjcDcYSvC6RL', 'transactTime': 1710201751126, 'price': '0.00000000', 'origQty': '0.22850000', 'executedQty': '0.22850000', 'cummulativeQuoteQty': '929.47630500', 'status': 'FILLED', 'timeInForce': 'GTC', 'type': 'MARKET', 'side': 'BUY', 'workingTime': 1710201751126, 'fills': [{'price': '4067.73000000', 'qty': '0.22850000', 'commission': '0.00022850', 'commissionAsset': 'ETH', 'tradeId': 1344971412}], 'selfTradePreventionMode': 'EXPIRE_MAKER'}
+2024-03-11 17:23:38,714:common_utils:INFO:Updated server timestamp: 1710203019283
+2024-03-11 17:30:27,105:binance_c2c:INFO:Message sent
+2024-03-11 17:30:32,113:binance_c2c:INFO:Message sent
+2024-03-11 17:30:32,113:binance_c2c:INFO:Message sent
+2024-03-11 17:30:35,784:fetch_outlook:WARNING:Token expires in: 2024-03-11 18:30:35.784516
+2024-03-11 17:30:36,208:ip_info_io:INFO:Getting IP details for: 187.189.92.198
+2024-03-11 17:30:36,567:verify_client_ip:INFO:IP from Country: MX
