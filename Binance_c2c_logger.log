@@ -109,3 +109,64 @@ RuntimeError: Event loop is closed
 2024-03-12 14:41:26,733:binance_c2c:INFO:Message sent
 2024-03-12 14:41:27,332:binance_orders:INFO:Missing balance for BTC: 0.001263309999999962
 2024-03-12 14:41:27,582:binance_wallets:INFO:Order successfully placed: {'symbol': 'BTCUSDT', 'orderId': 25582631770, 'orderListId': -1, 'clientOrderId': 'aqLbXLELgAL7GQuLwUDSJd', 'transactTime': 1710279686864, 'price': '0.00000000', 'origQty': '0.00130000', 'executedQty': '0.00130000', 'cummulativeQuoteQty': '92.27543000', 'status': 'FILLED', 'timeInForce': 'GTC', 'type': 'MARKET', 'side': 'BUY', 'workingTime': 1710279686864, 'fills': [{'price': '70981.10000000', 'qty': '0.00130000', 'commission': '0.00000130', 'commissionAsset': 'BTC', 'tradeId': 3478251864}], 'selfTradePreventionMode': 'EXPIRE_MAKER'}
+2024-03-12 14:44:40,891:__main__:ERROR:KeyboardInterrupt received. Exiting...
+2024-03-12 14:44:40,924:asyncio:ERROR:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000020667551F30>
+2024-03-12 14:44:40,924:asyncio:ERROR:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x0000020667551E10>
+2024-03-12 14:44:40,924:asyncio:ERROR:Unclosed connector
+connections: ['[(<aiohttp.client_proto.ResponseHandler object at 0x0000020667608E20>, 814846.687)]']
+connector: <aiohttp.connector.TCPConnector object at 0x0000020667551ED0>
+2024-03-12 14:44:40,924:asyncio:ERROR:Unclosed connector
+connections: ['[(<aiohttp.client_proto.ResponseHandler object at 0x0000020667608460>, 814849.64)]']
+connector: <aiohttp.connector.TCPConnector object at 0x0000020667551AB0>
+2024-03-12 14:44:40,924:asyncio:ERROR:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x00000206675517B0>
+transport: <_SelectorSocketTransport closing fd=624>
+Traceback (most recent call last):
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 924, in write
+    n = self._sock.send(data)
+OSError: [WinError 10038] An operation was attempted on something that is not a socket
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\sslproto.py", line 690, in _process_write_backlog
+    self._transport.write(chunk)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 930, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 725, in _fatal_error
+    self._force_close(exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 737, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 753, in call_soon
+    self._check_closed()
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 515, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+2024-03-12 14:44:41,033:asyncio:ERROR:Fatal error on SSL transport
+protocol: <asyncio.sslproto.SSLProtocol object at 0x00000206674F92A0>
+transport: <_SelectorSocketTransport closing fd=1172>
+Traceback (most recent call last):
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 924, in write
+    n = self._sock.send(data)
+OSError: [WinError 10038] An operation was attempted on something that is not a socket
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\sslproto.py", line 690, in _process_write_backlog
+    self._transport.write(chunk)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 930, in write
+    self._fatal_error(exc, 'Fatal write error on socket transport')
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 725, in _fatal_error
+    self._force_close(exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\selector_events.py", line 737, in _force_close
+    self._loop.call_soon(self._call_connection_lost, exc)
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 753, in call_soon
+    self._check_closed()
+  File "C:\Users\p7016\AppData\Local\Programs\Python\Python310\lib\asyncio\base_events.py", line 515, in _check_closed
+    raise RuntimeError('Event loop is closed')
+RuntimeError: Event loop is closed
+2024-03-12 14:44:46,090:common_utils:INFO:Updated server timestamp: 1710279885370
+2024-03-12 14:44:46,359:common_utils:INFO:Updated server timestamp: 1710279885630
