@@ -39,7 +39,7 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
 
         # Fuzzy matching for accepted banks
         closest_match, similarity = process.extractOne(normalized_response, [bank.lower() for bank in ACCEPTED_BANKS])
-        if similarity >= 90:  # Threshold of 80%
+        if similarity >= 95:  # Threshold of 95%
             if closest_match in BBVA_BANKS:
                 closest_match = 'bbva'  # Normalize to 'bbva' for consistency
                 await update_buyer_bank(conn, order_no, closest_match)  

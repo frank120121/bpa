@@ -80,3 +80,32 @@ RuntimeError: Event loop is closed
 2024-03-12 14:35:28,497:fetch_outlook:WARNING:Token expires in: 2024-03-12 15:35:28.497191
 2024-03-12 14:35:28,967:ip_info_io:INFO:Getting IP details for: 187.161.80.191
 2024-03-12 14:35:29,292:verify_client_ip:INFO:IP from Country: MX
+2024-03-12 14:36:14,715:binance_c2c:INFO:Message sent
+2024-03-12 14:36:19,835:binance_c2c:INFO:Message sent
+2024-03-12 14:36:27,345:binance_c2c:INFO:Message sent
+2024-03-12 14:36:53,490:common_utils:INFO:Updated server timestamp: 1710279412764
+2024-03-12 14:36:53,772:common_utils:INFO:Updated server timestamp: 1710279413038
+2024-03-12 14:37:14,018:binance_c2c:INFO:Message sent
+2024-03-12 14:37:14,018:binance_c2c:INFO:Message sent
+2024-03-12 14:37:25,644:binance_c2c:INFO:Message sent
+2024-03-12 14:37:31,723:binance_bank_deposit:INFO:Amount to deposit: 1500.0
+2024-03-12 14:37:31,723:binance_bank_deposit:INFO:Buyer bank condition: AND LOWER(a.account_bank_name) = ?
+2024-03-12 14:37:31,723:binance_bank_deposit:INFO:Found 0 suitable accounts for order 20600982166162001920
+2024-03-12 14:37:31,723:binance_bank_deposit:INFO:Suitable accounts: []
+2024-03-12 14:37:31,723:binance_bank_deposit:INFO:Amount to deposit: 1500.0
+2024-03-12 14:37:31,723:binance_bank_deposit:INFO:Buyer bank condition: AND LOWER(a.account_bank_name) NOT LIKE '%bbva%'
+2024-03-12 14:37:31,739:binance_bank_deposit:INFO:Found 8 suitable accounts for order 20600982166162001920
+2024-03-12 14:37:31,739:binance_bank_deposit:INFO:Suitable accounts: [('646180146006124571', 'STP'), ('646180204200033494', 'STP'), ('710969000016348705', 'Nvio'), ('058597000054265356', 'Banregio'), ('058597000056476091', 'Banregio'), ('710969000007300927', 'Nvio'), ('014761655091416464', 'Santander'), ('710969000015306104', 'Nvio')]
+2024-03-12 14:37:31,739:binance_bank_deposit:INFO:Total after deposit for buyer 'MENDEZ CABELLO ALLAN' on account 646180146006124571: 1500.0
+2024-03-12 14:37:31,739:binance_bank_deposit:INFO:The deposit does not exceed the buyer's monthly limit of 70000.00.
+2024-03-12 14:37:31,754:binance_c2c:INFO:Message sent
+2024-03-12 14:37:36,771:binance_c2c:INFO:Message sent
+2024-03-12 14:37:41,779:binance_c2c:INFO:Message sent
+2024-03-12 14:39:53,008:binance_c2c:INFO:Message sent
+2024-03-12 14:39:58,015:binance_c2c:INFO:Message sent
+2024-03-12 14:40:20,382:binance_c2c:INFO:Message sent
+2024-03-12 14:41:20,660:binance_c2c:INFO:Message sent
+2024-03-12 14:41:21,715:binance_c2c:INFO:Message sent
+2024-03-12 14:41:26,733:binance_c2c:INFO:Message sent
+2024-03-12 14:41:27,332:binance_orders:INFO:Missing balance for BTC: 0.001263309999999962
+2024-03-12 14:41:27,582:binance_wallets:INFO:Order successfully placed: {'symbol': 'BTCUSDT', 'orderId': 25582631770, 'orderListId': -1, 'clientOrderId': 'aqLbXLELgAL7GQuLwUDSJd', 'transactTime': 1710279686864, 'price': '0.00000000', 'origQty': '0.00130000', 'executedQty': '0.00130000', 'cummulativeQuoteQty': '92.27543000', 'status': 'FILLED', 'timeInForce': 'GTC', 'type': 'MARKET', 'side': 'BUY', 'workingTime': 1710279686864, 'fills': [{'price': '70981.10000000', 'qty': '0.00130000', 'commission': '0.00000130', 'commissionAsset': 'BTC', 'tradeId': 3478251864}], 'selfTradePreventionMode': 'EXPIRE_MAKER'}
