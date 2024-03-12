@@ -1758,3 +1758,7 @@ client_session: <aiohttp.client.ClientSession object at 0x000001BE0E6BA140>
 client_session: <aiohttp.client.ClientSession object at 0x000001BE0E6BBE80>
 2024-03-11 17:52:56,779:common_utils:INFO:Updated server timestamp: 1710204777348
 2024-03-11 17:52:57,029:common_utils:INFO:Updated server timestamp: 1710204777610
+2024-03-11 17:56:31,051:binance_search_ad:ERROR:An error occurred: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-11 17:56:31,051:binance_search_ad:INFO:Attempt 1/3 failed, retrying after delay...
+2024-03-11 17:56:33,061:binance_search_ad:ERROR:An error occurred: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-11 17:56:33,061:binance_search_ad:INFO:Attempt 2/3 failed, retrying after delay...
