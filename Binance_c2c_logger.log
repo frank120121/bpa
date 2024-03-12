@@ -13,3 +13,13 @@
 2024-03-11 18:44:02,735:common_utils:INFO:Updated server timestamp: 1710207843323
 2024-03-11 18:44:03,022:common_utils:INFO:Updated server timestamp: 1710207843608
 2024-03-11 18:44:14,989:binance_c2c:INFO:Message sent
+2024-03-11 18:45:10,992:common_utils:INFO:Updated server timestamp: 1710207911574
+2024-03-11 18:45:11,242:common_utils:INFO:Updated server timestamp: 1710207911832
+2024-03-11 18:45:45,265:common_utils:INFO:Updated server timestamp: 1710207945844
+2024-03-11 18:45:45,529:common_utils:INFO:Updated server timestamp: 1710207946110
+2024-03-11 18:45:47,325:__main__:ERROR:An error occurred: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
+2024-03-11 18:45:47,325:__main__:ERROR:Traceback (most recent call last):
+  File "c:\Users\p7016\Documents\bpa\binance_orders.py", line 33, in binance_buy_order
+    missing_balance = wallets.check_asset_balance(asset_type, btc_target)
+TypeError: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
+
