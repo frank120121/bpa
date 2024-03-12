@@ -23,3 +23,15 @@
     missing_balance = wallets.check_asset_balance(asset_type, btc_target)
 TypeError: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
 
+2024-03-11 18:46:51,099:common_utils:INFO:Updated server timestamp: 1710208011682
+2024-03-11 18:46:51,355:common_utils:INFO:Updated server timestamp: 1710208011939
+2024-03-11 18:46:52,779:__main__:ERROR:An error occurred: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
+2024-03-11 18:46:52,779:__main__:ERROR:Traceback (most recent call last):
+  File "c:\Users\p7016\Documents\bpa\binance_orders.py", line 33, in binance_buy_order
+    missing_balance = wallets.check_asset_balance(asset_type, btc_target)
+TypeError: BinanceWallets.check_asset_balance() takes 2 positional arguments but 3 were given
+
+2024-03-11 18:48:03,318:common_utils:INFO:Updated server timestamp: 1710208083912
+2024-03-11 18:48:03,578:common_utils:INFO:Updated server timestamp: 1710208084173
+2024-03-11 18:48:05,246:__main__:INFO:Missing balance for BTC: 1.7380000000011275e-05
+2024-03-11 18:48:05,246:__main__:INFO:No missing balance for BTC; 1.7380000000011275e-05
