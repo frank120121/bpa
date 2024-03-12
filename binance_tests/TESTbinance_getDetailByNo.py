@@ -5,6 +5,7 @@ import hmac
 import time
 import logging
 from logging_config import setup_logging
+from common_utils import get_server_timestamp
 setup_logging(log_filename='TESTs_logger.log')
 logger = logging.getLogger(__name__)
 

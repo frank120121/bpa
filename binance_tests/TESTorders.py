@@ -1,6 +1,5 @@
 import asyncio
-import binance_db
-import binance_db_get
+import database
 import random
 
 def generate_random_order_no():
@@ -9,7 +8,7 @@ def generate_random_order_no():
 
 async def test_order_insertion():
     # 1. Setup database
-    conn = await binance_db.create_connection("C:/Users/p7016/Documents/bpa/orders_data.db")
+    conn = await database.create_connection("C:/Users/p7016/Documents/bpa/orders_data.db")
     if not conn:
         print("Failed to connect to the database.")
         return
@@ -27,10 +26,10 @@ async def test_order_insertion():
         }
     }
 
-    await binance_db.insert_or_update_order(conn, order_details)
+    await database.insert_or_update_order(conn, order_details)
 
     # 3. Fetch the order from the database to verify its presence
-    order_data = await binance_db_get.get_order_details(conn, order_details['data']['orderNumber'])
+    order_data = await database.get_order_details(conn, order_details['data']['orderNumber'])
 
     if order_data:
         print("Order was added successfully!")
