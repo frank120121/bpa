@@ -79,7 +79,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
             return
 
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
-        logger.debug(f'Competitor ad: {competitor_ad}')
+        logger.info(f'Competitor ad: {competitor_ad}')
         competitor_price = float(competitor_ad['adv']['price'])
         competitor_ratio = (competitor_price / base_price) * 100
 
