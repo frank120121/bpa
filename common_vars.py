@@ -154,6 +154,7 @@ bank_accounts = [
         "account_daily_limit": DAILY_LIMITS,
         "account_monthly_limit": MONTHLY_LIMITS
     },
+    #new bank accounts
     {
         "bank_name": "BBVA",
         "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
