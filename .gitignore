@@ -1,0 +1,5 @@
+"" 
+.env* 
+*.db
+.env.email
+gmail_credentilas.json
