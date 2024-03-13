@@ -42,10 +42,10 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
         if similarity >= 95:  # Threshold of 95%
             if closest_match in BBVA_BANKS:
                 closest_match = 'bbva'  # Normalize to 'bbva' for consistency
-                await update_buyer_bank(conn, order_no, closest_match)  
+                await update_buyer_bank(conn, buyer_name, closest_match)  
 
             else:
-                await update_buyer_bank(conn, order_no, closest_match)  # Use the closest match
+                await update_buyer_bank(conn, buyer_name, closest_match)  # Use the closest match
         else:
             accepted_banks_list = ', '.join(ACCEPTED_BANKS)
             await connection_manager.send_text_message(f"No pudimos verificar el banco proporcionado. Por favor, asegúrese de elegir uno de los siguientes bancos aceptados: {accepted_banks_list}", order_no)

@@ -16,26 +16,26 @@ async def update_order_details(conn, order_no, account_number):
     # Commit the changes to the database
     await conn.commit()
 
-async def update_buyer_bank(conn, order_no, new_buyer_bank):
+async def update_buyer_bank(conn, buyer_name, new_buyer_bank):
     """
-    Update the buyer_bank field in the orders table for a given order_no.
+    Update the user_bank field in the orders table for a given order_no.
 
     Args:
     - conn (aiosqlite.Connection): The database connection.
-    - order_no (str): The order number to update.
+    - buyer_name (str): The name to update.
     - new_buyer_bank (str): The new name of the buyer's bank.
 
     Returns:
     - None
     """
-    update_query = "UPDATE orders SET buyer_bank = ? WHERE order_no = ?"
-    params = (new_buyer_bank, order_no)
+    update_query = "UPDATE users SET user_bank = ? WHERE name = ?"
+    params = (new_buyer_bank, buyer_name)
 
     try:
         await execute_and_commit(conn, update_query, params)
-        logger.debug(f"Updated buyer_bank for order_no {order_no} to {new_buyer_bank}")
+        logger.debug(f"Updated user_bank for user {buyer_name} to {new_buyer_bank}")
     except Exception as e:
-        handle_error(e, f"Failed to update buyer_bank for order_no {order_no}")
+        handle_error(e, f"Failed to update user_bank for user {buyer_name}")
 
 async def update_order_status(conn, order_no, order_status):
     sql = "UPDATE orders SET order_status = ? WHERE order_no = ?"
@@ -129,26 +129,7 @@ async def set_menu_presented(conn, order_no, value):
     except Exception as e:
         logger.error(f"Error setting menu_presented for order_no {order_no}: {e}")
 
-async def update_buyer_bank(conn, order_no, new_buyer_bank):
-    """
-    Update the buyer_bank field in the orders table for a given order_no.
 
-    Args:
-    - conn (aiosqlite.Connection): The database connection.
-    - order_no (str): The order number to update.
-    - new_buyer_bank (str): The new name of the buyer's bank.
-
-    Returns:
-    - None
-    """
-    update_query = "UPDATE orders SET buyer_bank = ? WHERE order_no = ?"
-    params = (new_buyer_bank, order_no)
-
-    try:
-        await execute_and_commit(conn, update_query, params)
-        logger.debug(f"Updated buyer_bank for order_no {order_no} to {new_buyer_bank}")
-    except Exception as e:
-        handle_error(e, f"Failed to update buyer_bank for order_no {order_no}")
 
 async def update_order_details(conn, order_no, account_number):
         # Prepare the SQL statement for updating the order

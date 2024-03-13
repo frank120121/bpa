@@ -1,7 +1,7 @@
 
 import asyncio
 from common_vars import DB_FILE
-from common_utils_db import create_connection, execute_and_commit, print_table_contents, create_table
+from common_utils_db import create_connection, execute_and_commit, print_table_contents, create_table, add_column_if_not_exists
 import logging
 logger = logging.getLogger(__name__)
 
@@ -116,7 +116,8 @@ async def main():
                             total_crypto_sold_lifetime REAL,
                             anti_fraud_stage INTEGER DEFAULT 0,
                             rfc TEXT NULL,  -- RFC can be NULL
-                            codigo_postal TEXT NULL  -- Codigo Postal can be NULL
+                            codigo_postal TEXT NULL,  -- Codigo Postal can be NULL
+                            user_bank TEXT NULL,  -- Name of the user's bank
                             );"""
 
     sql_create_transactions_table = """CREATE TABLE IF NOT EXISTS transactions (
@@ -164,6 +165,7 @@ async def main():
         # Print table contents for verification
         # await remove(conn, '20598203477247664128')
         # await remove_user(conn, 'MARTINEZ MARTINEZ JUAN MANUEL')
+        await add_column_if_not_exists(conn, 'orders', 'buyer_bank', 'TEXT', 'NULL')
         await print_table_contents(conn, 'orders')
 
         await conn.close()

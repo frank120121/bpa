@@ -109,20 +109,14 @@ async def execute_and_fetchone(conn, sql, params=None):
         print(f"Error executing query: {e}")
         return None
 
-async def get_buyer_bank(conn, order_no):
+async def get_buyer_bank(conn, buyer_name):
     async with conn.cursor() as cursor:
-        await cursor.execute("SELECT buyer_bank FROM orders WHERE order_no=?", (order_no,))
+        await cursor.execute("SELECT user_bank FROM users WHERE name=?", (buyer_name,))
         result = await cursor.fetchone()
         if result:
             return result[0]
         return None
-async def get_buyer_bank(conn, order_no):
-    async with conn.cursor() as cursor:
-        await cursor.execute("SELECT buyer_bank FROM orders WHERE order_no=?", (order_no,))
-        result = await cursor.fetchone()
-        if result:
-            return result[0]
-        return None
+
 async def get_account_number(conn, order_no):
     async with conn.cursor() as cursor:
         await cursor.execute("SELECT account_number FROM orders WHERE order_no=?", (order_no,))

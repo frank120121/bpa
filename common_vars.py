@@ -189,7 +189,6 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    #new bank accounts
     {
         "bank_name": "BBVA",
         "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
@@ -201,7 +200,7 @@ bank_accounts = [
 ]
 
 
-NOT_ACCEPTED_BANKS = {"banco azteca", "mercado pago", "stp", "bancoppel", "albo", "azteca", "mercadopago", "oxxo", "coppel"}
+NOT_ACCEPTED_BANKS = {"banco azteca", "mercado pago", "stp", "bancoppel", "albo", "azteca", "mercadopago", "coppel"}
 
 ACCEPTED_BANKS = {
     'abc capital', 'actinver', 'afirme', 'alternativos', 'arcus', 'asp integra opc',
@@ -213,7 +212,7 @@ ACCEPTED_BANKS = {
     'indeval', 'intercam banco', 'invercap', 'invex', 'kuspit', 'libertad', 'masari',
     'mifel', 'monex', 'multiva banco', 'nafin', 'nu', 'nu bank', 'nu mexico', 'nvio',
     'pagatodo', 'profuturo', 'sabadell', 'santander', 'scotia', 'scotiabank', 'shinhan',
-    'tesored', 'transfer', 'unagra', 'valmex', 'value', 've por mas', 'vector', 'spin'
+    'tesored', 'transfer', 'unagra', 'valmex', 'value', 've por mas', 'vector', 'spin', 'citibanamex'
 }
 
 BBVA_BANKS = ['bbva', 'bbva bancomer', 'bancomer', 'bbva mexico']
