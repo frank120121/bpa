@@ -796,3 +796,17 @@ connector: <aiohttp.connector.TCPConnector object at 0x000001AA9F2119C0>
 2024-03-12 18:50:56,815:binance_update_ads:INFO:Ad: BTC - start price: 1239073.52, ratio: 102.65. Competitor ad - spot: 1, price: 1227606.21, base: 1207085.75, ratio: 101.70000018639935
 2024-03-12 18:50:59,507:binance_update_ads:INFO:Ad: BTC - start price: 1254041.38, ratio: 103.89. Competitor ad - spot: 2, price: 1239909.58, base: 1207085.74, ratio: 102.71926333915602
 2024-03-12 18:51:04,741:binance_update_ads:INFO:Ad: USDT - start price: 17.08, ratio: 101.69. Competitor ad - spot: 2, price: 17.1, base: 16.8, ratio: 101.78571428571428
+2024-03-12 18:53:20,152:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v3/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:53:21,156:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v1/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:53:22,132:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v3/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:53:22,163:common_utils:ERROR:Attempt 2: Failed to fetch server time from https://api.binance.com/api/v3/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:53:28,150:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v3/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:53:29,153:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v1/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:53:39,970:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v3/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:54:21,158:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v3/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:54:22,175:common_utils:ERROR:Attempt 1: Failed to fetch server time from https://api.binance.com/api/v1/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:54:23,191:common_utils:ERROR:Attempt 2: Failed to fetch server time from https://api.binance.com/api/v3/time: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
+2024-03-12 18:56:24,579:common_utils:INFO:Updated server timestamp: 1710294983918
+2024-03-12 18:56:24,835:common_utils:INFO:Updated server timestamp: 1710294984190
+2024-03-12 18:56:35,380:binance_update_ads:INFO:Ad: BTC - start price: 1228690.58, ratio: 101.66. Competitor ad - spot: 1, price: 1239909.58, base: 1208627.37, ratio: 102.58824272695396
+2024-03-12 18:56:38,048:binance_update_ads:INFO:Ad: BTC - start price: 1241018.58, ratio: 102.68. Competitor ad - spot: 2, price: 1256976.98, base: 1208627.37, ratio: 104.00037358081671
