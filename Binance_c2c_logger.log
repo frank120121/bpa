@@ -791,3 +791,8 @@ connector: <aiohttp.connector.TCPConnector object at 0x000001AA9F2119C0>
 2024-03-12 18:49:49,804:binance_update_ads:ERROR:Failed to fetch ads data for asset_type USDT, fiat MXN, transAmount 500.0, and payTypes ['OXXO'].
 2024-03-12 18:49:50,820:binance_search_ad:ERROR:An error occurred: Cannot connect to host api.binance.com:443 ssl:default [getaddrinfo failed]
 2024-03-12 18:49:50,820:binance_search_ad:INFO:Attempt 1/3 failed, retrying after delay...
+2024-03-12 18:50:45,938:common_utils:INFO:Updated server timestamp: 1710294645284
+2024-03-12 18:50:46,205:common_utils:INFO:Updated server timestamp: 1710294645550
+2024-03-12 18:50:56,815:binance_update_ads:INFO:Ad: BTC - start price: 1239073.52, ratio: 102.65. Competitor ad - spot: 1, price: 1227606.21, base: 1207085.75, ratio: 101.70000018639935
+2024-03-12 18:50:59,507:binance_update_ads:INFO:Ad: BTC - start price: 1254041.38, ratio: 103.89. Competitor ad - spot: 2, price: 1239909.58, base: 1207085.74, ratio: 102.71926333915602
+2024-03-12 18:51:04,741:binance_update_ads:INFO:Ad: USDT - start price: 17.08, ratio: 101.69. Competitor ad - spot: 2, price: 17.1, base: 16.8, ratio: 101.78571428571428
