@@ -2,7 +2,7 @@
 .env* 
 *.db
 .env.email
-gmail_credentilas.json
+gmail_credentials.json
 token.pickle
 tokens.json
 *.log
