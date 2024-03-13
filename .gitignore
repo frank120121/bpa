@@ -10,5 +10,6 @@ tokens.json
 .lesshst
 outlook tokens.txt
 gmail_auth.py
+Binance_c2c_logger.log
 
 ```
