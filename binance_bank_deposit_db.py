@@ -130,11 +130,21 @@ async def sum_recent_deposits(account_number):
     finally:
         await conn.close()
 
+async def clear_accounts(conn):
+    try:
+        await conn.execute('DELETE FROM mxn_bank_accounts')
+        await conn.commit()
+        logger.debug(f"Removed all bank accounts")
+    except Exception as e:
+        logger.error(f"Error removing bank accounts: {e}")
+        raise
+
 async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
         # Initialize the database (create tables and insert initial data)
-        #await initialize_database(conn)
+        # await clear_accounts(conn)
+        # await initialize_database(conn)
         # Print table contents for verification
         # await remove_bank_account(conn, '0482424657')
         # await remove_bank_account(conn, '012778015323351288')
