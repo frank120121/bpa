@@ -811,3 +811,48 @@ connector: <aiohttp.connector.TCPConnector object at 0x000001AA9F2119C0>
 2024-03-12 18:56:35,380:binance_update_ads:INFO:Ad: BTC - start price: 1228690.58, ratio: 101.66. Competitor ad - spot: 1, price: 1239909.58, base: 1208627.37, ratio: 102.58824272695396
 2024-03-12 18:56:38,048:binance_update_ads:INFO:Ad: BTC - start price: 1241018.58, ratio: 102.68. Competitor ad - spot: 2, price: 1256976.98, base: 1208627.37, ratio: 104.00037358081671
 2024-03-12 18:56:42,929:binance_update_ads:INFO:Ad: USDT - start price: 17.09, ratio: 101.75. Competitor ad - spot: 2, price: 17.11, base: 16.8, ratio: 101.84523809523809
+2024-03-12 18:56:47,199:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
+2024-03-12 18:57:53,511:binance_update_ads:INFO:Ad: BTC - start price: 1240641.27, ratio: 102.55. Competitor ad - spot: 1, price: 1230358.04, base: 1209791.58, ratio: 101.70000025954884
+2024-03-12 18:57:56,139:binance_update_ads:INFO:Ad: BTC - start price: 1257699.33, ratio: 103.96. Competitor ad - spot: 2, price: 1239909.58, base: 1209791.58, ratio: 102.4895197237197
+2024-03-12 18:58:03,421:binance_update_ads:INFO:Ad: USDT - start price: 17.35, ratio: 103.3. Competitor ad - spot: 1, price: 17.35, base: 16.8, ratio: 103.27380952380953
+2024-03-12 18:59:09,825:binance_update_ads:INFO:Ad: BTC - start price: 1228568.99, ratio: 101.66. Competitor ad - spot: 1, price: 1230358.04, base: 1208507.76, ratio: 101.80803803858073
+2024-03-12 18:59:12,556:binance_update_ads:INFO:Ad: BTC - start price: 1238050.83, ratio: 102.45. Competitor ad - spot: 2, price: 1239909.58, base: 1208443.95, ratio: 102.60381377224819
+2024-03-12 18:59:19,824:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
+2024-03-12 18:59:23,686:binance_update_ads:INFO:Ad: ETH - start price: 69017.52, ratio: 102.14. Competitor ad - spot: 1, price: 68973.52, base: 67571.49, ratio: 102.074883948837
+2024-03-12 19:00:27,837:binance_update_ads:INFO:Ad: BTC - start price: 1229635.76, ratio: 101.77. Competitor ad - spot: 1, price: 1228789.99, base: 1208249.74, ratio: 101.70000036581841
+2024-03-12 19:00:30,409:binance_update_ads:INFO:Ad: BTC - start price: 1239180.94, ratio: 102.56. Competitor ad - spot: 2, price: 1256587.96, base: 1208249.75, ratio: 104.00068032292165
+2024-03-12 19:00:37,639:binance_update_ads:INFO:Ad: USDT - start price: 17.35, ratio: 103.3. Competitor ad - spot: 1, price: 17.35, base: 16.8, ratio: 103.27380952380953
+2024-03-12 19:00:41,593:binance_update_ads:INFO:Ad: ETH - start price: 68871.81, ratio: 102.03. Competitor ad - spot: 1, price: 68973.52, base: 67501.53, ratio: 102.18067649725866
+2024-03-12 19:01:45,712:binance_update_ads:INFO:Ad: BTC - start price: 1230427.66, ratio: 101.66. Competitor ad - spot: 1, price: 1239909.58, base: 1210336.08, ratio: 102.44341224629112
+2024-03-12 19:01:54,049:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
+2024-03-12 19:03:00,369:binance_update_ads:INFO:Ad: BTC - start price: 1238274.69, ratio: 102.4. Competitor ad - spot: 1, price: 1230911.8, base: 1209252.63, ratio: 101.79112035505766
+2024-03-12 19:03:03,012:binance_update_ads:INFO:Ad: BTC - start price: 1258265.39, ratio: 103.96. Competitor ad - spot: 2, price: 1239909.58, base: 1210336.08, ratio: 102.44341224629112
+2024-03-12 19:03:07,919:binance_update_ads:INFO:Ad: USDT - start price: 17.1, ratio: 101.81. Competitor ad - spot: 1, price: 17.09, base: 16.8, ratio: 101.72619047619047
+2024-03-12 19:03:11,765:binance_update_ads:INFO:Ad: USDT - start price: 17.35, ratio: 103.3. Competitor ad - spot: 1, price: 17.35, base: 16.8, ratio: 103.27380952380953
+2024-03-12 19:04:18,064:binance_update_ads:INFO:Ad: BTC - start price: 1229553.45, ratio: 101.75. Competitor ad - spot: 1, price: 1228949.25, base: 1208406.34, ratio: 101.70000018371303
+2024-03-12 19:04:20,684:binance_update_ads:INFO:Ad: BTC - start price: 1237408.09, ratio: 102.4. Competitor ad - spot: 2, price: 1239909.58, base: 1208406.34, ratio: 102.60700717607953
+2024-03-12 19:05:39,502:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
+2024-03-12 19:05:49,169:binance_c2c:INFO:Message sent
+2024-03-12 19:05:54,167:binance_c2c:INFO:Message sent
+2024-03-12 19:05:54,168:binance_c2c:INFO:Message sent
+2024-03-12 19:05:58,088:fetch_outlook:WARNING:Token expires in: 2024-03-12 20:05:58.088250
+2024-03-12 19:05:58,541:verify_client_ip:WARNING:Attempt 1: Could not fetch the IP. Retrying...
+2024-03-12 19:06:01,971:verify_client_ip:WARNING:Attempt 2: Could not fetch the IP. Retrying...
+2024-03-12 19:06:05,389:ip_info_io:INFO:Getting IP details for: 189.220.43.2
+2024-03-12 19:06:05,755:verify_client_ip:INFO:IP from Country: MX
+2024-03-12 19:06:47,087:binance_update_ads:INFO:Ad: BTC - start price: 1239059.68, ratio: 102.57. Competitor ad - spot: 2, price: 1256330.82, base: 1208013.73, ratio: 103.99971364563878
+2024-03-12 19:06:54,620:binance_update_ads:INFO:Ad: USDT - start price: 17.35, ratio: 103.3. Competitor ad - spot: 1, price: 17.35, base: 16.8, ratio: 103.27380952380953
+2024-03-12 19:07:43,745:binance_c2c:INFO:Message sent
+2024-03-12 19:07:49,972:binance_c2c:INFO:Message sent
+2024-03-12 19:08:04,212:common_utils:INFO:Updated server timestamp: 1710295683564
+2024-03-12 19:08:04,480:common_utils:INFO:Updated server timestamp: 1710295683831
+2024-03-12 19:08:16,043:binance_update_ads:INFO:Ad: BTC - start price: 1255584.16, ratio: 103.96. Competitor ad - spot: 2, price: 1239909.58, base: 1207756.98, ratio: 102.66217463715259
+2024-03-12 19:08:20,880:binance_update_ads:INFO:Ad: USDT - start price: 17.08, ratio: 101.69. Competitor ad - spot: 2, price: 17.11, base: 16.8, ratio: 101.84523809523809
+2024-03-12 19:08:25,017:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
+2024-03-12 19:09:31,502:binance_update_ads:INFO:Ad: BTC - start price: 1228915.24, ratio: 101.66. Competitor ad - spot: 1, price: 1239909.58, base: 1208848.36, ratio: 102.56948853369829
+2024-03-12 19:09:34,145:binance_update_ads:INFO:Ad: BTC - start price: 1240520.18, ratio: 102.62. Competitor ad - spot: 2, price: 1257236.84, base: 1208848.35, ratio: 104.002858588507
+2024-03-12 19:09:41,386:binance_update_ads:INFO:Ad: USDT - start price: 17.35, ratio: 103.3. Competitor ad - spot: 1, price: 17.35, base: 16.8, ratio: 103.27380952380953
+2024-03-12 19:10:48,073:binance_update_ads:INFO:Ad: BTC - start price: 1239201.32, ratio: 102.53. Competitor ad - spot: 1, price: 1229398.78, base: 1208623.15, ratio: 101.71895019551793
+2024-03-12 19:10:50,751:binance_update_ads:INFO:Ad: BTC - start price: 1256205.36, ratio: 103.96. Competitor ad - spot: 2, price: 1239909.58, base: 1208354.52, ratio: 102.61140745350133
+2024-03-12 19:10:57,930:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
+2024-03-12 19:11:01,841:binance_update_ads:INFO:Ad: ETH - start price: 68913.24, ratio: 102.14. Competitor ad - spot: 1, price: 69023.11, base: 67469.39, ratio: 102.30285170801159

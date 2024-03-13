@@ -8,4 +8,7 @@ tokens.json
 *.log
 .gitconfig
 .lesshst
+outlook tokens.txt
+gmail_auth.py
+
 ```
