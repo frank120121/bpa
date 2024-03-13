@@ -13,7 +13,7 @@ MAX_RATIO = 110
 RATIO_ADJUSTMENT = 0.04
 DIFF_THRESHOLD = 0.09
 DELAY_BETWEEN_ASSET_TYPES = 1
-DELAY_BETWEEN_MAIN_LOOPS = 5
+DELAY_BETWEEN_MAIN_LOOPS = 60
 AMOUNT_THRESHOLD = 5000
 
 def filter_ads(ads_data, base_price, own_ads):
@@ -100,7 +100,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
         else:
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount)
-            logger.debug(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
+            logger.info(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
             await asyncio.sleep(1)
 
     except Exception as e:
