@@ -856,3 +856,23 @@ connector: <aiohttp.connector.TCPConnector object at 0x000001AA9F2119C0>
 2024-03-12 19:10:50,751:binance_update_ads:INFO:Ad: BTC - start price: 1256205.36, ratio: 103.96. Competitor ad - spot: 2, price: 1239909.58, base: 1208354.52, ratio: 102.61140745350133
 2024-03-12 19:10:57,930:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
 2024-03-12 19:11:01,841:binance_update_ads:INFO:Ad: ETH - start price: 68913.24, ratio: 102.14. Competitor ad - spot: 1, price: 69023.11, base: 67469.39, ratio: 102.30285170801159
+2024-03-12 19:12:06,859:binance_update_ads:INFO:Ad: BTC - start price: 1239473.58, ratio: 102.57. Competitor ad - spot: 2, price: 1256757.77, base: 1208417.26, ratio: 104.00031608287357
+2024-03-12 19:12:14,200:binance_update_ads:INFO:Ad: USDT - start price: 17.35, ratio: 103.3. Competitor ad - spot: 1, price: 17.35, base: 16.8, ratio: 103.27380952380953
+2024-03-12 19:12:18,037:binance_update_ads:INFO:Ad: ETH - start price: 69038.87, ratio: 102.26. Competitor ad - spot: 1, price: 68944.57, base: 67513.07, ratio: 102.12033018199291
+2024-03-12 19:13:13,058:binance_c2c:INFO:Message sent
+2024-03-12 19:13:13,073:binance_c2c:INFO:Message sent
+2024-03-12 19:13:21,981:binance_c2c:INFO:Message sent
+2024-03-12 19:13:23,030:binance_update_ads:INFO:Ad: BTC - start price: 1257732.02, ratio: 103.96. Competitor ad - spot: 2, price: 1256757.77, base: 1209823.03, ratio: 103.87947152898882
+2024-03-12 19:13:30,275:binance_update_ads:INFO:Ad: USDT - start price: 17.33, ratio: 103.23. Competitor ad - spot: 1, price: 17.35, base: 16.79, ratio: 103.33531864204886
+2024-03-12 19:13:31,125:binance_c2c:INFO:Message sent
+2024-03-12 19:13:37,078:binance_bank_deposit:INFO:Amount to deposit: 1700.0
+2024-03-12 19:13:37,078:binance_bank_deposit:INFO:Buyer bank condition: AND LOWER(a.account_bank_name) = ?
+2024-03-12 19:13:37,084:binance_bank_deposit:INFO:Found 1 suitable accounts for order 20601050238831923200
+2024-03-12 19:13:37,084:binance_bank_deposit:INFO:Suitable accounts: [('1593999048', 'BBVA')]
+2024-03-12 19:13:37,087:binance_bank_deposit:INFO:Total after deposit for buyer 'ZAPATA LOPEZ SERGIO DAVID' on account 1593999048: 1700.0
+2024-03-12 19:13:37,087:binance_bank_deposit:INFO:The deposit does not exceed the buyer's monthly limit of 70000.00.
+2024-03-12 19:13:37,093:binance_c2c:INFO:Message sent
+2024-03-12 19:13:42,090:binance_c2c:INFO:Message sent
+2024-03-12 19:13:47,092:binance_c2c:INFO:Message sent
+2024-03-12 19:14:37,875:binance_update_ads:INFO:Ad: BTC - start price: 1256269.76, ratio: 103.84. Competitor ad - spot: 2, price: 1239909.58, base: 1209812.94, ratio: 102.48771020749705
+2024-03-12 19:14:45,157:binance_update_ads:INFO:Ad: USDT - start price: 17.35, ratio: 103.3. Competitor ad - spot: 1, price: 17.35, base: 16.8, ratio: 103.27380952380953
