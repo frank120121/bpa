@@ -153,38 +153,40 @@ async def main():
 
 
         # #FRANCISCO JAVIER LOPEZ GUqERRERO
-        FNVIO = 81304.26
-        FSTP = 39834.45
-        FBBVA = 283745.21
-        FHEY = 39933.57
+        FNVIO = 50497.91
+        FSTP = 11100.00
+        FBBVA = 194680.4
+        FHEY = 41435.07
         
         # await update_account_balance(conn, '710969000007300927', FNVIO)    #NVIO
         # await update_account_balance(conn, '058597000056476091', FHEY)    #HEY
-        # await update_account_balance(conn, '646180146006124571', FSTP)    #STP
+        # await update_account_balance(conn, '646180146099983826', FSTP)    #STP
         # await update_account_balance(conn, '1532335128', FBBVA)  #BBVA
 
         # # #MARIA FERNANDA MUNOZ PEREA
-        MNVIO = 55577.36
-        MBBVA1 = 256981.96
-        MBBVA2 = 165759.44
+        MNVIO = 0.00
+        MBBVA1 = 100816.94
+        MBBVA2 = 310006.43
 
         # await update_account_balance(conn, '710969000016348705', MNVIO)    #NVIO
         # await update_account_balance(conn, '1593999048', MBBVA1)   #BBVA
         # await update_account_balance(conn, '0482424657', MBBVA2)    #BBVA
 
         # # # MARTHA GUERRERO LOPEZ
-        MGNVIO = 197938.79
-        MGHEY = 28578.52
-        MGSANTANDER = 134879.01
+        MGNVIO = 102687.96
+        MGHEY = 32336.87
+        MGSANTANDER = 175662.45
 
         # await update_account_balance(conn, '710969000015306104', MGNVIO)    #NVIO
         # await update_account_balance(conn, '014761655091416464', MGSANTANDER)    #SANTANDER
         # await update_account_balance(conn, '058597000054265356', MGHEY)  #HEY
 
         # # #ANBER CAP DE MEXICO
-        ASTP = 22518.72
+        ASTP = 14482.91
+        ACMBBVA = 50859.89
         # await update_account_balance(conn, '646180204200033494', ASTP)    #STP
-        # await remove_bank_account(conn, '0482424657')
+        # await update_account_balance(conn, '0122819805', ACMBBVA)  #BBVA
+
         await print_table_contents(conn, 'mxn_bank_accounts')
 
         # await sum_recent_deposits('1532335128')

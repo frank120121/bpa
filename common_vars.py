@@ -76,83 +76,117 @@ MERCHANTS = {
 MONTHLY_LIMITS = 2000000.00
 DAILY_LIMITS = 90000.00
 
+#Oxxo Limits
+BBVA_OXXO_DAILY_LIMIT = 19000.00
+BANAMEX_OXXO_DAILY_LIMIT = 18000.00
+SANTANDER_OXXO_DAILY_LIMIT = 10000.00
+SCOTIABANK_OXXO_DAILY_LIMIT = 17760.00
+INBURSA_OXXO_DAILY_LIMIT = 24000.00
+HSBC_OXXO_DAILY_LIMIT = 20000.00
+CAJAPOPULAR_OXXO_DAILY_LIMIT = 20000.00
+INVEX_OXXO_DAILY_LIMIT = 19000.00
+BANREGIO_OXXO_DAILY_LIMIT = 27000.00
+
+#Oxxo Limits too low
+AFIRME_OXXO_DAILY_LIMIT = 5000.00
+BANCOPPEL_OXXO_DAILY_LIMIT = 5000.00
+
+#Oxxo Monthly Limit
+OXXO_MONTHLY_LIMIT = 80000.00
+
+
 bank_accounts = [
     {
         "bank_name": "Nvio",
         "beneficiary": "Francisco Javier Lopez",
         "account_number": "710969000007300927",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": 0.00,
     },
     {
         "bank_name": "BBVA",
         "beneficiary": "Francisco Javier Lopez",
         "account_number": "1532335128",
+        "card_number": "4152314008762364",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
     },
     {
         "bank_name": "STP",
         "beneficiary": "Francisco Javier Lopez",
         "account_number": "646180146099983826",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": 0.00
     },
     {
         "bank_name": "Banregio",
         "beneficiary": "Francisco Javier Lopez",
         "account_number": "058597000056476091",
+        "card_number": "4347984876309005",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     },
     {
         "bank_name": "BBVA",
         "beneficiary": "Maria Fernanda Munoz Perea",
         "account_number": "1593999048",
+        "card_number": "4152314089865862",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
     },
     {
         "bank_name": "Nvio",
         "beneficiary": "Maria Fernanda Munoz Perea",
         "account_number": "710969000016348705",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": 0.00
     },
     {
         "bank_name": "BBVA",
         "beneficiary": "Maria Fernanda Munoz Perea",
         "account_number": "0482424657",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": 250000.00
+        "account_monthly_limit": 250000.00,
+        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
     },
     {
         "bank_name": "Nvio",
         "beneficiary": "Martha Guerrero Lopez",
         "account_number": "710969000015306104",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": 0.00
     },
     {
         "bank_name": "Banregio",
         "beneficiary": "Martha Guerrero Lopez",
         "account_number": "058597000054265356",
+        "card_number": "4347984866288631",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     },
     {
         "bank_name": "Santander",
         "beneficiary": "Martha Guerrero Lopez",
         "account_number": "65509141646",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": SANTANDER_OXXO_DAILY_LIMIT
     },
     {
         "bank_name": "STP",
         "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
         "account_number": "646180204200033494",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": 0.00
     },
     #new bank accounts
     {
@@ -160,9 +194,11 @@ bank_accounts = [
         "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
         "account_number": "0122819805",
         "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
     }
 ]
+
 
 NOT_ACCEPTED_BANKS = {"banco azteca", "mercado pago", "stp", "bancoppel", "albo", "azteca", "mercadopago", "oxxo", "coppel"}
 
