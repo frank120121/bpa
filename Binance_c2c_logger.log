@@ -810,3 +810,4 @@ connector: <aiohttp.connector.TCPConnector object at 0x000001AA9F2119C0>
 2024-03-12 18:56:24,835:common_utils:INFO:Updated server timestamp: 1710294984190
 2024-03-12 18:56:35,380:binance_update_ads:INFO:Ad: BTC - start price: 1228690.58, ratio: 101.66. Competitor ad - spot: 1, price: 1239909.58, base: 1208627.37, ratio: 102.58824272695396
 2024-03-12 18:56:38,048:binance_update_ads:INFO:Ad: BTC - start price: 1241018.58, ratio: 102.68. Competitor ad - spot: 2, price: 1256976.98, base: 1208627.37, ratio: 104.00037358081671
+2024-03-12 18:56:42,929:binance_update_ads:INFO:Ad: USDT - start price: 17.09, ratio: 101.75. Competitor ad - spot: 2, price: 17.11, base: 16.8, ratio: 101.84523809523809
