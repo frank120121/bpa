@@ -165,8 +165,8 @@ async def main():
         # Print table contents for verification
         # await remove(conn, '20598203477247664128')
         # await remove_user(conn, 'MARTINEZ MARTINEZ JUAN MANUEL')
-        await add_column_if_not_exists(conn, 'orders', 'buyer_bank', 'TEXT', 'NULL')
-        await print_table_contents(conn, 'orders')
+        await add_column_if_not_exists(conn, 'users', 'user_bank', 'TEXT', 'NULL')
+        await print_table_contents(conn, 'users')
 
         await conn.close()
     else:
