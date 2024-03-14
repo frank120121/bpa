@@ -65,7 +65,7 @@ if __name__ == "__main__":
     else:
         logger.error(f"Credentials not found for account: {account}")
         exit()
-    adOrderNo = "20592632273051729920"
+    adOrderNo = "20601447771168387072"
     result = asyncio.run(fetch_order_details(KEY, SECRET, adOrderNo))
     print(result)
     account_number = None
