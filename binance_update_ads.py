@@ -14,15 +14,14 @@ RATIO_ADJUSTMENT = 0.04
 DIFF_THRESHOLD = 0.09
 DELAY_BETWEEN_ASSET_TYPES = 1
 DELAY_BETWEEN_MAIN_LOOPS = 60
-AMOUNT_THRESHOLD = 5000
 
-def filter_ads(ads_data, base_price, own_ads):
+def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
     logger.debug(f'own ad numbers: {own_adv_nos}')
     return [ad for ad in ads_data 
             if ad['adv']['advNo'] not in own_adv_nos 
             and float(ad['adv']['price']) >= base_price * PRICE_THRESHOLD
-            and float(ad['adv']['dynamicMaxSingleTransAmount']) >= AMOUNT_THRESHOLD]
+            and float(ad['adv']['dynamicMaxSingleTransAmount']) >= trans_amount_threshold]
 
 
 def compute_base_price(price: float, floating_ratio: float) -> float:
@@ -71,7 +70,8 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
         logger.debug(f"Base Price: {base_price}")
-        filtered_ads = filter_ads(ads_data, base_price, all_ads)
+        transAmount_threshold = float(ad['transAmount'])  # Ensure it's a float
+        filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount_threshold)
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
 
         if not filtered_ads:
