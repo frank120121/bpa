@@ -51,7 +51,7 @@ async def binance_buy_order(asset_type):
 
 async def binance_orders_main(loop):
     await asyncio.gather(
-        binance_buy_order('ETH'),
+        binance_buy_order('BTC'),
     )
 
 if __name__ == "__main__":
