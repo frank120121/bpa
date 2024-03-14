@@ -21,7 +21,9 @@ class MerchantAccount:
         if await has_specific_bank_identifiers(conn, order_no, ['OXXO', 'SkrillMoneybookers']):
             logger.info(f"Order {order_no} uses payment method (OXXO or Skrill).")
             return  # Skip further processing for now
-        
+        fiat = order_details.get('fiat_unit')
+        if fiat == 'USD':
+            return # Skip further processing for now
         buyer_name = order_details.get('buyer_name')
         if msg_type == 'system':
             await self._handle_system_type(connection_manager, msg_json, conn, order_no, order_details, buyer_name)
