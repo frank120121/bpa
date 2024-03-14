@@ -62,9 +62,16 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_b
         # Get the amount to deposit from the current order
         amount_to_deposit = await get_order_amount(conn, order_no)
         logger.info(f"Amount to deposit: {amount_to_deposit}")
+
         # Construct the buyer bank condition with SQL Injection Protection
-        buyer_bank_condition = "AND LOWER(a.account_bank_name) NOT LIKE '%bbva%'" if ignore_bank_preference or buyer_bank is None else "AND LOWER(a.account_bank_name) = ?"
+        if ignore_bank_preference or buyer_bank is None:
+            # Include only accounts from 'stp' or 'nvio'
+            buyer_bank_condition = "AND LOWER(a.account_bank_name) IN ('stp', 'nvio')"
+        else:
+            # Filter by the specific bank name provided in buyer_bank
+            buyer_bank_condition = "AND LOWER(a.account_bank_name) = ?"
         logger.info(f"Buyer bank condition: {buyer_bank_condition}")
+
         # Parameterized query to avoid SQL Injection
         query = f'''
             WITH LastAccount AS (
@@ -127,10 +134,10 @@ async def get_payment_details(conn, order_no, buyer_name):
             logger.debug(f"Account already assigned for order {order_no}.")
             return await get_account_details(conn, assigned_account_number)
 
-        buyer_bank = await get_buyer_bank(conn, order_no)
+        buyer_bank = await get_buyer_bank(conn, buyer_name)
         suitable_accounts = await find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_bank_preference=False)
 
-        # If no account matches the buyer's bank preference or buyer_bank is None, search without bank preference
+        # If no account matches the buyer's bank preference or buyer_bank is None, fetch only accounts from nvio or stp
         if not suitable_accounts:
             suitable_accounts = await find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_bank_preference=True)
 
