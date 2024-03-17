@@ -93,9 +93,7 @@ class BinanceWallets:
         elif asset == 'ETH':
             target = 1.000
         balance = self.combined_balances.get(asset, 0)
-        if balance < target:
-            return target - balance
-        return 0
+        return target - balance
 
     def get_account_with_most_usd(self):
         max_free_usd = 0
