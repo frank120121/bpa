@@ -190,14 +190,14 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    {
-        "bank_name": "BBVA",
-        "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
-        "account_number": "0122819805",
-        "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS,
-        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
-    }
+    # {
+    #     "bank_name": "BBVA",
+    #     "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
+    #     "account_number": "0122819805",
+    #     "account_daily_limit": DAILY_LIMITS,
+    #     "account_monthly_limit": MONTHLY_LIMITS,
+    #     "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
+    # }
 ]
 
 
