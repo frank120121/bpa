@@ -6,7 +6,7 @@ from logging_config import setup_logging
 setup_logging(log_filename='Binance_c2c_logger.log')
 logger = logging.getLogger(__name__)
 from common_vars import ads_dict
-from common_utils_db import print_table_contents, create_connection
+from common_utils_db import print_table_contents, create_connection, add_column_if_not_exists
 
 DB_PATH = 'C:/Users/p7016/Documents/bpa/ads_data.db'
 
@@ -26,7 +26,8 @@ async def create_database():
                 transAmount REAL,
                 payTypes TEXT NOT NULL DEFAULT '[]',
                 `Group` TEXT NOT NULL DEFAULT 'Unknown',
-                merchant_id INTEGER REFERENCES merchants(id) 
+                merchant_id INTEGER REFERENCES merchants(id),
+                trade_type TEXT NOT NULL  -- Add trade_type column
             )
         ''')
         await conn.commit()
@@ -38,10 +39,15 @@ async def clear_ads_table():
         await conn.commit()
 
 
-async def fetch_all_ads_from_database():
+async def fetch_all_ads_from_database(trade_type=None):
     async with aiosqlite.connect(DB_PATH) as conn:
         c = await conn.cursor()
-        await c.execute("SELECT * FROM ads")
+        query = "SELECT * FROM ads"
+        params = ()
+        if trade_type is not None:
+            query += " WHERE trade_type = ?"
+            params = (trade_type,)
+        await c.execute(query, params)
         ads = await c.fetchall()
     return [
         {
@@ -55,9 +61,9 @@ async def fetch_all_ads_from_database():
             'surplused_amount': ad[7],
             'fiat': ad[8],
             'transAmount': ad[9],
-            # Check if ad[10] is a valid non-empty JSON string; otherwise, set to None
-            'payTypes': json.loads(ad[10]) if ad[10] and ad[10] not in ['null', ''] and ad[10].strip().startswith('[') else None,
-            'Group': ad[11]  # Include Group
+            'payTypes': json.loads(ad[10]) if ad[10] and ad[10].strip().startswith('[') else None,
+            'Group': ad[11],
+            'trade_type': ad[12]  # Assuming 'trade_type' is the 13th column in your table
         }
         for ad in ads
     ]
@@ -109,16 +115,9 @@ async def insert_initial_ads():
     for account_name, ads in ads_dict.items():
         for ad in ads:
             pay_types_serialized = json.dumps(ad.get('payTypes', []))  # Serialize payTypes to JSON
-            ads_to_insert.append({
-                'advNo': ad['advNo'],
-                'target_spot': ad['target_spot'],
-                'asset_type': ad['asset_type'],
-                'account': account_name,
-                'fiat': ad['fiat'],
-                'transAmount': ad['transAmount'],
-                'payTypes': pay_types_serialized,
-                'Group': ad['Group']  # Include Group
-            })
+            # Use account_name instead of ad['account']
+            ads_to_insert.append((ad['advNo'], ad['target_spot'], ad['asset_type'], account_name,
+                                  ad['fiat'], ad['transAmount'], pay_types_serialized, ad['Group'], ad['trade_type']))
     await insert_multiple_ads(ads_to_insert)
 
 async def insert_multiple_ads(ads_list):
@@ -126,14 +125,12 @@ async def insert_multiple_ads(ads_list):
         c = await conn.cursor()
         for ad in ads_list:
             await c.execute(
-                """INSERT OR REPLACE INTO ads (advNo, target_spot, asset_type, account, fiat, transAmount, payTypes, `Group`) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",  # Include Group in the SQL command
-                (
-                    ad['advNo'], ad['target_spot'], ad['asset_type'], ad['account'],
-                    ad['fiat'], ad['transAmount'], ad['payTypes'], ad['Group']  # Pass Group to SQL execution
-                )
+                """INSERT OR REPLACE INTO ads (advNo, target_spot, asset_type, account, fiat, transAmount, payTypes, `Group`, trade_type) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ad  # Pass the tuple directly
             )
         await conn.commit()
+
 
 async def main():
     conn = await create_connection(DB_PATH)
