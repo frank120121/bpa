@@ -5,6 +5,7 @@ import traceback
 
 from binance_c2c import main_binance_c2c
 from binance_update_ads import start_update_ads
+from binance_update_buy_ads import start_update_buy_ads
 from populate_database import populate_ads_with_details
 
 setup_logging(log_filename='Binance_c2c_logger.log')
@@ -16,6 +17,7 @@ async def main():
     try:
         tasks.append(asyncio.create_task(main_binance_c2c()))
         tasks.append(asyncio.create_task(start_update_ads()))
+        tasks.append(asyncio.create_task(start_update_buy_ads()))
         await asyncio.gather(*tasks)
     except Exception as e:
         tb_str = traceback.format_exception(etype=type(e), value=e, tb=e.__traceback__)

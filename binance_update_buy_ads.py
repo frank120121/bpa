@@ -147,7 +147,7 @@ async def main_loop(api_instances):
 
     # Closing of API instance sessions can be handled outside if they need to be reused
 
-async def start_update_ads():
+async def start_update_buy_ads():
     # Initialize API instances once
     api_instances = {account: BinanceAPI(credentials_dict[account]['KEY'], credentials_dict[account]['SECRET']) for account in set(ad['account'] for ad in await fetch_all_ads_from_database())}
 
@@ -160,4 +160,4 @@ async def start_update_ads():
         await api_instance.close_session()
 
 if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(start_update_ads())
+    asyncio.get_event_loop().run_until_complete(start_update_buy_ads())
