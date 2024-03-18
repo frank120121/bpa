@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Initialize a cache dictionary
 cache = {}
 
-async def search_ads(KEY, SECRET, asset_type, fiat, transAmount, payTypes=None):
+async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, payTypes=None):
     global cache
 
     # Create a cache key based on the function's arguments
@@ -38,7 +38,7 @@ async def search_ads(KEY, SECRET, asset_type, fiat, transAmount, payTypes=None):
                 "page": 1,
                 "publisherType": "merchant",
                 "rows": 20,
-                "tradeType": "BUY"
+                "tradeType": trade_type
             }
             
             if payTypes:
@@ -108,7 +108,7 @@ if __name__ == "__main__":
             ]
 
             # Create tasks for each combination
-            tasks = [search_ads(KEY, SECRET, param['asset_type'], param['fiat'], param['transAmount'], param['payTypes']) for param in search_params]
+            tasks = [search_ads(KEY, SECRET, 'SELL', param['asset_type'], param['fiat'], param['transAmount'], param['payTypes']) for param in search_params]
             
             results = await asyncio.gather(*tasks)
 

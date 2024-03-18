@@ -72,11 +72,11 @@ class BinanceAPI:
                 "timestamp": await get_server_timestamp()
             }
         )
-    async def fetch_ads_search(self, asset_type, fiat, transAmount, payTypes=None):
+    async def fetch_ads_search(self, trade_type,asset_type, fiat, transAmount, payTypes=None):
     
         try:
             # Pass asset_type, fiat, and transAmount to the fetch_ads_search function
-            result = await search_ads(self.KEY, self.SECRET, asset_type, fiat, transAmount, payTypes)
+            result = await search_ads(self.KEY, self.SECRET, trade_type, asset_type, fiat, transAmount, payTypes)
             if not result:
                 logger.error("Failed to fetch ads data.")
             
