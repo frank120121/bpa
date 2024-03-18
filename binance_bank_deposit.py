@@ -65,8 +65,8 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_b
 
         # Construct the buyer bank condition with SQL Injection Protection
         if ignore_bank_preference or buyer_bank is None:
-            # Include only accounts from 'stp' or 'nvio'
-            buyer_bank_condition = "AND LOWER(a.account_bank_name) IN ('stp', 'nvio')"
+            # Include only accounts from 'nvio'
+            buyer_bank_condition = "AND LOWER(a.account_bank_name) = 'nvio'"
         else:
             # Filter by the specific bank name provided in buyer_bank
             buyer_bank_condition = "AND LOWER(a.account_bank_name) = ?"

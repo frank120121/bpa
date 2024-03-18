@@ -7,13 +7,13 @@ from binance_api import BinanceAPI
 
 logger = logging.getLogger(__name__)
 
-PRICE_THRESHOLD = 0.9950
+PRICE_THRESHOLD = 0.9995
 MIN_RATIO = 90.00
-MAX_RATIO = 99.52
+MAX_RATIO = 99.95
 RATIO_ADJUSTMENT = 0.04
 DIFF_THRESHOLD = 0.09
-DELAY_BETWEEN_ASSET_TYPES = 1
-DELAY_BETWEEN_MAIN_LOOPS = 60
+DELAY_BETWEEN_ASSET_TYPES = 2
+DELAY_BETWEEN_MAIN_LOOPS = 120
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
@@ -70,17 +70,17 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
             our_current_price = float(our_ad_data['adv']['price'])
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
-        logger.info(f"Base Price: {base_price}")
+        logger.debug(f"Base Price: {base_price}")
         transAmount_threshold = float(ad['transAmount'])  # Ensure it's a float
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount_threshold)
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
 
         if not filtered_ads:
-            logger.info(f"No competitor ads found for {advNo}")
+            logger.debug(f"No competitor ads found for {advNo}")
             return
 
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
-        logger.info(f'Competitor ad: {competitor_ad}')
+        logger.debug(f'Competitor ad: {competitor_ad}')
         competitor_price = float(competitor_ad['adv']['price'])
         competitor_ratio = (competitor_price / base_price) * 100
 
@@ -91,18 +91,18 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
             if diff_ratio > DIFF_THRESHOLD:
                 new_ratio_unbounded = competitor_ratio + RATIO_ADJUSTMENT
             else:
-                logger.info(f"Our ad - spot: {target_spot}, price: {our_current_price}, ratio: {current_priceFloatingRatio}.")
-                logger.info(f"Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}. Not enough diff: {diff_ratio}")
+                logger.debug(f"Our ad - spot: {target_spot}, price: {our_current_price}, ratio: {current_priceFloatingRatio}.")
+                logger.debug(f"Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}. Not enough diff: {diff_ratio}")
                 return
 
         new_ratio = max(MIN_RATIO, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
         if new_ratio == current_priceFloatingRatio:
-            logger.info(f"Ratio unchanged")
+            logger.debug(f"Ratio unchanged")
             return
         else:
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount)
-            logger.info(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
+            logger.debug(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
             await asyncio.sleep(1)
 
     except Exception as e:
@@ -124,7 +124,7 @@ async def process_ads(ads_group, api_instances, all_ads):
             continue
         current_ads_data = ads_data['data']
         if not isinstance(current_ads_data, list) or not current_ads_data:
-            logger.info(f"No valid ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
+            logger.debug(f"No valid ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
             continue
         # Process the current ad with the fetched ads_data
         await analyze_and_update_ads(ad, api_instance, current_ads_data, all_ads)
