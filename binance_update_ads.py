@@ -13,7 +13,7 @@ MAX_RATIO = 110
 RATIO_ADJUSTMENT = 0.04
 DIFF_THRESHOLD = 0.09
 DELAY_BETWEEN_ASSET_TYPES = 1
-DELAY_BETWEEN_MAIN_LOOPS = 60
+DELAY_BETWEEN_MAIN_LOOPS = 180
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
