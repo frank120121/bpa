@@ -7,9 +7,9 @@ from binance_api import BinanceAPI
 
 logger = logging.getLogger(__name__)
 
-PRICE_THRESHOLD = 0.9995
+PRICE_THRESHOLD = 0.998
 MIN_RATIO = 90.00
-MAX_RATIO = 99.95
+MAX_RATIO = 99.80
 RATIO_ADJUSTMENT = 0.04
 DIFF_THRESHOLD = 0.09
 DELAY_BETWEEN_ASSET_TYPES = 2
