@@ -144,9 +144,9 @@ async def main():
     if conn is not None:
         # Initialize the database (create tables and insert initial data)
         # await clear_accounts(conn)
-        # await initialize_database(conn)
+        await initialize_database(conn)
         # Print table contents for verification
-        await remove_bank_account(conn, '0482424657')
+        # await remove_bank_account(conn, '0482424657')
         # await remove_bank_account(conn, '012778015323351288')
         # await remove_bank_account(conn, '012778015939990486')
 
