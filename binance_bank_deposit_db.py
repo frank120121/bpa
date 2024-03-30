@@ -1,5 +1,6 @@
 import datetime
 import asyncio
+import aiosqlite
 from common_vars import bank_accounts, DB_FILE
 from common_utils_db import print_table_contents, create_connection
 import logging
@@ -139,6 +140,26 @@ async def clear_accounts(conn):
         logger.error(f"Error removing bank accounts: {e}")
         raise
 
+async def count_transactions(DB_FILE):
+    # SQL to count transactions based on amount_deposited
+    sql = """
+    SELECT
+        SUM(CASE WHEN amount_deposited < 2500 THEN 1 ELSE 0 END) AS under_5000,
+        SUM(CASE WHEN amount_deposited > 2500 THEN 1 ELSE 0 END) AS over_5000
+    FROM mxn_deposits
+    """
+
+    # Connect to your SQLite database
+    async with aiosqlite.connect(DB_FILE) as db:
+        cursor = await db.execute(sql)
+        result = await cursor.fetchone()
+
+    # Extracting the counts
+    under_5000, over_5000 = result if result else (0, 0)
+
+    print(f"Transactions under 5000.00: {under_5000}")
+    print(f"Transactions over 5000.00: {over_5000}")
+
 async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
@@ -146,7 +167,7 @@ async def main():
         # await clear_accounts(conn)
         # await initialize_database(conn)
         # Print table contents for verification
-        await remove_bank_account(conn, '0482424657')
+        # await remove_bank_account(conn, '0482424657')
         # await remove_bank_account(conn, '012778015323351288')
         # await remove_bank_account(conn, '012778015939990486')
 
@@ -187,7 +208,8 @@ async def main():
         # await update_account_balance(conn, '646180204200033494', ASTP)    #STP
         # await update_account_balance(conn, '0122819805', ACMBBVA)  #BBVA
 
-        await print_table_contents(conn, 'mxn_bank_accounts')
+        # await print_table_contents(conn, 'mxn_deposits')
+        await count_transactions(DB_FILE)
 
         # await sum_recent_deposits('1532335128')
         await conn.close()
