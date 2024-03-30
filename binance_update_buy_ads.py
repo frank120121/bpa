@@ -7,13 +7,13 @@ from binance_api import BinanceAPI
 
 logger = logging.getLogger(__name__)
 
-PRICE_THRESHOLD = 0.998
+PRICE_THRESHOLD = 0.9990
 MIN_RATIO = 90.00
-MAX_RATIO = 99.80
-RATIO_ADJUSTMENT = 0.04
-DIFF_THRESHOLD = 0.09
+MAX_RATIO = 99.90
+RATIO_ADJUSTMENT = 0.05
+DIFF_THRESHOLD = 0.1
 DELAY_BETWEEN_ASSET_TYPES = 2
-DELAY_BETWEEN_MAIN_LOOPS = 120
+DELAY_BETWEEN_MAIN_LOOPS = 180
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
