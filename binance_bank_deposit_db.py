@@ -160,6 +160,43 @@ async def count_transactions(DB_FILE):
     print(f"Transactions under 5000.00: {under_5000}")
     print(f"Transactions over 5000.00: {over_5000}")
 
+async def sum_deposits_by_day_and_week(db_path, year, month):
+    # SQL to sum amount_deposited for each day and each week of a specified month and year
+    sql = """
+    SELECT
+        strftime('%d', timestamp) AS day,
+        (strftime('%d', timestamp) - 1) / 7 + 1 AS week, -- Calculating week of the month
+        SUM(amount_deposited) AS total_deposited
+    FROM mxn_deposits
+    WHERE
+        strftime('%Y', timestamp) = ? AND
+        strftime('%m', timestamp) = ?
+    GROUP BY week, strftime('%Y-%m-%d', timestamp)
+    ORDER BY week, day
+    """
+
+    # Connect to your SQLite database
+    async with aiosqlite.connect(db_path) as db:
+        cursor = await db.execute(sql, (str(year), str(month).zfill(2)))
+        results = await cursor.fetchall()
+
+    # Initializing variables to track the current week and its total deposits
+    current_week = 0
+    weekly_total = 0
+    for day, week, total_deposited in results:
+        if week != current_week:
+            # When we move to a new week, print the total for the previous week and reset the total
+            if current_week > 0:
+                print(f"Week {current_week}: {weekly_total:.2f}")
+            weekly_total = 0  # Resetting weekly total for the new week
+            current_week = week
+        weekly_total += total_deposited  # Accumulating weekly total
+        print(f"  Day {day}: {total_deposited:.2f}")  # Print daily total within the week
+    
+    # Don't forget to print the total for the last week
+    if current_week > 0:
+        print(f"Week {current_week}: {weekly_total:.2f}")
+
 async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
@@ -209,7 +246,8 @@ async def main():
         # await update_account_balance(conn, '0122819805', ACMBBVA)  #BBVA
 
         # await print_table_contents(conn, 'mxn_deposits')
-        await count_transactions(DB_FILE)
+        # await count_transactions(DB_FILE)
+        await sum_deposits_by_day_and_week(DB_FILE, 2024, 2)
 
         # await sum_recent_deposits('1532335128')
         await conn.close()
