@@ -197,6 +197,41 @@ async def sum_deposits_by_day_and_week(db_path, year, month):
     if current_week > 0:
         print(f"Week {current_week}: {weekly_total:.2f}")
 
+async def get_monthly_deposit_sum(conn, account_number: str, year: int, month: int) -> float:
+    """
+    Fetches the total sum of deposits for a given account number, year, and month.
+    
+    Args:
+        conn: The database connection object.
+        account_number (str): The account number to query.
+        year (int): The year for the deposits.
+        month (int): The month for the deposits.
+    
+    Returns:
+        float: The total sum of deposits.
+    """
+    # Ensure month and year are integers and within valid ranges
+    if not 1 <= month <= 12:
+        logger.error("Invalid month: %s. Month must be between 1 and 12.", month)
+        return 0.0
+    if year < 1900 or year > datetime.datetime.now().year:
+        logger.error("Invalid year: %s. Year must be between 1900 and the current year.", year)
+        return 0.0
+    
+    try:
+        await conn.execute('PRAGMA foreign_keys = ON')  # Ensure foreign key constraints are enforced
+        async with conn.execute(
+            'SELECT SUM(amount_deposited) FROM mxn_deposits WHERE account_number = ? AND year = ? AND month = ?',
+            (account_number, year, month,)
+        ) as cursor:
+            result = await cursor.fetchone()
+            total_sum = result[0] if result[0] is not None else 0.0
+            return total_sum
+    except Exception as e:
+        logger.exception("Failed to fetch monthly deposit sum due to an error: %s", e)
+        return 0.0
+
+
 async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
@@ -247,8 +282,10 @@ async def main():
 
         # await print_table_contents(conn, 'mxn_deposits')
         # await count_transactions(DB_FILE)
-        await sum_deposits_by_day_and_week(DB_FILE, 2024, 2)
-
+        # await sum_deposits_by_day_and_week(DB_FILE, 2024, 2)
+        deposit_sum = await get_monthly_deposit_sum(conn, '0482424657', 2024, 3)
+        print(f"Total deposit sum for account '0482424657' in March 2024: {deposit_sum}")
+    
         # await sum_recent_deposits('1532335128')
         await conn.close()
     else:
