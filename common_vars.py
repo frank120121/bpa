@@ -6,10 +6,10 @@ FIAT_UNIT_USD = 'USD'
 MGL_SPOT = 1
 MFM_SPOT = 2
 MXN_BTC_AMT = '5000'
-MXN_USDT_AMT = '30000'
+MXN_USDT_AMT = '3000'
 USD_AMT_1 = '100'
 USD_AMT_2 = '500'
-MXN_SELL_AMT = '5600'
+MXN_SELL_AMT = '5000'
 
 
 ads_dict = {
@@ -234,14 +234,14 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    {
-        "bank_name": "BBVA",
-        "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
-        "account_number": "0122819805",
-        "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": MONTHLY_LIMITS,
-        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
-    }
+    # {
+    #     "bank_name": "BBVA",
+    #     "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
+    #     "account_number": "0122819805",
+    #     "account_daily_limit": DAILY_LIMITS,
+    #     "account_monthly_limit": MONTHLY_LIMITS,
+    #     "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
+    # }
 ]
 
 
