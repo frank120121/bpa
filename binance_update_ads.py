@@ -7,14 +7,14 @@ from binance_api import BinanceAPI
 
 logger = logging.getLogger(__name__)
 
-PRICE_THRESHOLD = 1.0180
-PRICE_THRESHOLD_2 = 1.026
-MIN_RATIO = 101.80
+PRICE_THRESHOLD = 1.0300
+PRICE_THRESHOLD_2 = 1.0245
+MIN_RATIO = 102.95
 MAX_RATIO = 110
 RATIO_ADJUSTMENT = 0.05
 DIFF_THRESHOLD = 0.1
 DELAY_BETWEEN_ASSET_TYPES = 1
-DELAY_BETWEEN_MAIN_LOOPS = 180
+DELAY_BETWEEN_MAIN_LOOPS = 15
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_threshold):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
@@ -110,7 +110,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
         else:
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount)
-            logger.info(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
+            logger.debug(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
             await asyncio.sleep(1)
 
     except Exception as e:

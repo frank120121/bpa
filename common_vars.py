@@ -3,8 +3,8 @@ ProhibitedPaymentTypes = "TERCEROS, BANCOPPEL, BANCO AZTECA, STP, MERCADO PAGO, 
 ORDER_STATUS_UNDER_REVIEW = 2
 FIAT_UNIT_MXN = 'MXN'
 FIAT_UNIT_USD = 'USD'
-MGL_SPOT = 1
-MFM_SPOT = 2
+MGL_SPOT = 2
+MFM_SPOT = 1
 MXN_BTC_AMT = '5000'
 MXN_USDT_AMT = '3000'
 USD_AMT_1 = '100'
@@ -34,7 +34,7 @@ ads_dict = {
         # {'advNo': '12590568277293666304', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':USD_AMT_2, 'payTypes': ['BANK'], 'Group': '8'}
     ],
     'account_2': [
-        {'advNo': '12593495469168508928', 'target_spot': MGL_SPOT, 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':MXN_BTC_AMT, 'payTypes': None, 'Group': '1', 'trade_type': 'BUY'},
+        {'advNo': '12593495469168508928', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'30000', 'payTypes': None, 'Group': '1', 'trade_type': 'BUY'},
         {'advNo': '12593490877264977920', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':MXN_USDT_AMT, 'payTypes': ['BBVABank'], 'Group': '2', 'trade_type': 'BUY'},
         {'advNo': '12598150744306384896', 'target_spot': '1', 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount':MXN_BTC_AMT, 'payTypes': None, 'Group': '3', 'trade_type': 'BUY'},
         {'advNo': '12601117035243544576', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'500', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY'},

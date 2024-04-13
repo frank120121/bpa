@@ -283,8 +283,8 @@ async def main():
         # await print_table_contents(conn, 'mxn_deposits')
         # await count_transactions(DB_FILE)
         # await sum_deposits_by_day_and_week(DB_FILE, 2024, 2)
-        deposit_sum = await get_monthly_deposit_sum(conn, '0482424657', 2024, 3)
-        print(f"Total deposit sum for account '0482424657' in March 2024: {deposit_sum}")
+        deposit_sum = await get_monthly_deposit_sum(conn, '1593999048', 2024, 3)
+        print(f"Total deposit sum for account '1593999048' in March 2024: {deposit_sum}")
     
         # await sum_recent_deposits('1532335128')
         await conn.close()

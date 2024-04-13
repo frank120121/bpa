@@ -17,10 +17,10 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
     # Create a cache key based on the function's arguments
     cache_key = (asset_type, fiat, transAmount, tuple(sorted(payTypes)) if payTypes else None)
 
-    # Check if these parameters are in the cache and if the cached result is less than 10 seconds old
+    # Check if these parameters are in the cache and if the cached result is less than 5 seconds old
     if cache_key in cache:
         cached_result, timestamp = cache[cache_key]
-        if datetime.now() - timestamp < timedelta(seconds=30):
+        if datetime.now() - timestamp < timedelta(seconds=5):
             logger.debug("Returning cached result")
             return cached_result
 
