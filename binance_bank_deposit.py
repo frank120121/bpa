@@ -102,7 +102,6 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_b
             ) m ON a.account_number = m.account_number
             WHERE (d.total_deposited_today + ? < a.account_daily_limit OR d.total_deposited_today IS NULL)
             AND (m.total_deposited_this_month + ? < a.account_monthly_limit OR m.total_deposited_this_month IS NULL)
-            AND a.account_number NOT IN (SELECT account_number FROM LastAccount)
             AND a.account_number NOT IN (SELECT account_number FROM MostRecentlyUsedAccount)
             {buyer_bank_condition}
             ORDER BY a.account_balance ASC
