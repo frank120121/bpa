@@ -18,7 +18,7 @@ ads_dict = {
         {'advNo': '12593308415142735872', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':MXN_USDT_AMT, 'payTypes': ['BBVABank'], 'Group': '2', 'trade_type': 'BUY'},
         {'advNo': '12598158630177452032', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'3000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY'},
         #USDC BUY
-        {'advNo': '12622081735207518208', 'target_spot': MFM_SPOT, 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':MXN_USDT_AMT, 'payTypes': ['BBVABank'], 'Group': '6', 'trade_type': 'BUY'},
+        {'advNo': '12622081735207518208', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'20000', 'payTypes': None, 'Group': '6', 'trade_type': 'BUY'},
         {'advNo': '12603135169369452544', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'100000', 'payTypes': None, 'Group': '1', 'trade_type': 'SELL'},
         {'advNo': '12603135448257830912', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'100000', 'payTypes': None, 'Group': '2', 'trade_type': 'SELL'},
         {'advNo': '12603135448257830912', 'target_spot': MFM_SPOT, 'asset_type': 'BNB', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '3', 'trade_type': 'SELL'},
@@ -44,7 +44,7 @@ ads_dict = {
         {'advNo': '12601117035243544576', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'3000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY'},
         {'advNo': '12601438033869934592', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':'500', 'payTypes': ['BANK'], 'Group': '5', 'trade_type': 'BUY'},
         #USDC BUY
-        {'advNo': '12622083293687042048', 'target_spot': MGL_SPOT, 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':MXN_USDT_AMT, 'payTypes': ['BBVABank'], 'Group': '6', 'trade_type': 'BUY'},
+        {'advNo': '12622083293687042048', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'1000', 'payTypes': None, 'Group': '6', 'trade_type': 'BUY'},
         {'advNo': '12601682453428781056', 'target_spot': MGL_SPOT, 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '1', 'trade_type': 'SELL'},
         {'advNo': '12602501942341144576', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '2', 'trade_type': 'SELL'},
         {'advNo': '12602510869029322752', 'target_spot': MGL_SPOT, 'asset_type': 'BNB', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '3', 'trade_type': 'SELL'},

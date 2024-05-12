@@ -7,7 +7,7 @@ from binance_api import BinanceAPI
 
 logger = logging.getLogger(__name__)
 
-PRICE_THRESHOLD = 1.016
+PRICE_THRESHOLD = 1.0160
 PRICE_THRESHOLD_2 = 1.0180
 MIN_RATIO = 101.55
 MAX_RATIO = 110
