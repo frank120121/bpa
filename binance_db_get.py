@@ -140,10 +140,18 @@ async def get_buyer_name(conn, order_no):
         return None
     
 async def has_specific_bank_identifiers(conn, order_no, identifiers):
-    async with conn.cursor() as cursor:
-        await cursor.execute("""
-            SELECT COUNT(*) FROM order_bank_identifiers
-            WHERE order_no = ? AND bank_identifier IN ({})
-        """.format(','.join('?'*len(identifiers))), (order_no, *identifiers))
-        result = await cursor.fetchone()
-        return result[0] > 0  # True if any of the specified identifiers are found
+    query_placeholders = ','.join(['?']*len(identifiers))  # Safe placeholder generation
+    query = f"""
+        SELECT COUNT(*) FROM order_bank_identifiers
+        WHERE order_no = ? AND bank_identifier IN ({query_placeholders})
+    """
+    try:
+        async with conn.cursor() as cursor:
+            await cursor.execute(query, (order_no, *identifiers))
+            result = await cursor.fetchone()
+            count_found = result[0] > 0
+            logger.debug(f"Checking for bank identifiers {identifiers} for order {order_no}: Found {count_found}")
+            return count_found
+    except Exception as e:
+        logger.error(f"Error checking bank identifiers for order {order_no}: {e}")
+        return False  # Consider how to handle exceptions; returning False is cautious

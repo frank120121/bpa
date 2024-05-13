@@ -34,6 +34,7 @@ async def populate_ads_with_details():
         finally:
             for api_instance in api_instances.values():
                 await api_instance.close_session()
+        logger.info("All ads processed successfully.")
 async def delayed_process(delay, ad_info, api_instance):
     """Wait for the specified delay and then process the ad."""
     await asyncio.sleep(delay)

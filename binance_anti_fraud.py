@@ -28,6 +28,7 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
     questions_OXXO = [
         "Para el método de pago OXXO, ¿está realizando el pago en efectivo?"
     ]
+    oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
 
     normalized_response = normalize_string(response.strip().lower())
     if anti_fraud_stage >= len(questions):
@@ -75,19 +76,25 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
 
     anti_fraud_stage += 1  # Proceed to the next stage
     await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
-    if anti_fraud_stage > 2:
-        oxxo_used = await has_specific_bank_identifiers(conn, order_no, 'OXXO')
-        if anti_fraud_stage == 3 and oxxo_used:
-            anti_fraud_stage += 1
+    if anti_fraud_stage == 3:
+        logger.info(f"Buyer {buyer_name} passed anti-fraud stage {anti_fraud_stage}")
+        if oxxo_used:
+            logger.info(f"OXXO payment method detected for {buyer_name}, updating to stage {anti_fraud_stage + 1}")
+            anti_fraud_stage = 4
             await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
-            await update_buyer_bank(conn, buyer_name, 'OXXO') 
+            await update_buyer_bank(conn, buyer_name, 'OXXO')
+            await connection_manager.send_text_message(questions_OXXO[0], order_no)
+            return
+        else:
+            logger.debug(f"No OXXO payment detected for {buyer_name} at stage {anti_fraud_stage}")
+            return
 
     if anti_fraud_stage == len(questions):
         await update_kyc_status(conn, buyer_name, 1)
         payment_details = await get_payment_details(conn, order_no, buyer_name)
-        await send_messages(connection_manager, order_no, [payment_warning, payment_concept, payment_details])
-    else:
-        if anti_fraud_stage == 4 and oxxo_used:
-            await connection_manager.send_text_message(questions_OXXO[0], order_no)
+        if anti_fraud_stage == 5 and oxxo_used:
+            await send_messages(connection_manager, order_no, [payment_details])
         else:
-            await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)
+            await send_messages(connection_manager, order_no, [payment_warning, payment_concept, payment_details])
+    else:
+        await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)

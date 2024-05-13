@@ -57,6 +57,8 @@ async def handle_order_status_1(connection_manager, conn, order_no, order_detail
     kyc_status = await get_kyc_status(conn, buyer_name)
     if kyc_status == 0 or kyc_status is None:
         anti_fraud_stage = await get_anti_fraud_stage(conn, buyer_name)
+        if anti_fraud_stage is None:
+            anti_fraud_stage = 0
         await generic_reply(connection_manager, order_no, order_details, 1)
         await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, "", order_no, connection_manager)
         if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
@@ -102,7 +104,8 @@ async def handle_text_message(connection_manager, content, order_no, order_detai
     seller_name, buyer_name = order_details.get('seller_name'), order_details.get('buyer_name')
     kyc_status = await get_kyc_status(conn, buyer_name)
     anti_fraud_stage = await get_anti_fraud_stage(conn, buyer_name)
-
+    if anti_fraud_stage is None:
+        anti_fraud_stage = 0
 
     if kyc_status == 0 or anti_fraud_stage < 5:
         await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, content, order_no, connection_manager)

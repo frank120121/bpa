@@ -163,10 +163,10 @@ async def main():
         # await create_table(conn, sql_create_order_bank_identifiers_table)
 
         # Print table contents for verification
-        # await remove(conn, '20598203477247664128')
+        await remove(conn, '20623152404079497216')
         await remove_user(conn, 'LOPEZ GUERRERO FRANCISCO JAVIER')
         # await add_column_if_not_exists(conn, 'users', 'user_bank', 'TEXT', 'NULL')
-        await print_table_contents(conn, 'order_bank_identifiers')
+        await print_table_contents(conn, 'orders')
 
         await conn.close()
     else:

@@ -109,6 +109,7 @@ async def update_anti_fraud_stage(conn, buyer_name, new_stage):
     async with conn.cursor() as cursor:
         await cursor.execute("UPDATE users SET anti_fraud_stage = ? WHERE name = ?", (new_stage, buyer_name))
         await conn.commit()
+        logger.info(f"Updated anti_fraud_stage for user {buyer_name} to {new_stage}")
 
 async def set_menu_presented(conn, order_no, value):
     """

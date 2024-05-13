@@ -1,13 +1,13 @@
 import datetime
 import logging
 import os
-from binance_db_get import get_buyer_bank, get_order_amount, get_buyer_name, has_specific_bank_identifiers
-from binance_db_set import update_order_details, update_buyer_bank
+from binance_db_get import get_buyer_bank, get_order_amount, get_buyer_name
+from binance_db_set import update_order_details
 from binance_bank_deposit_db import update_last_used_timestamp
 from common_vars import BBVA_BANKS
 
 # Configuration Management
-MONTHLY_LIMIT = float(os.getenv('MONTHLY_LIMIT', '70000.00'))
+MONTHLY_LIMIT = float(os.getenv('MONTHLY_LIMIT', '170000.00'))
 
 # Set up logging with different levels
 logging.basicConfig(level=logging.INFO)
@@ -58,61 +58,62 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_b
         current_date = datetime.datetime.now(datetime.timezone.utc).date()
         current_month_str = datetime.datetime.now(datetime.timezone.utc).strftime("%m")
         current_date_str = current_date.strftime('%Y-%m-%d')
-
-        # Get the amount to deposit from the current order
         amount_to_deposit = await get_order_amount(conn, order_no)
         logger.info(f"Amount to deposit: {amount_to_deposit}")
 
-        # Check if the buyer bank is 'OXXO' to decide on query handling
-        if buyer_bank.lower() == 'oxxo':
+        # Select the appropriate table and column based on the buyer's bank
+        if buyer_bank and buyer_bank.lower() == 'oxxo':
             table_name = 'oxxo_debit_cards'
             account_column = 'card_number'
-            buyer_bank_condition = ""  # No bank condition needed for OXXO
+            buyer_bank_condition = ""  # No condition needed as 'oxxo' has no further conditional query
         else:
             table_name = 'mxn_bank_accounts'
             account_column = 'account_number'
-            # Apply original logic for non-OXXO banks
             if ignore_bank_preference or buyer_bank is None:
-                # Include only accounts from 'nvio'
                 buyer_bank_condition = "AND LOWER(a.account_bank_name) = 'nvio'"
             else:
-                # Filter by the specific bank name provided in buyer_bank
                 buyer_bank_condition = "AND LOWER(a.account_bank_name) = ?"
 
-        # Parameterized query to avoid SQL Injection
         query = f'''
             WITH LastAccount AS (
+                SELECT account_number
+                FROM mxn_deposits
+                WHERE deposit_from = ? 
+                ORDER BY timestamp DESC
+                LIMIT 1
+            ), MostRecentlyUsedAccount AS (
                 SELECT {account_column} AS account_id
                 FROM {table_name}
-                WHERE deposit_from = ? 
                 ORDER BY last_used_timestamp DESC
                 LIMIT 1
             )
             SELECT a.{account_column}, a.account_bank_name
             FROM {table_name} a
             LEFT JOIN (
-                SELECT {account_column}, SUM(amount_deposited) AS total_deposited_today
+                SELECT account_number, SUM(amount_deposited) AS total_deposited_today
                 FROM mxn_deposits
                 WHERE DATE(timestamp) = ?
-                GROUP BY {account_column}
-            ) d ON a.{account_column} = d.{account_column}
+                GROUP BY account_number
+            ) d ON a.{account_column} = d.account_number
             LEFT JOIN (
-                SELECT {account_column}, SUM(amount_deposited) AS total_deposited_this_month
+                SELECT account_number, SUM(amount_deposited) AS total_deposited_this_month
                 FROM mxn_deposits
                 WHERE strftime('%m', timestamp) = ?
-                GROUP BY {account_column}
-            ) m ON a.{account_column} = m.{account_column}
+                GROUP BY account_number
+            ) m ON a.{account_column} = m.account_number
             WHERE (d.total_deposited_today + ? < a.account_daily_limit OR d.total_deposited_today IS NULL)
             AND (m.total_deposited_this_month + ? < a.account_monthly_limit OR m.total_deposited_this_month IS NULL)
-            AND a.{account_column} NOT IN (SELECT account_id FROM LastAccount)
+            AND a.{account_column} NOT IN (SELECT account_id FROM MostRecentlyUsedAccount)
             {buyer_bank_condition}
             ORDER BY a.account_balance ASC
         '''
 
         parameters = [buyer_name, current_date_str, current_month_str, amount_to_deposit, amount_to_deposit]
         if buyer_bank.lower() != 'oxxo' and buyer_bank is not None and not ignore_bank_preference:
-            parameters.append(buyer_bank.lower())
+            parameters.append(buyer_bank.lower())  # This should only be added if buyer_bank_condition is added to the query.
 
+        logger.debug(f"Executing query: {query}")
+        logger.debug(f"With parameters: {parameters}")
         cursor = await conn.execute(query, parameters)
         accounts = await cursor.fetchall()
         logger.info(f"Found {len(accounts)} suitable accounts for order {order_no} in {table_name}")
@@ -120,6 +121,7 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_b
     except Exception as e:
         logger.error(f"Error finding suitable account: {e}")
         raise
+
 async def get_payment_details(conn, order_no, buyer_name):
     """Retrieves payment details for the given order number and buyer name."""
     try:
@@ -194,3 +196,4 @@ async def get_account_details(conn, account_number, buyer_name, buyer_bank=None)
     except Exception as e:
         logger.error(f"Error retrieving account details: {e}")
         raise
+
