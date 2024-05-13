@@ -1,8 +1,8 @@
 import datetime
 import logging
 import os
-from binance_db_get import get_buyer_bank, get_order_amount, get_buyer_name
-from binance_db_set import update_order_details
+from binance_db_get import get_buyer_bank, get_order_amount, get_buyer_name, has_specific_bank_identifiers
+from binance_db_set import update_order_details, update_buyer_bank
 from binance_bank_deposit_db import update_last_used_timestamp
 from common_vars import BBVA_BANKS
 
@@ -63,64 +63,63 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_b
         amount_to_deposit = await get_order_amount(conn, order_no)
         logger.info(f"Amount to deposit: {amount_to_deposit}")
 
-        # Construct the buyer bank condition with SQL Injection Protection
-        if ignore_bank_preference or buyer_bank is None:
-            # Include only accounts from 'nvio'
-            buyer_bank_condition = "AND LOWER(a.account_bank_name) = 'nvio'"
+        # Check if the buyer bank is 'OXXO' to decide on query handling
+        if buyer_bank.lower() == 'oxxo':
+            table_name = 'oxxo_debit_cards'
+            account_column = 'card_number'
+            buyer_bank_condition = ""  # No bank condition needed for OXXO
         else:
-            # Filter by the specific bank name provided in buyer_bank
-            buyer_bank_condition = "AND LOWER(a.account_bank_name) = ?"
-        logger.info(f"Buyer bank condition: {buyer_bank_condition}")
+            table_name = 'mxn_bank_accounts'
+            account_column = 'account_number'
+            # Apply original logic for non-OXXO banks
+            if ignore_bank_preference or buyer_bank is None:
+                # Include only accounts from 'nvio'
+                buyer_bank_condition = "AND LOWER(a.account_bank_name) = 'nvio'"
+            else:
+                # Filter by the specific bank name provided in buyer_bank
+                buyer_bank_condition = "AND LOWER(a.account_bank_name) = ?"
 
         # Parameterized query to avoid SQL Injection
         query = f'''
             WITH LastAccount AS (
-                SELECT account_number
-                FROM mxn_deposits
+                SELECT {account_column} AS account_id
+                FROM {table_name}
                 WHERE deposit_from = ? 
-                ORDER BY timestamp DESC
-                LIMIT 1
-            ), MostRecentlyUsedAccount AS (
-                SELECT account_number
-                FROM mxn_bank_accounts
                 ORDER BY last_used_timestamp DESC
                 LIMIT 1
             )
-            SELECT a.account_number, a.account_bank_name
-            FROM mxn_bank_accounts a
+            SELECT a.{account_column}, a.account_bank_name
+            FROM {table_name} a
             LEFT JOIN (
-                SELECT account_number, SUM(amount_deposited) AS total_deposited_today
+                SELECT {account_column}, SUM(amount_deposited) AS total_deposited_today
                 FROM mxn_deposits
                 WHERE DATE(timestamp) = ?
-                GROUP BY account_number
-            ) d ON a.account_number = d.account_number
+                GROUP BY {account_column}
+            ) d ON a.{account_column} = d.{account_column}
             LEFT JOIN (
-                SELECT account_number, SUM(amount_deposited) AS total_deposited_this_month
+                SELECT {account_column}, SUM(amount_deposited) AS total_deposited_this_month
                 FROM mxn_deposits
                 WHERE strftime('%m', timestamp) = ?
-                GROUP BY account_number
-            ) m ON a.account_number = m.account_number
+                GROUP BY {account_column}
+            ) m ON a.{account_column} = m.{account_column}
             WHERE (d.total_deposited_today + ? < a.account_daily_limit OR d.total_deposited_today IS NULL)
             AND (m.total_deposited_this_month + ? < a.account_monthly_limit OR m.total_deposited_this_month IS NULL)
-            AND a.account_number NOT IN (SELECT account_number FROM MostRecentlyUsedAccount)
+            AND a.{account_column} NOT IN (SELECT account_id FROM LastAccount)
             {buyer_bank_condition}
             ORDER BY a.account_balance ASC
         '''
 
         parameters = [buyer_name, current_date_str, current_month_str, amount_to_deposit, amount_to_deposit]
-        # Adjust the logic to append buyer_bank.lower() only when necessary
-        if not ignore_bank_preference and buyer_bank is not None:
+        if buyer_bank.lower() != 'oxxo' and buyer_bank is not None and not ignore_bank_preference:
             parameters.append(buyer_bank.lower())
 
         cursor = await conn.execute(query, parameters)
         accounts = await cursor.fetchall()
-        logger.info(f"Found {len(accounts)} suitable accounts for order {order_no}")
-        logger.info(f"Suitable accounts: {accounts}")
+        logger.info(f"Found {len(accounts)} suitable accounts for order {order_no} in {table_name}")
         return [acc[0] for acc in accounts]
     except Exception as e:
         logger.error(f"Error finding suitable account: {e}")
         raise
-
 async def get_payment_details(conn, order_no, buyer_name):
     """Retrieves payment details for the given order number and buyer name."""
     try:
@@ -131,7 +130,7 @@ async def get_payment_details(conn, order_no, buyer_name):
 
         if assigned_account_number:
             logger.debug(f"Account already assigned for order {order_no}.")
-            return await get_account_details(conn, assigned_account_number)
+            return await get_account_details(conn, assigned_account_number, buyer_name)
 
         buyer_bank = await get_buyer_bank(conn, buyer_name)
         suitable_accounts = await find_suitable_account(conn, order_no, buyer_name, buyer_bank, ignore_bank_preference=False)
@@ -144,7 +143,7 @@ async def get_payment_details(conn, order_no, buyer_name):
             if await check_deposit_limit(conn, account_number, order_no):
                 await update_order_details(conn, order_no, account_number)
                 await update_last_used_timestamp(conn, account_number)
-                return await get_account_details(conn, account_number)
+                return await get_account_details(conn, account_number, buyer_name, buyer_bank)
             else:
                 logger.info(f"Account {account_number} exceeded the monthly deposit limit for the buyer.")
 
@@ -153,15 +152,36 @@ async def get_payment_details(conn, order_no, buyer_name):
         logger.error(f"Error getting payment details: {e}")
         raise
 
-async def get_account_details(conn, account_number):
+async def get_account_details(conn, account_number, buyer_name, buyer_bank=None):
     """Retrieves account details for the given account number."""
     try:
-        logger.debug(f"Retrieving details for account {account_number}")
-        cursor = await conn.execute('SELECT account_bank_name, account_beneficiary, account_number FROM mxn_bank_accounts WHERE account_number = ?', (account_number,))
+        if buyer_bank is None:
+            buyer_bank = await get_buyer_bank(conn, buyer_name)
+
+        logger.debug(f"Retrieving details for account {account_number} with buyer bank preference {buyer_bank}")
+
+        # Prepare the SQL query based on the buyer_bank
+        if buyer_bank.lower() == 'oxxo':
+            query = '''
+                SELECT account_bank_name, account_beneficiary, card_number AS account_number
+                FROM oxxo_debit_cards
+                WHERE card_number = ?
+            '''
+            account_label = "Número de tarjeta"
+        else:
+            query = '''
+                SELECT account_bank_name, account_beneficiary, account_number
+                FROM mxn_bank_accounts
+                WHERE account_number = ?
+            '''
+        cursor = await conn.execute(query, (account_number,))
         account_details = await cursor.fetchone()
         if account_details:
             logger.debug(f"Details retrieved for account {account_number}")
-            account_label = "Número de cuenta" if account_details[0].lower() == "bbva" else "Número de CLABE"
+            # Decide the account label after fetching the details if not OXXO
+            if buyer_bank.lower() != 'oxxo':
+                account_label = "Número de cuenta" if account_details[0].lower() == buyer_bank.lower() else "Número de CLABE"
+
             return (
                 f"Los detalles para el pago son:\n\n"
                 f"Nombre de banco: {account_details[0]}\n"

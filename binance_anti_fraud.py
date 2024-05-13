@@ -7,6 +7,7 @@ from lang_utils import payment_concept, payment_warning, anti_fraud_stage3, anti
 from binance_bank_deposit import get_payment_details
 from common_vars import NOT_ACCEPTED_BANKS, ACCEPTED_BANKS, BBVA_BANKS
 from binance_db_set import update_buyer_bank, update_anti_fraud_stage, update_kyc_status
+from binance_db_get import has_specific_bank_identifiers
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,9 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
         "Muchas gracias por completar las preguntas, ahora para brindarle un servicio más eficiente, ¿podría indicarnos el nombre del banco que utilizará para realizar el pago?",
         f"Perfecto si aceptamos su banco. Por ultimo, la cuenta bancaria que utilizará para realizar el pago, ¿está a su nombre? ({buyer_name})",
     ]
-
+    questions_OXXO = [
+        "Para el método de pago OXXO, ¿está realizando el pago en efectivo?"
+    ]
 
     normalized_response = normalize_string(response.strip().lower())
     if anti_fraud_stage >= len(questions):
@@ -72,10 +75,19 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
 
     anti_fraud_stage += 1  # Proceed to the next stage
     await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
+    if anti_fraud_stage > 2:
+        oxxo_used = await has_specific_bank_identifiers(conn, order_no, 'OXXO')
+        if anti_fraud_stage == 3 and oxxo_used:
+            anti_fraud_stage += 1
+            await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
+            await update_buyer_bank(conn, buyer_name, 'OXXO') 
 
     if anti_fraud_stage == len(questions):
         await update_kyc_status(conn, buyer_name, 1)
         payment_details = await get_payment_details(conn, order_no, buyer_name)
         await send_messages(connection_manager, order_no, [payment_warning, payment_concept, payment_details])
     else:
-        await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)
+        if anti_fraud_stage == 4 and oxxo_used:
+            await connection_manager.send_text_message(questions_OXXO[0], order_no)
+        else:
+            await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)

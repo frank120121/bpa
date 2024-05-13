@@ -1,6 +1,6 @@
 from binance_msg_handler import handle_text_message, handle_system_notifications, handle_image_message
 from binance_db_set import update_order_status
-from binance_db_get import get_order_details
+from binance_db_get import get_order_details, has_specific_bank_identifiers
 from binance_order_details import fetch_order_details
 from binance_db import insert_or_update_order
 import json
@@ -18,7 +18,7 @@ class MerchantAccount:
             logger.warning("Failed to fetch order details from the external source.")
             return
         # Check for specific bank identifiers
-        if await has_specific_bank_identifiers(conn, order_no, ['OXXO', 'SkrillMoneybookers']):
+        if await has_specific_bank_identifiers(conn, order_no, ['SkrillMoneybookers']):
             logger.info(f"Order {order_no} uses payment method (OXXO or Skrill).")
             return  # Skip further processing for now
         fiat = order_details.get('fiat_unit')
@@ -85,11 +85,3 @@ class MerchantAccount:
         except Exception as e:
             logger.error(f"An error occurred: {e}\n{traceback.format_exc()}")
             return None
-async def has_specific_bank_identifiers(conn, order_no, identifiers):
-    async with conn.cursor() as cursor:
-        await cursor.execute("""
-            SELECT COUNT(*) FROM order_bank_identifiers
-            WHERE order_no = ? AND bank_identifier IN ({})
-        """.format(','.join('?'*len(identifiers))), (order_no, *identifiers))
-        result = await cursor.fetchone()
-        return result[0] > 0  # True if any of the specified identifiers are found

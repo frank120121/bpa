@@ -129,6 +129,8 @@ MERCHANTS = {
 
 MONTHLY_LIMITS = 2000000.00
 DAILY_LIMITS = 90000.00
+OXXO_MONTHLY_LIMIT = 800000.00
+
 
 #Oxxo Limits
 BBVA_OXXO_DAILY_LIMIT = 19000.00
@@ -175,15 +177,6 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    # {
-    #     "bank_name": "Banregio",
-    #     "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
-    #     "account_number": "058597000056476091",
-    #     "card_number": "4347984876309005",
-    #     "account_daily_limit": DAILY_LIMITS,
-    #     "account_monthly_limit": MONTHLY_LIMITS,
-    #     "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
-    # },
     {
         "bank_name": "BBVA",
         "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
@@ -201,14 +194,14 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    # {
-    #     "bank_name": "BBVA",
-    #     "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
-    #     "account_number": "0482424657",
-    #     "account_daily_limit": DAILY_LIMITS,
-    #     "account_monthly_limit": 250000.00,
-    #     "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
-    # },
+    {
+        "bank_name": "BBVA",
+        "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
+        "account_number": "0482424657",
+        "account_daily_limit": DAILY_LIMITS,
+        "account_monthly_limit": 250000.00,
+        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
+    },
     {
         "bank_name": "Nvio",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
@@ -217,15 +210,6 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    # {
-    #     "bank_name": "Banregio",
-    #     "beneficiary": "MARTHA GUERRERO LOPEZ",
-    #     "account_number": "058597000054265356",
-    #     "card_number": "4347984866288631",
-    #     "account_daily_limit": DAILY_LIMITS,
-    #     "account_monthly_limit": MONTHLY_LIMITS,
-    #     "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
-    # },
     {
         "bank_name": "Santander",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
@@ -242,14 +226,61 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    # {
-    #     "bank_name": "BBVA",
-    #     "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
-    #     "account_number": "0122819805",
-    #     "account_daily_limit": DAILY_LIMITS,
-    #     "account_monthly_limit": MONTHLY_LIMITS,
-    #     "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
-    # }
+    {
+        "bank_name": "BBVA",
+        "beneficiary": "ANBER CAP DE MEXICO SA DE CV",
+        "account_number": "0122819805",
+        "account_daily_limit": DAILY_LIMITS,
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
+    }
+
+]
+
+#Oxxo debit cards for cash deposits
+OXXO_DEBIT_CARDS = [
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
+        "card_no": "4347984806135934",
+        "daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "monthly_limit": OXXO_MONTHLY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
+        "card_no": "4347984876309005",
+        "daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "monthly_limit": OXXO_MONTHLY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
+        "card_no": "4347984866282113",
+        "daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "monthly_limit": OXXO_MONTHLY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "MARTHA GUERRERO LOPEZ",
+        "card_no": "4347984837112696",
+        "daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "monthly_limit": OXXO_MONTHLY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "MARTHA GUERRERO LOPEZ",
+        "card_no": "4347984868505966",
+        "daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "monthly_limit": OXXO_MONTHLY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "MARTHA GUERRERO LOPEZ",
+        "card_no": "4347984866288631",
+        "daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "monthly_limit": OXXO_MONTHLY_LIMIT
+    }
 ]
 
 

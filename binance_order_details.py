@@ -53,19 +53,19 @@ async def fetch_order_details(KEY, SECRET, order_no):
 if __name__ == "__main__":
     load_dotenv()
     credentials_dict = {
-        'account_1': {
-            'KEY': os.environ.get('API_KEY_MFMP'),
-            'SECRET': os.environ.get('API_SECRET_MFMP')
+        'account_2': {
+            'KEY': os.environ.get('API_KEY_MGL'),
+            'SECRET': os.environ.get('API_SECRET_MGL')
         }
     }
-    account = 'account_1'
+    account = 'account_2'
     if account in credentials_dict:
         KEY = credentials_dict[account]['KEY']
         SECRET = credentials_dict[account]['SECRET']
     else:
         logger.error(f"Credentials not found for account: {account}")
         exit()
-    adOrderNo = "20601438951316418560"
+    adOrderNo = "20623074265133563904"
     result = asyncio.run(fetch_order_details(KEY, SECRET, adOrderNo))
     print(result)
     account_number = None

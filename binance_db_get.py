@@ -138,3 +138,12 @@ async def get_buyer_name(conn, order_no):
         if result:
             return result[0]
         return None
+    
+async def has_specific_bank_identifiers(conn, order_no, identifiers):
+    async with conn.cursor() as cursor:
+        await cursor.execute("""
+            SELECT COUNT(*) FROM order_bank_identifiers
+            WHERE order_no = ? AND bank_identifier IN ({})
+        """.format(','.join('?'*len(identifiers))), (order_no, *identifiers))
+        result = await cursor.fetchone()
+        return result[0] > 0  # True if any of the specified identifiers are found

@@ -66,16 +66,16 @@ async def get_message_by_language(language, status, buyer_name=None):
 
 STATUS_MESSAGES = {
     2: {
-        'es': "Por favor enviar comprobante de pago para poder liberar(requerido).",
-        'en': "Please send proof of payment(required). For help type \"HELP\""
+        'es': "Si aun no envia el comprobante de pago por favor enviarlo ahora para yo poder liberar la orden(requerido). Si ya o envio por favor ignorar este mensaje. Para ayuda escriba \"AYUDA\".",
+        'en': "If you have not sent the proof of payment, please send it now so I can release the order(required). If you have already sent it, please ignore this message. For help type \"HELP\"."
     },
     1: {
         'es': [
-            "Hola {buyer_name}. Antes de poder brindarle los datos bancarios es necesario verificar que no esté siendo víctima de un fraude.",
+            "Hola {buyer_name}. Antes de poder brindarle los datos bancarios es necesario confirmar que usted cumpla con los terminos y condiciones del anuncio.",
 
         ],
         'en': [
-            "Hello,{buyer_name}. For your safety, before procceding with the order, it is necessary to verify you are not a victim of a scam.",
+            "Hello,{buyer_name}. For your safety, before procceding with the order, it is necessary to confirm you quilify for the terms and conditions of the ad.",
         ],
     },
     7: {

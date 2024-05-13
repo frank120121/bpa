@@ -1,7 +1,7 @@
 import datetime
 import asyncio
 import aiosqlite
-from common_vars import bank_accounts, DB_FILE
+from common_vars import bank_accounts, DB_FILE, OXXO_DEBIT_CARDS
 from common_utils_db import print_table_contents, create_connection
 import logging
 
@@ -34,6 +34,19 @@ async def initialize_database(conn):
             merchant_id INTEGER REFERENCES merchants(id)
         )
     ''')
+    await conn.execute('''
+        CREATE TABLE IF NOT EXISTS oxxo_debit_cards (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_bank_name TEXT,
+            account_beneficiary TEXT,
+            card_number TEXT UNIQUE,
+            account_daily_limit REAL,
+            account_monthly_limit REAL,
+            account_balance REAL DEFAULT 0,
+            last_used_timestamp DATETIME DEFAULT NULL,
+            merchant_id INTEGER REFERENCES merchants(id)
+        )
+    ''')
     for account in bank_accounts:
         # Check if the account number already exists
         cursor = await conn.execute("SELECT 1 FROM mxn_bank_accounts WHERE account_number = ?", (account['account_number'],))
@@ -43,6 +56,17 @@ async def initialize_database(conn):
                 (account['bank_name'], account['beneficiary'], account['account_number'], account['account_daily_limit'], account['account_monthly_limit'], 0))
         else:
             logger.debug(f"Account number {account['account_number']} already exists. Skipping insertion.")
+    await conn.commit()
+    # Insert OXXO debit card data into the database
+    for card in OXXO_DEBIT_CARDS:
+        cursor = await conn.execute("SELECT 1 FROM oxxo_debit_cards WHERE card_number = ?", (card['card_no'],))
+        if not await cursor.fetchone():
+            await conn.execute(
+                'INSERT INTO oxxo_debit_cards (account_bank_name, account_beneficiary, card_number, account_daily_limit, account_monthly_limit) VALUES (?, ?, ?, ?, ?)',
+                (card['bank_name'], card['beneficiary'], card['card_no'], card['daily_limit'], card['monthly_limit']))
+        else:
+            logger.debug(f"Card number {card['card_no']} already exists. Skipping insertion.")
+
     await conn.commit()
 
 async def add_bank_account(conn, bank_name, beneficiary, account_number, account_daily_limit, account_monthly_limit, account_balance=0):
@@ -239,6 +263,8 @@ async def main():
         # await clear_accounts(conn)
         await initialize_database(conn)
         # Print table contents for verification
+        # await print_table_contents(conn, 'mxn_bank_accounts')
+        await print_table_contents(conn, 'oxxo_debit_cards')
         # await remove_bank_account(conn, '0482424657')
         # await remove_bank_account(conn, '012778015323351288')
         # await remove_bank_account(conn, '012778015939990486')
@@ -283,8 +309,8 @@ async def main():
         # await print_table_contents(conn, 'mxn_deposits')
         # await count_transactions(DB_FILE)
         # await sum_deposits_by_day_and_week(DB_FILE, 2024, 2)
-        deposit_sum = await get_monthly_deposit_sum(conn, '1593999048', 2024, 3)
-        print(f"Total deposit sum for account '1593999048' in March 2024: {deposit_sum}")
+        # deposit_sum = await get_monthly_deposit_sum(conn, '1593999048', 2024, 3)
+        # print(f"Total deposit sum for account '1593999048' in March 2024: {deposit_sum}")
     
         # await sum_recent_deposits('1532335128')
         await conn.close()
