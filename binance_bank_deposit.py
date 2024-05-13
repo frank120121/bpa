@@ -175,7 +175,7 @@ async def get_account_details(conn, account_number, buyer_name, buyer_bank=None)
         logger.debug(f"Retrieving details for account {account_number} with buyer bank preference {buyer_bank}")
 
         # Prepare the SQL query based on the buyer_bank
-        if buyer_bank.lower() == 'oxxo':
+        if buyer_bank and buyer_bank.lower() == 'oxxo':
             query = '''
                 SELECT account_bank_name, account_beneficiary, card_number AS account_number
                 FROM oxxo_debit_cards
