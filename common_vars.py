@@ -233,6 +233,54 @@ bank_accounts = [
         "account_daily_limit": DAILY_LIMITS,
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
+        "account_number": "4347984806135934",
+        "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
+        "account_number": "4347984876309005",
+        "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
+        "account_number": "4347984866282113",
+        "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "MARTHA GUERRERO LOPEZ",
+        "account_number": "4347984837112696",
+        "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "MARTHA GUERRERO LOPEZ",
+        "account_number": "4347984868505966",
+        "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "BANREGIO",
+        "beneficiary": "MARTHA GUERRERO LOPEZ",
+        "account_number": "4347984866288631",
+        "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     }
 
 ]

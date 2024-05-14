@@ -31,6 +31,9 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
     oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
 
     normalized_response = normalize_string(response.strip().lower())
+    if anti_fraud_stage == 0 and normalized_response == "":
+        await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)
+        return  # Exit early to prevent further processing
     if anti_fraud_stage >= len(questions):
         return  # No more questions
 
@@ -48,7 +51,10 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
                 closest_match = 'bbva'  # Normalize to 'bbva' for consistency
                 await update_buyer_bank(conn, buyer_name, closest_match)  
 
+            elif closest_match == 'santander':
+                await update_buyer_bank(conn, buyer_name, closest_match)
             else:
+                closest_match = 'nvio'
                 await update_buyer_bank(conn, buyer_name, closest_match)  # Use the closest match
         else:
             accepted_banks_list = ', '.join(ACCEPTED_BANKS)
@@ -82,12 +88,12 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
             logger.info(f"OXXO payment method detected for {buyer_name}, updating to stage {anti_fraud_stage + 1}")
             anti_fraud_stage = 4
             await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
-            await update_buyer_bank(conn, buyer_name, 'OXXO')
+            await update_buyer_bank(conn, buyer_name, 'banregio')
             await connection_manager.send_text_message(questions_OXXO[0], order_no)
             return
         else:
-            logger.debug(f"No OXXO payment detected for {buyer_name} at stage {anti_fraud_stage}")
-            return
+            logger.info(f"No OXXO payment detected for {buyer_name} at stage {anti_fraud_stage}")
+            
 
     if anti_fraud_stage == len(questions):
         await update_kyc_status(conn, buyer_name, 1)

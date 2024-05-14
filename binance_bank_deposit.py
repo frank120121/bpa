@@ -2,21 +2,22 @@ import datetime
 import logging
 import os
 from binance_db_get import get_buyer_bank, get_order_amount, get_buyer_name
-from binance_db_set import update_order_details
+from binance_db_set import update_order_details, update_buyer_bank
 from binance_bank_deposit_db import update_last_used_timestamp
-from common_vars import BBVA_BANKS
-
+from common_vars import BBVA_BANKS, DB_FILE
+from common_utils_db import create_connection, print_table_contents
 from asyncio import Lock
 
 bank_accounts_lock = Lock()
 
 # Configuration Management
-MONTHLY_LIMIT = float(os.getenv('MONTHLY_LIMIT', '70000.00'))
+MONTHLY_LIMIT = float(os.getenv('MONTHLY_LIMIT', '71000.00'))
 
 bank_accounts = {
     'nvio': [],
     'bbva': [],
-    'oxxo': []
+    'banregio': [],
+    'santander': []
 }
 
 # Set up logging with different levels
@@ -62,51 +63,30 @@ async def check_deposit_limit(conn, account_number, order_no, buyer_name):
 async def find_suitable_account(conn, order_no, buyer_name, buyer_bank):
     """Finds suitable accounts for the given order number and buyer details based on buyer's bank preference."""
     try:
-        current_date = datetime.datetime.now(datetime.timezone.utc).date()
-        current_month_str = datetime.datetime.now(datetime.timezone.utc).strftime("%m")
-        current_date_str = current_date.strftime('%Y-%m-%d')
-        amount_to_deposit = await get_order_amount(conn, order_no)
-        logger.info(f"Amount to deposit: {amount_to_deposit}")
+        # Decide table and columns based on bank name
+        if buyer_bank and buyer_bank.lower() == 'oxxo':
+            buyer_bank = 'banregio'
+            await update_buyer_bank(conn, buyer_name, 'banregio')
 
-        # Decide table based on bank name and set columns
-        if buyer_bank.lower() == 'oxxo':
-            table_name = 'oxxo_debit_cards'
-            account_column = 'card_number'
-        else:
-            table_name = 'mxn_bank_accounts'
-            account_column = 'account_number'
-
-        buyer_bank_condition = f"AND LOWER(a.account_bank_name) = '{buyer_bank.lower()}'"
-
+        if buyer_bank.lower() not in bank_accounts or buyer_bank is None:
+            logger.warning(f"Bank '{buyer_bank}' not supported. Defaulting to 'nvio'.")
+            buyer_bank = 'nvio'
+        table_name = 'mxn_bank_accounts'
+        account_column = 'account_number'
         query = f'''
-            SELECT a.{account_column}, a.account_bank_name, a.account_beneficiary, a.account_daily_limit, a.account_monthly_limit, a.account_balance
-            FROM {table_name} a
-            LEFT JOIN (
-                SELECT account_number, SUM(amount_deposited) AS total_deposited_today
-                FROM mxn_deposits
-                WHERE DATE(timestamp) = ?
-                GROUP BY account_number
-            ) d ON a.{account_column} = d.account_number
-            LEFT JOIN (
-                SELECT account_number, SUM(amount_deposited) AS total_deposited_this_month
-                FROM mxn_deposits
-                WHERE strftime('%m', timestamp) = ?
-                GROUP BY account_number
-            ) m ON a.{account_column} = m.account_number
-            WHERE (d.total_deposited_today + ? < a.account_daily_limit OR d.total_deposited_today IS NULL)
-            AND (m.total_deposited_this_month + ? < a.account_monthly_limit OR m.total_deposited_this_month IS NULL)
-            {buyer_bank_condition}
-            ORDER BY a.account_balance ASC
+            SELECT {account_column}, account_bank_name, account_beneficiary, account_daily_limit, account_monthly_limit, account_balance
+            FROM {table_name}
+            WHERE LOWER(account_bank_name) = ?
+            ORDER BY account_balance ASC
         '''
 
-        parameters = [current_date_str, current_month_str, amount_to_deposit, amount_to_deposit]
 
-        logger.debug(f"Executing query: {query}")
-        logger.debug(f"With parameters: {parameters}")
-        cursor = await conn.execute(query, parameters)
+        cursor = await conn.execute(query, (buyer_bank.lower(),))
+
         accounts = await cursor.fetchall()
-        logger.info(f"Found {len(accounts)} suitable accounts for order {order_no} with bank {buyer_bank} in {table_name}")
+        logger.info(f"Found {len(accounts)} suitable accounts for buyer bank '{buyer_bank}' in {table_name}")
 
+        # Create a list of dictionaries to store account details
         account_details = [{
             'account_number': acc[0],
             'bank_name': acc[1],
@@ -122,79 +102,70 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank):
         raise
 
 async def get_payment_details(conn, order_no, buyer_name):
-    """Retrieves payment details for the given order number and buyer name."""
-    global bank_accounts
     try:
         await bank_accounts_lock.acquire()
-        # Retrieve the assigned account number if it already exists
         logger.debug("Checking if an account is already assigned to the order.")
         cursor = await conn.execute('SELECT account_number FROM orders WHERE order_no = ?', (order_no,))
         result = await cursor.fetchone()
         assigned_account_number = result[0] if result else None
 
         if assigned_account_number:
-            logger.debug(f"Account {assigned_account_number} already assigned for order {order_no}. Retrieving details.")
+            # Return details if already assigned
             return await get_account_details(conn, assigned_account_number, buyer_name)
         
         buyer_bank = (await get_buyer_bank(conn, buyer_name) or 'nvio').lower()
-        logger.debug(f"Buyer bank determined as {buyer_bank}.")
-
 
         # Load or refresh account details if empty
-        if not bank_accounts.get(buyer_bank):
-            logger.info(f"No accounts cached for {buyer_bank}. Fetching from database.")
-            bank_accounts[buyer_bank] = await find_suitable_account(conn, order_no, buyer_name, buyer_bank)
+        if not bank_accounts[buyer_bank]:
+            logger.info(f"No cached accounts for {buyer_bank}. Fetching from database.")
+            bank_accounts[buyer_bank] = await find_suitable_account(conn, None, None, buyer_bank)
 
         # Check each account for deposit limits before assigning
-        for account in bank_accounts[buyer_bank]:
+        for account in bank_accounts[buyer_bank][:]:  # Create a copy of the list for safe iteration
             if await check_deposit_limit(conn, account['account_number'], order_no, buyer_name):
                 assigned_account_number = account['account_number']
                 await update_order_details(conn, order_no, assigned_account_number)
                 await update_last_used_timestamp(conn, assigned_account_number)
-                logger.info(f"Assigning account number {assigned_account_number} to order {order_no}.")
-                return await get_account_details(conn, assigned_account_number, buyer_name)
+
+                # Remove the assigned account from the dictionary to prevent reuse
+                bank_accounts[buyer_bank].remove(account)
+                logger.info(f"Account {assigned_account_number} has been assigned and removed from cache.")
+
+                return await get_account_details(conn, assigned_account_number, buyer_name, buyer_bank)
             else:
                 logger.info(f"Account {account['account_number']} exceeded the deposit limit for this month.")
 
-        # If all accounts exceed limits or are empty
         logger.warning("No suitable account found or all accounts exceed the limit.")
-        return "No suitable account found or all accounts exceed the limit"
-
-    except Exception as e:
-        logger.error(f"Error getting payment details: {e}")
-        raise
+        return "Un momento por favor."
     finally:
         bank_accounts_lock.release()
+
 
 async def get_account_details(conn, account_number, buyer_name, buyer_bank=None):
     """Retrieves account details for the given account number."""
     try:
         if buyer_bank is None:
             buyer_bank = await get_buyer_bank(conn, buyer_name)
+            if buyer_bank == 'oxxo':
+                buyer_bank = 'banregio'
+                await update_buyer_bank(conn, buyer_name, 'banregio')
 
         logger.debug(f"Retrieving details for account {account_number} with buyer bank preference {buyer_bank}")
 
-        # Prepare the SQL query based on the buyer_bank
-        if buyer_bank and buyer_bank.lower() == 'oxxo':
-            query = '''
-                SELECT account_bank_name, account_beneficiary, card_number AS account_number
-                FROM oxxo_debit_cards
-                WHERE card_number = ?
-            '''
-            account_label = "Número de tarjeta"
-        else:
-            query = '''
-                SELECT account_bank_name, account_beneficiary, account_number
-                FROM mxn_bank_accounts
-                WHERE account_number = ?
-            '''
+        query = '''
+            SELECT account_bank_name, account_beneficiary, account_number
+            FROM mxn_bank_accounts
+            WHERE account_number = ?
+        '''
         cursor = await conn.execute(query, (account_number,))
         account_details = await cursor.fetchone()
         if account_details:
             logger.debug(f"Details retrieved for account {account_number}")
             # Decide the account label after fetching the details if not OXXO
-            if buyer_bank.lower() != 'oxxo':
+            if buyer_bank.lower() not in ['oxxo', 'banregio']:
                 account_label = "Número de cuenta" if account_details[0].lower() == buyer_bank.lower() else "Número de CLABE"
+            else:
+                account_label = "Número de tarjeta"
 
             return (
                 f"Los detalles para el pago son:\n\n"
@@ -208,4 +179,29 @@ async def get_account_details(conn, account_number, buyer_name, buyer_bank=None)
     except Exception as e:
         logger.error(f"Error retrieving account details: {e}")
         raise
+async def initialize_account_cache(conn):
+    for bank in ['nvio', 'bbva', 'banregio', 'santander']:  # Include all banks you need
+        bank_accounts[bank] = await find_suitable_account(conn, None, None, bank)
 
+async def main():
+    conn = await create_connection(DB_FILE)
+    if conn is not None:
+        try:
+            order_no = 1  # Example order number
+            buyer_name = 'John Doe'  # Example buyer name
+            buyer_bank = 'beanregio'  # Explicitly testing 'oxxo'
+
+            # Testing the find_suitable_account function directly for 'oxxo'
+            suitable_accounts = await find_suitable_account(conn, order_no, buyer_name, buyer_bank)
+            print(f"Suitable accounts for 'oxxo': {suitable_accounts}")
+            # await print_table_contents(conn, 'mxn_bank_accounts')
+            await print_table_contents(conn, 'oxxo_debit_cards')
+        except Exception as e:
+            logger.error(f"Error in main: {e}")
+        finally:
+            await conn.close()
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

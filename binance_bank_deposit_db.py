@@ -263,7 +263,7 @@ async def main():
         # await clear_accounts(conn)
         await initialize_database(conn)
         # Print table contents for verification
-        # await print_table_contents(conn, 'mxn_bank_accounts')
+        await print_table_contents(conn, 'mxn_bank_accounts')
         await print_table_contents(conn, 'oxxo_debit_cards')
         # await remove_bank_account(conn, '0482424657')
         # await remove_bank_account(conn, '012778015323351288')

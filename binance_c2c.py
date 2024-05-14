@@ -123,6 +123,7 @@ async def run_websocket(KEY, SECRET):
                 connection_manager.ws = ws
                 connection_manager.is_connected = True
                 async for message in ws:
+                    logger.debug(f"Received message: {message}")
                     await on_message(connection_manager, message, KEY, SECRET)
             connection_manager.is_connected = False
             logger.info("WebSocket connection closed gracefully.")

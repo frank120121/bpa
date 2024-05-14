@@ -7,6 +7,9 @@ from binance_c2c import main_binance_c2c
 from binance_update_ads import start_update_ads
 from binance_update_buy_ads import start_update_buy_ads
 from populate_database import populate_ads_with_details
+from common_utils_db import create_connection
+from common_vars import DB_FILE
+from binance_bank_deposit import initialize_account_cache
 
 setup_logging(log_filename='Binance_c2c_logger.log')
 logger = logging.getLogger(__name__)
@@ -31,8 +34,17 @@ async def main():
                 task.cancel()
 
 async def run():
-    await populate_ads_with_details()
-    await main()
+    conn = None
+    try:
+        conn = await create_connection(DB_FILE)  # Create the database connection
+        await initialize_account_cache(conn)  # Initialize cache
+        await populate_ads_with_details()
+        await main()
+    except Exception as e:
+        logger.error(f"An error occurred during initialization: {e}")
+    finally:
+        if conn:
+            await conn.close()  # Properly close the connection
 
 if __name__ == "__main__":
     try:
