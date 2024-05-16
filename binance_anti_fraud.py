@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import unicodedata
 from fuzzywuzzy import process
 from binance_messages import send_messages
@@ -59,13 +60,22 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
         else:
             accepted_banks_list = ', '.join(ACCEPTED_BANKS)
             await connection_manager.send_text_message(f"No pudimos verificar el banco proporcionado. Por favor, asegúrese de elegir uno de los siguientes bancos aceptados: {accepted_banks_list}", order_no)
+            await asyncio.sleep(2)
+
             await connection_manager.send_text_message(questions[3], order_no)  # Ask the bank question again
             return
         
     if anti_fraud_stage in [0, 1, 2, 4] and normalized_response not in ['si', 'no']:
-        await connection_manager.send_text_message(anti_fraud_not_valid_response, order_no)
-        await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)
-        return
+        if anti_fraud_stage == 4 and oxxo_used:
+            await connection_manager.send_text_message(anti_fraud_not_valid_response, order_no)
+            await asyncio.sleep(2)
+            await connection_manager.send_text_message(questions_OXXO[0], order_no)
+            return
+        else:
+            await connection_manager.send_text_message(anti_fraud_not_valid_response, order_no)
+            await asyncio.sleep(2)
+            await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)
+            return
 
     fraud_responses = {(0, 'si'), (1, 'si')}
     deny_responses = {(2, 'no'), (4, 'no')}

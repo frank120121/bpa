@@ -66,12 +66,13 @@ async def get_message_by_language(language, status, buyer_name=None):
 
 STATUS_MESSAGES = {
     2: {
-        'es': "Si aun no envia el comprobante de pago por favor enviarlo ahora para yo poder liberar la orden(requerido). Si ya o envio por favor ignorar este mensaje. Para ayuda escriba \"AYUDA\".",
+        'es': "Si aun no envia el comprobante de pago por favor enviarlo ahora para poder liberar la orden(requerido). De lo contrario por favor ignorar este mensaje.",
         'en': "If you have not sent the proof of payment, please send it now so I can release the order(required). If you have already sent it, please ignore this message. For help type \"HELP\"."
     },
     1: {
         'es': [
-            "Hola {buyer_name}. Antes de poder brindarle los datos bancarios es necesario confirmar que usted cumpla con los terminos y condiciones del anuncio.",
+            "**********IMPORTANTE!!!**********\n\n",
+            "Hola {buyer_name}. Para recibir los datos de deposito es necesario confirmar que cumpla con los terminos del anuncio.",
 
         ],
         'en': [
@@ -248,7 +249,7 @@ payment_warning = (
 
 payment_concept = (
     f"Para el concepto estas son opciones validas: pago, o su nombre.\n\n"
-    f"Para que no se cancele el intercambio de forma automática, puede marcar el intercambio como pagado en la opción que dice 'Realizar Pago'." 
+    f"Para que no se cancele el intercambio de forma automática, puede marcar el intercambio como pagado en la opción que dice 'Realizar Pago'.\n\n" 
     f"Para ayuda, escriba la palabra 'ayuda'."
 )
 

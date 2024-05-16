@@ -47,11 +47,11 @@ async def check_deposit_limit(conn, account_number, order_no, buyer_name):
         total_deposited_this_month = total_deposited_this_month_row[0]
         # Calculate the total after the proposed deposit
         total_after_deposit = total_deposited_this_month + amount_to_deposit
-        logger.info(f"Total after deposit for buyer '{buyer_name}' on account {account_number}: {total_after_deposit}")
+        logger.debug(f"Total after deposit for buyer '{buyer_name}' on account {account_number}: {total_after_deposit}")
 
         # Check if adding the new deposit exceeds the monthly limit for the buyer to this account
         if total_after_deposit <= MONTHLY_LIMIT:
-            logger.info(f"The deposit does not exceed the buyer's monthly limit of {MONTHLY_LIMIT:.2f}.")
+            logger.debug(f"The deposit does not exceed the buyer's monthly limit of {MONTHLY_LIMIT:.2f}.")
             return True
         else:
             logger.warning(f"Deposit exceeds the monthly limit of {MONTHLY_LIMIT:.2f} for buyer '{buyer_name}' on account {account_number}.")
@@ -84,7 +84,7 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank):
         cursor = await conn.execute(query, (buyer_bank.lower(),))
 
         accounts = await cursor.fetchall()
-        logger.info(f"Found {len(accounts)} suitable accounts for buyer bank '{buyer_bank}' in {table_name}")
+        logger.debug(f"Found {len(accounts)} suitable accounts for buyer bank '{buyer_bank}' in {table_name}")
 
         # Create a list of dictionaries to store account details
         account_details = [{
@@ -117,7 +117,7 @@ async def get_payment_details(conn, order_no, buyer_name):
 
         # Load or refresh account details if empty
         if not bank_accounts[buyer_bank]:
-            logger.info(f"No cached accounts for {buyer_bank}. Fetching from database.")
+            logger.debug(f"No cached accounts for {buyer_bank}. Fetching from database.")
             bank_accounts[buyer_bank] = await find_suitable_account(conn, None, None, buyer_bank)
 
         # Check each account for deposit limits before assigning
@@ -129,11 +129,11 @@ async def get_payment_details(conn, order_no, buyer_name):
 
                 # Remove the assigned account from the dictionary to prevent reuse
                 bank_accounts[buyer_bank].remove(account)
-                logger.info(f"Account {assigned_account_number} has been assigned and removed from cache.")
+                logger.debug(f"Account {assigned_account_number} has been assigned and removed from cache.")
 
                 return await get_account_details(conn, assigned_account_number, buyer_name, buyer_bank)
             else:
-                logger.info(f"Account {account['account_number']} exceeded the deposit limit for this month.")
+                logger.debug(f"Account {account['account_number']} exceeded the deposit limit for this month.")
 
         logger.warning("No suitable account found or all accounts exceed the limit.")
         return "Un momento por favor."
