@@ -1,9 +1,10 @@
 import asyncio
+import aiohttp
 import traceback
 import logging
 from ads_database import update_ad_in_database, fetch_all_ads_from_database
 from credentials import credentials_dict
-from binance_api import BinanceAPI
+from binance_singleton_api import SingletonBinanceAPI
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +13,6 @@ MIN_RATIO = 90.00
 MAX_RATIO = 99.30
 RATIO_ADJUSTMENT = 0.05
 DIFF_THRESHOLD = 0.1
-DELAY_BETWEEN_ASSET_TYPES = 2
-DELAY_BETWEEN_MAIN_LOOPS = 180
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
@@ -23,18 +22,16 @@ def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold):
             and float(ad['adv']['price']) <= base_price * PRICE_THRESHOLD
             and float(ad['adv']['dynamicMaxSingleTransAmount']) >= trans_amount_threshold]
 
-
 def compute_base_price(price: float, floating_ratio: float) -> float:
     return round(price / (floating_ratio / 100), 2)
 
-
 def check_if_ads_avail(ads_list, adjusted_target_spot):
-        if len(ads_list) < adjusted_target_spot:
-            adjusted_target_spot = len(ads_list)
-            logger.debug("Adjusted the target spot due to insufficient ads after filtering.")
-            return adjusted_target_spot
-        else:
-            return adjusted_target_spot
+    if len(ads_list) < adjusted_target_spot:
+        adjusted_target_spot = len(ads_list)
+        logger.debug("Adjusted the target spot due to insufficient ads after filtering.")
+        return adjusted_target_spot
+    else:
+        return adjusted_target_spot
 
 async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
     advNo = ad['advNo']
@@ -103,22 +100,17 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount)
             logger.debug(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
-            await asyncio.sleep(1)
 
     except Exception as e:
         traceback.print_exc()
-        
+
 async def process_ads(ads_group, api_instances, all_ads):
     if not ads_group:
         return
     for ad in ads_group:
-        # Directly use the account of the current ad to get the API instance
         api_instance = api_instances[ad['account']]
-        # Convert payTypes to a list if not None, else default to an empty list
         payTypes_list = ad['payTypes'] if ad['payTypes'] is not None else []
-        # Perform the fetch_ads_search call for the current ad
         ads_data = await api_instance.fetch_ads_search('SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], payTypes_list)
-        # Validate ads_data
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
             logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
             continue
@@ -126,38 +118,40 @@ async def process_ads(ads_group, api_instances, all_ads):
         if not isinstance(current_ads_data, list) or not current_ads_data:
             logger.debug(f"No valid ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
             continue
-        # Process the current ad with the fetched ads_data
         await analyze_and_update_ads(ad, api_instance, current_ads_data, all_ads)
-        await asyncio.sleep(1)
 
 async def main_loop(api_instances):
     all_ads = await fetch_all_ads_from_database('SELL')
     logger.debug(f"All ads: {len(all_ads)}")
 
-    # Group ads by Group value
     grouped_ads = {}
     for ad in all_ads:
         group_key = ad['Group']
         grouped_ads.setdefault(group_key, []).append(ad)
 
-    # Process each group of ads
+    tasks = []
     for group_key, ads_group in grouped_ads.items():
-        await process_ads(ads_group, api_instances, all_ads)
-        await asyncio.sleep(DELAY_BETWEEN_ASSET_TYPES)
-
-    # Closing of API instance sessions can be handled outside if they need to be reused
+        tasks.append(asyncio.create_task(process_ads(ads_group, api_instances, all_ads)))
+    await asyncio.gather(*tasks)
 
 async def start_update_buy_ads():
-    # Initialize API instances once
-    api_instances = {account: BinanceAPI(credentials_dict[account]['KEY'], credentials_dict[account]['SECRET']) for account in set(ad['account'] for ad in await fetch_all_ads_from_database())}
+    async with aiohttp.ClientSession() as session:
+        try:
+            all_ads = await fetch_all_ads_from_database()
+            accounts = set(ad['account'] for ad in all_ads)
+            api_instances = {}
 
-    while True: 
-        await main_loop(api_instances)
-        await asyncio.sleep(DELAY_BETWEEN_MAIN_LOOPS)
+            for account in accounts:
+                KEY = credentials_dict[account]['KEY']
+                SECRET = credentials_dict[account]['SECRET']
+                api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
+                api_instances[account] = api_instance
 
-    # Optionally close each API instance session after exiting the loop
-    for api_instance in api_instances.values():
-        await api_instance.close_session()
+            while True:
+                await main_loop(api_instances)
+                await asyncio.sleep(2)  # Adjust sleep time as needed
+        finally:
+            await SingletonBinanceAPI.close_all()
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(start_update_buy_ads())
