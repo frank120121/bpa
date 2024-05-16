@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 async def send_messages(connection_manager, order_no, messages):
     for msg in messages:
         await connection_manager.send_text_message(msg, order_no)
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
 
 async def present_menu_based_on_status(connection_manager, order_details, order_no, conn):
 

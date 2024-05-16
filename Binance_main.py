@@ -4,7 +4,7 @@ from logging_config import setup_logging
 import traceback
 
 from binance_c2c import main_binance_c2c
-from binance_update_ads import start_update_ads
+from binance_update_sell_ads import start_update_sell_ads
 from binance_update_buy_ads import start_update_buy_ads
 from populate_database import populate_ads_with_details
 from common_utils_db import create_connection
@@ -19,7 +19,7 @@ async def main():
     tasks = []
     try:
         tasks.append(asyncio.create_task(main_binance_c2c()))
-        tasks.append(asyncio.create_task(start_update_ads()))
+        tasks.append(asyncio.create_task(start_update_sell_ads()))
         tasks.append(asyncio.create_task(start_update_buy_ads()))
         await asyncio.gather(*tasks)
     except Exception as e:
