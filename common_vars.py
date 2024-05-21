@@ -4,7 +4,7 @@ ORDER_STATUS_UNDER_REVIEW = 2
 FIAT_UNIT_MXN = 'MXN'
 FIAT_UNIT_USD = 'USD'
 MGL_SPOT = 1
-MFM_SPOT = 2
+MFM_SPOT = 1
 MXN_BTC_AMT = '5000'
 MXN_USDT_AMT = '3000'
 USD_AMT_1 = '100'
@@ -14,11 +14,11 @@ MXN_SELL_AMT = '5000'
 
 ads_dict = {
     'account_1': [
-        {'advNo': '12593303119082127360', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'20000', 'payTypes': None, 'Group': '1', 'trade_type': 'BUY'},
+        {'advNo': '12593303119082127360', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '1', 'trade_type': 'BUY'},
         {'advNo': '12593308415142735872', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':MXN_USDT_AMT, 'payTypes': ['BBVABank'], 'Group': '2', 'trade_type': 'BUY'},
         {'advNo': '12598158630177452032', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'3000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY'},
         #USDC BUY
-        {'advNo': '12622081735207518208', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'20000', 'payTypes': None, 'Group': '6', 'trade_type': 'BUY'},
+        {'advNo': '12622081735207518208', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '6', 'trade_type': 'BUY'},
         {'advNo': '12603135169369452544', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'100000', 'payTypes': None, 'Group': '1', 'trade_type': 'SELL'},
         {'advNo': '12603135448257830912', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'100000', 'payTypes': None, 'Group': '2', 'trade_type': 'SELL'},
         {'advNo': '12603135448257830912', 'target_spot': MFM_SPOT, 'asset_type': 'BNB', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '3', 'trade_type': 'SELL'},
@@ -38,10 +38,10 @@ ads_dict = {
         # {'advNo': '12590568277293666304', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':USD_AMT_2, 'payTypes': ['BANK'], 'Group': '8'}
     ],
     'account_2': [
-        {'advNo': '12593495469168508928', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'5000', 'payTypes': None, 'Group': '1', 'trade_type': 'BUY'},
+        {'advNo': '12593495469168508928', 'target_spot': '2', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'5000', 'payTypes': None, 'Group': '1', 'trade_type': 'BUY'},
         {'advNo': '12593490877264977920', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':MXN_USDT_AMT, 'payTypes': ['BBVABank'], 'Group': '2', 'trade_type': 'BUY'},
         {'advNo': '12598150744306384896', 'target_spot': '1', 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount':MXN_BTC_AMT, 'payTypes': None, 'Group': '3', 'trade_type': 'BUY'},
-        {'advNo': '12601117035243544576', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'3000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY'},
+        {'advNo': '12601117035243544576', 'target_spot': '2', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'3000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY'},
         {'advNo': '12601438033869934592', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':'500', 'payTypes': ['BANK'], 'Group': '5', 'trade_type': 'BUY'},
         #USDC BUY
         {'advNo': '12622083293687042048', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'1000', 'payTypes': None, 'Group': '6', 'trade_type': 'BUY'},
@@ -124,7 +124,7 @@ ANTI_FRAUD_CHECKS = {}
 
 MERCHANTS = {
     'GUERRERO LOPEZ MARTHA': 2, 
-    'MUNOZ PEREA MARIA FERNANDA': 1
+    'MUÑOZ PEREA MARIA FERNANDA': 1
 }
 
 MONTHLY_LIMITS = 2000000.00

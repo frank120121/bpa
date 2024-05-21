@@ -99,6 +99,15 @@ async def remove(conn, order_no):
 async def remove_user(conn, name):
     await conn.execute("DELETE FROM users WHERE name = ?", (name,))
     await conn.commit()
+async def get_orders_by_total_price(conn, total_price):
+    try:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * FROM orders WHERE total_price = ?", (total_price,))
+            rows = await cursor.fetchall()
+            return rows
+    except Exception as e:
+        logger.error(f"Error retrieving orders with total price {total_price}: {e}")
+        return []
 async def main():  
     sql_create_merchants_table = """CREATE TABLE IF NOT EXISTS merchants (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -163,14 +172,19 @@ async def main():
         # await create_table(conn, sql_create_order_bank_identifiers_table)
 
         # Print table contents for verification
-        await remove(conn, '20623567436719017984')
-        await remove_user(conn, 'LOPEZ GUERRERO FRANCISCO JAVIER')
+        # await remove(conn, '20624872107382546432')
+        # await remove_user(conn, 'LOPEZ GUERRERO FRANCISCO JAVIER')
         # await add_column_if_not_exists(conn, 'users', 'user_bank', 'TEXT', 'NULL')
-        await print_table_contents(conn, 'orders')
-
+        await print_table_contents(conn, 'merchants')
+        # total_price = 10921.00  # Example total price to search for
+        # orders = await get_orders_by_total_price(conn, total_price)
+        # for order in orders:
+        #     print(order)
         await conn.close()
     else:
         logger.error("Error! Cannot create the database connection.")
+    
+    
             
 if __name__ == '__main__':
     asyncio.run(main())

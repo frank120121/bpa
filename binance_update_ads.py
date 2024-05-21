@@ -8,19 +8,29 @@ from binance_singleton_api import SingletonBinanceAPI
 
 logger = logging.getLogger(__name__)
 
-PRICE_THRESHOLD = 0.9925
+# Constants
+BUY_PRICE_THRESHOLD = 1.0120
+SELL_PRICE_THRESHOLD = 0.9945
+PRICE_THRESHOLD_2 = 1.0180
 MIN_RATIO = 90.00
-MAX_RATIO = 99.30
-RATIO_ADJUSTMENT = 0.05
-DIFF_THRESHOLD = 0.1
+MAX_RATIO = 110.00
+RATIO_ADJUSTMENT = 0.1
+DIFF_THRESHOLD = 0.2
 
-def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold):
+def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_threshold, is_buy=True):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
-    logger.debug(f'own ad numbers: {own_adv_nos}')
-    return [ad for ad in ads_data 
-            if ad['adv']['advNo'] not in own_adv_nos 
-            and float(ad['adv']['price']) <= base_price * PRICE_THRESHOLD
-            and float(ad['adv']['dynamicMaxSingleTransAmount']) >= trans_amount_threshold]
+    return [ad for ad in ads_data
+            if ad['adv']['advNo'] not in own_adv_nos
+            and ((float(ad['adv']['price']) >= base_price * price_threshold) if is_buy else (float(ad['adv']['price']) <= base_price * price_threshold))
+            and float(ad['adv']['dynamicMaxSingleTransAmount']) >= trans_amount_threshold
+            and float(ad['adv']['minSingleTransAmount']) < 20000.00]  # Adjusted comparison
+
+def determine_price_threshold(payTypes, is_buy=True):
+    special_payTypes = ['OXXO', 'BANK', 'ZELLE', 'SkrillMoneybookers']
+    if payTypes is not None and any(payType in payTypes for payType in special_payTypes):
+        return PRICE_THRESHOLD_2 if is_buy else SELL_PRICE_THRESHOLD
+    else:
+        return BUY_PRICE_THRESHOLD if is_buy else SELL_PRICE_THRESHOLD
 
 def compute_base_price(price: float, floating_ratio: float) -> float:
     return round(price / (floating_ratio / 100), 2)
@@ -33,7 +43,7 @@ def check_if_ads_avail(ads_list, adjusted_target_spot):
     else:
         return adjusted_target_spot
 
-async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
+async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=True):
     advNo = ad['advNo']
     target_spot = ad['target_spot']
     asset_type = ad['asset_type']
@@ -69,7 +79,8 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
         logger.debug(f"Base Price: {base_price}")
         transAmount_threshold = float(ad['transAmount'])  # Ensure it's a float
-        filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount_threshold)
+        custom_price_threshold = determine_price_threshold(ad['payTypes'], is_buy)
+        filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount_threshold, custom_price_threshold, is_buy)
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
 
         if not filtered_ads:
@@ -81,14 +92,13 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
         competitor_price = float(competitor_ad['adv']['price'])
         competitor_ratio = (competitor_price / base_price) * 100
 
-        if our_current_price <= competitor_price:
-            new_ratio_unbounded = competitor_ratio + RATIO_ADJUSTMENT
+        if (our_current_price >= competitor_price and is_buy) or (our_current_price <= competitor_price and not is_buy):
+            new_ratio_unbounded = competitor_ratio - RATIO_ADJUSTMENT if is_buy else competitor_ratio + RATIO_ADJUSTMENT
         else:
-            diff_ratio =  current_priceFloatingRatio - competitor_ratio
+            diff_ratio = competitor_ratio - current_priceFloatingRatio if is_buy else current_priceFloatingRatio - competitor_ratio
             if diff_ratio > DIFF_THRESHOLD:
-                new_ratio_unbounded = competitor_ratio + RATIO_ADJUSTMENT
+                new_ratio_unbounded = competitor_ratio - RATIO_ADJUSTMENT if is_buy else competitor_ratio + RATIO_ADJUSTMENT
             else:
-                logger.debug(f"Our ad - spot: {target_spot}, price: {our_current_price}, ratio: {current_priceFloatingRatio}.")
                 logger.debug(f"Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}. Not enough diff: {diff_ratio}")
                 return
 
@@ -104,13 +114,14 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads):
     except Exception as e:
         traceback.print_exc()
 
-async def process_ads(ads_group, api_instances, all_ads):
+async def process_ads(ads_group, api_instances, all_ads, is_buy=True):
     if not ads_group:
         return
     for ad in ads_group:
-        api_instance = api_instances[ad['account']]
+        account = ad['account']
+        api_instance = api_instances[account]
         payTypes_list = ad['payTypes'] if ad['payTypes'] is not None else []
-        ads_data = await api_instance.fetch_ads_search('SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], payTypes_list)
+        ads_data = await api_instance.fetch_ads_search('BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], payTypes_list)
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
             logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
             continue
@@ -118,10 +129,10 @@ async def process_ads(ads_group, api_instances, all_ads):
         if not isinstance(current_ads_data, list) or not current_ads_data:
             logger.debug(f"No valid ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
             continue
-        await analyze_and_update_ads(ad, api_instance, current_ads_data, all_ads)
+        await analyze_and_update_ads(ad, api_instance, current_ads_data, all_ads, is_buy)
 
-async def main_loop(api_instances):
-    all_ads = await fetch_all_ads_from_database('SELL')
+async def main_loop(api_instances, is_buy=True):
+    all_ads = await fetch_all_ads_from_database('BUY' if is_buy else 'SELL')
     logger.debug(f"All ads: {len(all_ads)}")
 
     grouped_ads = {}
@@ -131,10 +142,10 @@ async def main_loop(api_instances):
 
     tasks = []
     for group_key, ads_group in grouped_ads.items():
-        tasks.append(asyncio.create_task(process_ads(ads_group, api_instances, all_ads)))
+        tasks.append(asyncio.create_task(process_ads(ads_group, api_instances, all_ads, is_buy)))
     await asyncio.gather(*tasks)
 
-async def start_update_buy_ads():
+async def start_update_ads(is_buy=True):
     async with aiohttp.ClientSession() as session:
         try:
             all_ads = await fetch_all_ads_from_database()
@@ -148,10 +159,12 @@ async def start_update_buy_ads():
                 api_instances[account] = api_instance
 
             while True:
-                await main_loop(api_instances)
-                await asyncio.sleep(0.1)  # Adjust sleep time as needed
+                await main_loop(api_instances, is_buy)
+                await asyncio.sleep(0.2)  # Adjust sleep time as needed
         finally:
             await SingletonBinanceAPI.close_all()
 
-if __name__ == "__main__":
-    asyncio.get_event_loop().run_until_complete(start_update_buy_ads())
+async def run_ads_update():
+    buy_task = asyncio.create_task(start_update_ads(is_buy=True))
+    sell_task = asyncio.create_task(start_update_ads(is_buy=False))
+    await asyncio.gather(buy_task, sell_task)

@@ -1,6 +1,6 @@
 from lang_utils import get_message_by_language, determine_language, get_default_reply, payment_concept, payment_warning, invalid_country
-from binance_db_get import get_account_number, is_menu_presented, get_kyc_status, get_anti_fraud_stage, get_buyer_bank
-from binance_db_set import update_total_spent
+from binance_db_get import get_account_number, is_menu_presented, get_kyc_status, get_anti_fraud_stage, get_buyer_bank, has_specific_bank_identifiers
+from binance_db_set import update_total_spent, update_buyer_bank
 from binance_bank_deposit import get_payment_details
 from binance_bank_deposit_db import log_deposit
 from binance_messages import present_menu_based_on_status, handle_menu_response, send_messages
@@ -66,11 +66,15 @@ async def handle_order_status_1(connection_manager, conn, order_no, order_detail
     else:
         if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
             return
+        oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
+        if oxxo_used:
+            await update_buyer_bank(conn, buyer_name, 'banregio')
         payment_details = await get_payment_details(conn, order_no, buyer_name)
         buyer_bank = await get_buyer_bank(conn, buyer_name)
         if buyer_bank and buyer_bank.lower() in ['banregio', 'oxxo']:
             await send_messages(connection_manager, order_no, [payment_details])
-        await send_messages(connection_manager, order_no, [payment_warning, payment_concept, payment_details])
+        else:
+            await send_messages(connection_manager, order_no, [payment_warning, payment_concept, payment_details])
 
 async def generic_reply(connection_manager, order_no, order_details, status_code):
     buyer_name = order_details.get('buyer_name')

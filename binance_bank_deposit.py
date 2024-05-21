@@ -113,7 +113,17 @@ async def get_payment_details(conn, order_no, buyer_name):
             # Return details if already assigned
             return await get_account_details(conn, assigned_account_number, buyer_name)
         
-        buyer_bank = (await get_buyer_bank(conn, buyer_name) or 'nvio').lower()
+        buyer_bank = await get_buyer_bank(conn, buyer_name)
+        
+        if buyer_bank not in bank_accounts:
+            logger.warning(f"Bank '{buyer_bank}' not supported. Defaulting to 'nvio'.")
+            if buyer_bank == 'oxxo':
+                buyer_bank = 'banregio'
+                await update_buyer_bank(conn, buyer_name, 'banregio')
+
+            else:
+                buyer_bank = 'nvio'
+                await update_buyer_bank(conn, buyer_name, 'nvio')
 
         # Load or refresh account details if empty
         if not bank_accounts[buyer_bank]:
@@ -149,6 +159,9 @@ async def get_account_details(conn, account_number, buyer_name, buyer_bank=None)
             if buyer_bank == 'oxxo':
                 buyer_bank = 'banregio'
                 await update_buyer_bank(conn, buyer_name, 'banregio')
+            if buyer_bank not in ['bbva', 'santander']:
+                buyer_bank = 'nvio'
+                await update_buyer_bank(conn, buyer_name, 'nvio')
 
         logger.debug(f"Retrieving details for account {account_number} with buyer bank preference {buyer_bank}")
 

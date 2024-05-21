@@ -93,7 +93,7 @@ class ConnectionManager:
         if self.is_connected:
             try:
                 await self.ws.send(message_json)
-                logger.info(f"Message sent")
+                logger.debug(f"Message sent")
             except Exception as e:
                 logger.error(f"Message sending failed: {e}.")
         else:

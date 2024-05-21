@@ -33,6 +33,7 @@ class ServerTimestampCache:
                             start_time = int(time.time() * 1000)
                             async with session.get(endpoint) as response:
                                 if response.status == 200:
+                                    logger.info(f"Successfully fetched server time from {endpoint}")
                                     data = await response.json()
                                     server_time = data['serverTime']
                                     end_time = int(time.time() * 1000)

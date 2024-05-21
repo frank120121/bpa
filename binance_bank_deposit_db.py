@@ -148,7 +148,7 @@ async def sum_recent_deposits(account_number):
             sum_deposits = sum_deposits[0] if sum_deposits[0] is not None else 0
         
         # Log the sum of the deposits
-        logger.info(f"Total deposits for account {account_number} in the last 24 hours: MXN {sum_deposits}")
+        logger.debug(f"Total deposits for account {account_number} in the last 24 hours: MXN {sum_deposits}")
         
     except Exception as e:
         logger.error(f"Error calculating sum of recent deposits: {e}")

@@ -20,8 +20,8 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
     # Check if these parameters are in the cache and if the cached result is less than 5 seconds old
     if cache_key in cache:
         cached_result, timestamp = cache[cache_key]
-        if datetime.now() - timestamp < timedelta(seconds=5):
-            logger.debug("Returning cached result")
+        if datetime.now() - timestamp < timedelta(seconds=0.3):
+            logger.info(f"Returning cached result for {asset_type} {fiat} {transAmount} {payTypes}")
             return cached_result
 
     attempts = 0
@@ -60,7 +60,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
                 async with session.post(full_url, json=payload, headers=headers) as response:
                     if response.status == 200:
                         response_data = await response.json()
-                        logger.debug("Fetched ads search: success")
+                        logger.info(f"Fetched ads search: success for {asset_type} {fiat} {transAmount} {payTypes}")
 
                         # Cache the result along with the current timestamp
                         cache[cache_key] = (response_data, datetime.now())
@@ -81,7 +81,6 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
 
     logger.error("Failed to complete request after maximum attempts.")
     return None
-            
 
 if __name__ == "__main__":
     import sys
@@ -103,7 +102,7 @@ if __name__ == "__main__":
         async def main():
             # Define your asset types, fiat, and transAmount combinations
             search_params = [
-                {'asset_type': 'USDT', 'fiat': 'USD', 'transAmount': 100, 'payTypes': None},
+                {'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount': 5000, 'payTypes': None},
                 # Add more combinations if necessary
             ]
 

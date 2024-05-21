@@ -45,8 +45,8 @@ class BinanceAPI:
                         query_string += f"&signature={signature}"
                         async with self.session.post(f"{endpoint}?{query_string}", json=payload, headers=headers) as response:
                             if response.status == 200:
-                                #log the response
-                                logger.info(f"API call to '{method} {endpoint}' with payload '{str(payload)[:50]}...' successful.")
+                                #log a short and simple message
+                                logger.debug(f"API call to '{method}' successful.")
                                 return await response.json()
                             elif response.status == 429:  # Too many requests
                                 logger.warning("Rate limit exceeded. Retrying after delay.")

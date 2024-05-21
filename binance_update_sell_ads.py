@@ -157,7 +157,7 @@ async def start_update_sell_ads():
 
             while True:
                 await main_loop(api_instances)
-                await asyncio.sleep(2)  # Adjust sleep time as needed
+                await asyncio.sleep(0.1)  # Adjust sleep time as needed
         finally:
             await SingletonBinanceAPI.close_all()
 

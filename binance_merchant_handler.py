@@ -19,7 +19,7 @@ class MerchantAccount:
             return
         # Check for specific bank identifiers
         if await has_specific_bank_identifiers(conn, order_no, ['SkrillMoneybookers']):
-            logger.info(f"Order {order_no} uses payment method (OXXO or Skrill).")
+            logger.info(f"Order {order_no} uses payment method (Skrill).")
             return  # Skip further processing for now
         fiat = order_details.get('fiat_unit')
         if fiat == 'USD':

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 async def fetch_ip(last_four_digits, seller_name):
     if seller_name not in MERCHANTS:
-        logger.error(f"Seller not in MERCHANTS.")
+        logger.error(f"Seller({seller_name}) not in MERCHANTS.")
         return
 
     email_id = MERCHANTS[seller_name]
@@ -38,12 +38,12 @@ async def fetch_ip(last_four_digits, seller_name):
 
         
 async def main():
-    last_four_digits = '2272'
-    seller_name = 'GUERRERO LOPEZ MARTHA'
+    last_four_digits = '9952'
+    seller_name = 'MUÑOZ PEREA MARIA FERNANDA'
     logger.info(f'Fetching ip for {last_four_digits}')
     country = await fetch_ip(last_four_digits, seller_name)
     if country and country != "MX":
-        logger.warning(f"The IP address originates from outside of Mexico!")
+        logger.warning(f"The IP address originates from {country}. Transaction denied. Seller not from Mexico. Buyer added to blacklist.")
     elif country == "MX":
         logger.info(f"The IP address is from Mexico.")
 
