@@ -12,22 +12,26 @@ from common_vars import prohibited_countries
 import logging
 logger = logging.getLogger(__name__)
 
+accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES']
 
 async def check_order_details(order_details):
     if order_details is None:
         logger.warning("order_details is None.")
         return False
     return True
-async def check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
+async def check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used=False):
+    country = await fetch_ip(order_no[-4:], seller_name)
     if fiat == 'USD':
-        country = await fetch_ip(order_no[-4:], seller_name)
         if country in prohibited_countries:
             logger.debug(f"Transaction denied. Seller from prohibited country {country}. Buyer: {buyer_name} added to blacklist.")
             await connection_manager.send_text_message(invalid_country, order_no)
             await add_to_blacklist(conn, buyer_name, order_no, country)
             return
 
-    country = await fetch_ip(order_no[-4:], seller_name)
+    if oxxo_used and country in accepted_countries_for_oxxo:
+        return False  # Accept orders from specified countries for OXXO payment type
+
+  
     if country and country != "MX":
         logger.debug(f"Transaction denied. Seller not from Mexico. Buyer: {buyer_name} added to blacklist.")
         await connection_manager.send_text_message(invalid_country, order_no)
@@ -54,18 +58,18 @@ async def handle_order_status_4(connection_manager, conn, order_no, order_detail
 async def handle_order_status_1(connection_manager, conn, order_no, order_details):
     seller_name, buyer_name, fiat = order_details.get('seller_name'), order_details.get('buyer_name'), order_details.get('fiat_unit')
     kyc_status = await get_kyc_status(conn, buyer_name)
+    oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
     if kyc_status == 0 or kyc_status is None:
         anti_fraud_stage = await get_anti_fraud_stage(conn, buyer_name)
         if anti_fraud_stage is None:
             anti_fraud_stage = 0
         await generic_reply(connection_manager, order_no, order_details, 1)
         await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, "", order_no, connection_manager)
-        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
+        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
             return
     else:
-        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat):
+        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
             return
-        oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
         if oxxo_used:
             await update_buyer_bank(conn, buyer_name, 'banregio')
         payment_details = await get_payment_details(conn, order_no, buyer_name)
