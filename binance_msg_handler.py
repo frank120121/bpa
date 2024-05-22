@@ -12,7 +12,6 @@ from common_vars import prohibited_countries
 import logging
 logger = logging.getLogger(__name__)
 
-COUNTRY_NOT_ALLOWED = "Transaction denied. Seller not from Mexico. Buyer: {buyer_name} added to blacklist."
 
 async def check_order_details(order_details):
     if order_details is None:

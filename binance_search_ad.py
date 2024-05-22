@@ -21,7 +21,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
     if cache_key in cache:
         cached_result, timestamp = cache[cache_key]
         if datetime.now() - timestamp < timedelta(seconds=0.3):
-            logger.info(f"Returning cached result for {asset_type} {fiat} {transAmount} {payTypes}")
+            logger.debug(f"Returning cached result for {asset_type} {fiat} {transAmount} {payTypes}")
             return cached_result
 
     attempts = 0
@@ -60,7 +60,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
                 async with session.post(full_url, json=payload, headers=headers) as response:
                     if response.status == 200:
                         response_data = await response.json()
-                        logger.info(f"Fetched ads search: success for {asset_type} {fiat} {transAmount} {payTypes}")
+                        logger.debug(f"Fetched ads search: success for {asset_type} {fiat} {transAmount} {payTypes}")
 
                         # Cache the result along with the current timestamp
                         cache[cache_key] = (response_data, datetime.now())

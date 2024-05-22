@@ -14,8 +14,8 @@ SELL_PRICE_THRESHOLD = 0.9945
 PRICE_THRESHOLD_2 = 1.0180
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
-RATIO_ADJUSTMENT = 0.1
-DIFF_THRESHOLD = 0.2
+RATIO_ADJUSTMENT = 0.05
+DIFF_THRESHOLD = 0.15
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_threshold, is_buy=True):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
@@ -160,7 +160,7 @@ async def start_update_ads(is_buy=True):
 
             while True:
                 await main_loop(api_instances, is_buy)
-                await asyncio.sleep(0.2)  # Adjust sleep time as needed
+                await asyncio.sleep(0.1)  # Adjust sleep time as needed
         finally:
             await SingletonBinanceAPI.close_all()
 

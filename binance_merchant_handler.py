@@ -25,8 +25,7 @@ class MerchantAccount:
         if fiat == 'USD':
             return # Skip further processing for now
         buyer_name = order_details.get('buyer_name')
-        # if buyer_name in ['LOPEZ GUERRERO FRANCISCO JAVIER', 'GUERRERO LOPEZ MARTHA', 'MUNOZ PEREA MARIA FERNANDA']:
-        #     return
+
         if msg_type == 'system':
             await self._handle_system_type(connection_manager, msg_json, conn, order_no, order_details, buyer_name)
         else:
@@ -37,7 +36,7 @@ class MerchantAccount:
             content_dict = json.loads(content)
             system_type_str = content_dict.get('type', '')
             if system_type_str not in status_map:
-                logger.debug("System type not in status_map")
+                logger.info(f"System type not in status_map{system_type_str}")
                 return
             order_status = status_map[system_type_str]
         except json.JSONDecodeError:
