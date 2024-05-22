@@ -47,7 +47,7 @@ async def handle_order_status_1(ws, conn, order_no, order_details):
         await generic_reply(ws, order_no, order_details, 1)
         await handle_anti_fraud(buyer_name, conn, anti_fraud_stage, "start_pro", order_no, ws)
     else:
-        payment_details = await get_payment_details(conn, order_no)
+        payment_details = await get_payment_details(conn, order_no, buyer_name, seller_name)
         await send_messages(ws, order_no, [payment_details, payment_concept])
 
 async def generic_reply(ws, order_no, order_details, status_code):

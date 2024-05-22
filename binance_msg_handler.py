@@ -29,8 +29,8 @@ async def check_and_handle_country_restrictions(connection_manager, conn, order_
             return
 
     if oxxo_used and country in accepted_countries_for_oxxo:
+        await get_payment_details(conn, order_no, buyer_name, seller_name, oxxo_used)
         return False  # Accept orders from specified countries for OXXO payment type
-
   
     if country and country != "MX":
         logger.debug(f"Transaction denied. Seller not from Mexico. Buyer: {buyer_name} added to blacklist.")
@@ -72,7 +72,7 @@ async def handle_order_status_1(connection_manager, conn, order_no, order_detail
             return
         if oxxo_used:
             await update_buyer_bank(conn, buyer_name, 'banregio')
-        payment_details = await get_payment_details(conn, order_no, buyer_name)
+        payment_details = await get_payment_details(conn, order_no, buyer_name, seller_name, oxxo_used=False)
         buyer_bank = await get_buyer_bank(conn, buyer_name)
         if buyer_bank and buyer_bank.lower() in ['banregio', 'oxxo']:
             await send_messages(connection_manager, order_no, [payment_details])

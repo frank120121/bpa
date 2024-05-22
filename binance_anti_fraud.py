@@ -107,7 +107,7 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
 
     if anti_fraud_stage == len(questions):
         await update_kyc_status(conn, buyer_name, 1)
-        payment_details = await get_payment_details(conn, order_no, buyer_name)
+        payment_details = await get_payment_details(conn, order_no, buyer_name, seller_name, oxxo_used=False)
         if anti_fraud_stage == 5 and oxxo_used:
             await send_messages(connection_manager, order_no, [payment_details])
         else:

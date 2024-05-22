@@ -101,7 +101,7 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank):
         logger.error(f"Error finding suitable account: {e}")
         raise
 
-async def get_payment_details(conn, order_no, buyer_name):
+async def get_payment_details(conn, order_no, buyer_name, oxxo_used=False):
     try:
         await bank_accounts_lock.acquire()
         logger.debug("Checking if an account is already assigned to the order.")
@@ -120,36 +120,67 @@ async def get_payment_details(conn, order_no, buyer_name):
             if buyer_bank == 'oxxo':
                 buyer_bank = 'banregio'
                 await update_buyer_bank(conn, buyer_name, 'banregio')
-
             else:
                 buyer_bank = 'nvio'
                 await update_buyer_bank(conn, buyer_name, 'nvio')
+
+        async def assign_account():
+            nonlocal assigned_account_number
+            for account in bank_accounts[buyer_bank][:]:  # Create a copy of the list for safe iteration
+                if oxxo_used and account['beneficiary'] != 'FRANCISCO JAVIER LOPEZ GUERRERO':
+                    logger.debug(f"Skipping account {account['account_number']} as it does not have the required beneficiary name.")
+                    continue
+
+                if await check_deposit_limit(conn, account['account_number'], order_no, buyer_name):
+                    assigned_account_number = account['account_number']
+                    await update_order_details(conn, order_no, assigned_account_number)
+                    await update_last_used_timestamp(conn, assigned_account_number)
+
+                    # Remove the assigned account from the dictionary to prevent reuse
+                    bank_accounts[buyer_bank].remove(account)
+                    logger.debug(f"Account {assigned_account_number} has been assigned and removed from cache.")
+
+                    return await get_account_details(conn, assigned_account_number, buyer_name, buyer_bank)
+                else:
+                    logger.debug(f"Account {account['account_number']} exceeded the deposit limit for this month.")
+
+            return None
 
         # Load or refresh account details if empty
         if not bank_accounts[buyer_bank]:
             logger.debug(f"No cached accounts for {buyer_bank}. Fetching from database.")
             bank_accounts[buyer_bank] = await find_suitable_account(conn, None, None, buyer_bank)
 
-        # Check each account for deposit limits before assigning
-        for account in bank_accounts[buyer_bank][:]:  # Create a copy of the list for safe iteration
-            if await check_deposit_limit(conn, account['account_number'], order_no, buyer_name):
-                assigned_account_number = account['account_number']
+        # Attempt to assign an account
+        account_details = await assign_account()
+
+        if account_details is not None:
+            return account_details
+
+        # If no suitable account found, reload the accounts and try again
+        logger.debug("No suitable account found, reloading accounts and retrying.")
+        bank_accounts[buyer_bank] = await find_suitable_account(conn, None, None, buyer_bank)
+        account_details = await assign_account()
+
+        if account_details is not None:
+            return account_details
+
+        # Additional condition for third retry with 'nvio' bank
+        if not oxxo_used and buyer_bank not in ['oxxo', 'banregio']:
+            logger.debug("Second retry unsuccessful, loading accounts from 'nvio' bank and assigning first account without limit checks.")
+            bank_accounts['nvio'] = await find_suitable_account(conn, None, None, 'nvio')
+            if bank_accounts['nvio']:
+                assigned_account_number = bank_accounts['nvio'][0]['account_number']
                 await update_order_details(conn, order_no, assigned_account_number)
                 await update_last_used_timestamp(conn, assigned_account_number)
+                logger.debug(f"Assigned first 'nvio' account {assigned_account_number} without limit checks.")
 
-                # Remove the assigned account from the dictionary to prevent reuse
-                bank_accounts[buyer_bank].remove(account)
-                logger.debug(f"Account {assigned_account_number} has been assigned and removed from cache.")
-
-                return await get_account_details(conn, assigned_account_number, buyer_name, buyer_bank)
-            else:
-                logger.debug(f"Account {account['account_number']} exceeded the deposit limit for this month.")
+                return await get_account_details(conn, assigned_account_number, buyer_name, 'nvio')
 
         logger.warning("No suitable account found or all accounts exceed the limit.")
         return "Un momento por favor."
     finally:
         bank_accounts_lock.release()
-
 
 async def get_account_details(conn, account_number, buyer_name, buyer_bank=None):
     """Retrieves account details for the given account number."""
