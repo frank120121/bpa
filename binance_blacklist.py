@@ -57,11 +57,19 @@ async def get_blacklist_counts_by_country(conn):
     async with conn.execute(query) as cursor:
         result = await cursor.fetchall()
         return result
+async def remove_from_blacklist_accepted_countries(conn, accepted_countries):
+    placeholders = ', '.join('?' for _ in accepted_countries)
+    query = f"DELETE FROM P2PBlacklist WHERE country IN ({placeholders})"
+    await conn.execute(query, accepted_countries)
+    await conn.commit()
     
 async def main():
     conn = await create_connection(DB_FILE)
-    await remove_from_blacklist_no_country(conn)
-    await print_table_contents(conn, 'P2PBlacklist')
+    # await remove_from_blacklist_no_country(conn)
+    # accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE']
+    # await remove_from_blacklist_accepted_countries(conn, accepted_countries_for_oxxo)
+
+    # await print_table_contents(conn, 'P2PBlacklist')
     # Get blacklist counts by country
     # counts = await get_blacklist_counts_by_country(conn)
     

@@ -111,13 +111,13 @@ def update_balance(exchange_id, account, combined_balances):
     cursor = connection.cursor()
     
     for asset, balance in combined_balances.items():
-        logging.info(f"Updating {account} - {asset}: {balance}")
+        logging.debug(f"Updating {account} - {asset}: {balance}")
         try:
             cursor.execute('''
                 INSERT OR REPLACE INTO balances (exchange_id, account, asset, balance)
                 VALUES (?, ?, ?, ?)
             ''', (exchange_id, account, asset, balance))
-            logging.info(f"Successfully updated {account} - {asset}: {balance}")
+            logging.debug(f"Successfully updated {account} - {asset}: {balance}")
         except sqlite3.Error as e:
             logging.error(f"Failed to update {account} - {asset}: {balance}, Error: {str(e)}")
         
@@ -189,21 +189,15 @@ async def total_usd():
                 total_usd = await cursor.fetchone()
                 total_usd = total_usd[0] if total_usd[0] is not None else 0
 
-                # Query for MXN
-                await cursor.execute('''
-                    SELECT SUM(balance)
-                    FROM balances
-                    WHERE asset = 'MXN'
-                ''')
-                total_mxn = await cursor.fetchone()
-                total_mxn = total_mxn[0] if total_mxn[0] is not None else 0
-
-        print(f"Total USD (including USDC, USDT, TUSD): {total_usd}")
-        print(f"Total MXN: {total_mxn}")
+        logger.debug(f"Total USD (including USDC, USDT, TUSD): {total_usd}")
+        return total_usd
     except Exception as e:
-        print(f"Database error: {e}")
+        logger.error(f"Database error: {e}")
+        return 0
 
 async def main():
-    await total_usd()
+    usd_balance = await total_usd()
+    logger.debug(f"Total USD balance: {usd_balance}")
+
 if __name__ == "__main__":
     asyncio.run(main())

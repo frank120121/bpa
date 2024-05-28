@@ -20,8 +20,6 @@ bank_accounts = {
     'santander': []
 }
 
-# Set up logging with different levels
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def check_deposit_limit(conn, account_number, order_no, buyer_name):
@@ -127,9 +125,7 @@ async def get_payment_details(conn, order_no, buyer_name, oxxo_used=False):
         async def assign_account():
             nonlocal assigned_account_number
             for account in bank_accounts[buyer_bank][:]:  # Create a copy of the list for safe iteration
-                if oxxo_used and account['beneficiary'] != 'FRANCISCO JAVIER LOPEZ GUERRERO':
-                    logger.debug(f"Skipping account {account['account_number']} as it does not have the required beneficiary name.")
-                    continue
+
 
                 if await check_deposit_limit(conn, account['account_number'], order_no, buyer_name):
                     assigned_account_number = account['account_number']
@@ -190,7 +186,7 @@ async def get_account_details(conn, account_number, buyer_name, buyer_bank=None)
             if buyer_bank == 'oxxo':
                 buyer_bank = 'banregio'
                 await update_buyer_bank(conn, buyer_name, 'banregio')
-            if buyer_bank not in ['bbva', 'santander']:
+            if buyer_bank not in ['bbva', 'santander', 'banregio', 'nvio']:
                 buyer_bank = 'nvio'
                 await update_buyer_bank(conn, buyer_name, 'nvio')
 
@@ -207,7 +203,7 @@ async def get_account_details(conn, account_number, buyer_name, buyer_bank=None)
             logger.debug(f"Details retrieved for account {account_number}")
             # Decide the account label after fetching the details if not OXXO
             if buyer_bank.lower() not in ['oxxo', 'banregio']:
-                account_label = "Número de cuenta" if account_details[0].lower() == buyer_bank.lower() else "Número de CLABE"
+                account_label = "Número de cuenta" if account_details[0].lower() == buyer_bank.lower() and account_details[0].lower() != 'nvio' else "Número de CLABE"
             else:
                 account_label = "Número de tarjeta"
 

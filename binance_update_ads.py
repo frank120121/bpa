@@ -5,17 +5,50 @@ import logging
 from ads_database import update_ad_in_database, fetch_all_ads_from_database
 from credentials import credentials_dict
 from binance_singleton_api import SingletonBinanceAPI
+from bitso_wallets import bitso_main
+from binance_wallets import BinanceWallets
+from asset_balances import total_usd
 
 logger = logging.getLogger(__name__)
 
 # Constants
 BUY_PRICE_THRESHOLD = 1.0120
 SELL_PRICE_THRESHOLD = 0.9945
-PRICE_THRESHOLD_2 = 1.0180
+PRICE_THRESHOLD_2 = 1.0205
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
 RATIO_ADJUSTMENT = 0.05
 DIFF_THRESHOLD = 0.15
+
+balance_lock = asyncio.Lock()
+latest_usd_balance = 0
+
+def adjust_sell_price_threshold(usd_balance):
+    global SELL_PRICE_THRESHOLD
+    global BUY_PRICE_THRESHOLD
+    if usd_balance >= 70000:
+        SELL_PRICE_THRESHOLD = 0.9898
+        BUY_PRICE_THRESHOLD = 1.0120
+        logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
+    else:
+        adjustment = (70000 - usd_balance) / 1000 * 0.0005
+        SELL_PRICE_THRESHOLD = min(0.9898 + adjustment, 0.9995)
+        BUY_PRICE_THRESHOLD = min(1.0120 + adjustment, 1.0245)
+        logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
+async def fetch_and_calculate_total_balance():
+    while True:
+        try:
+            await bitso_main()
+            binance_wallets = BinanceWallets()
+            await binance_wallets.main()
+            usd_balance = await total_usd()
+            async with balance_lock:
+                global latest_usd_balance
+                latest_usd_balance = usd_balance
+            logger.debug(f"Fetched USD Balance: {usd_balance}")
+        except Exception as e:
+            logger.error(f"Error fetching balance: {e}")
+        await asyncio.sleep(300)  # Fetch balance every 5 minutes
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_threshold, is_buy=True):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
@@ -23,7 +56,7 @@ def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_thre
             if ad['adv']['advNo'] not in own_adv_nos
             and ((float(ad['adv']['price']) >= base_price * price_threshold) if is_buy else (float(ad['adv']['price']) <= base_price * price_threshold))
             and float(ad['adv']['dynamicMaxSingleTransAmount']) >= trans_amount_threshold
-            and float(ad['adv']['minSingleTransAmount']) < 20000.00]  # Adjusted comparison
+            and float(ad['adv']['minSingleTransAmount']) < 40000.00]  # Adjusted comparison
 
 def determine_price_threshold(payTypes, is_buy=True):
     special_payTypes = ['OXXO', 'BANK', 'ZELLE', 'SkrillMoneybookers']
@@ -159,12 +192,20 @@ async def start_update_ads(is_buy=True):
                 api_instances[account] = api_instance
 
             while True:
+                async with balance_lock:
+                    usd_balance = latest_usd_balance
+                logger.debug(f"Using USD Balance: {usd_balance}")
+                adjust_sell_price_threshold(usd_balance)
                 await main_loop(api_instances, is_buy)
                 await asyncio.sleep(0.1)  # Adjust sleep time as needed
         finally:
             await SingletonBinanceAPI.close_all()
 
 async def run_ads_update():
+    fetch_balances_task = asyncio.create_task(fetch_and_calculate_total_balance())
     buy_task = asyncio.create_task(start_update_ads(is_buy=True))
     sell_task = asyncio.create_task(start_update_ads(is_buy=False))
-    await asyncio.gather(buy_task, sell_task)
+    await asyncio.gather(fetch_balances_task, buy_task, sell_task)
+
+if __name__ == "__main__":
+    asyncio.run(run_ads_update())

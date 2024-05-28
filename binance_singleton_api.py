@@ -7,7 +7,7 @@ class SingletonBinanceAPI:
     _instances = {}
     _lock = asyncio.Lock()
     last_call = 0  
-    min_delay = 0.25  
+    min_delay = 0.5  
 
     @classmethod
     async def get_instance(cls, account, KEY, SECRET):

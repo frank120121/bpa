@@ -20,7 +20,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
     # Check if these parameters are in the cache and if the cached result is less than 5 seconds old
     if cache_key in cache:
         cached_result, timestamp = cache[cache_key]
-        if datetime.now() - timestamp < timedelta(seconds=0.3):
+        if datetime.now() - timestamp < timedelta(seconds=0.5):
             logger.debug(f"Returning cached result for {asset_type} {fiat} {transAmount} {payTypes}")
             return cached_result
 

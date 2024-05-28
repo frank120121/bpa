@@ -123,7 +123,7 @@ class BinanceWallets:
                 async with session.post(url, headers=headers) as response:
                     if response.status == 200:
                         order_data = await response.json()
-                        logger.info(f"Order successfully placed: {order_data}")
+                        logger.debug(f"Order successfully placed: {order_data}")
                     else:
                         logger.error(f"Failed to place order: {await response.text()}")
         except Exception as e:
@@ -138,7 +138,7 @@ class BinanceWallets:
     def validate_balances(self, account):
         exchange_id = 1
         balance = get_balance(exchange_id, account)
-        print(f"Balance for account {account} in exchange {exchange_id}: {balance}")
+        logger.debug(f"Balance for account {account} in exchange {exchange_id}: {balance}")
     async def main(self):
         for account, cred in credentials_dict.items():
             self.combined_balances = {}

@@ -12,14 +12,15 @@ from common_vars import prohibited_countries
 import logging
 logger = logging.getLogger(__name__)
 
-accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES']
+accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE']
 
 async def check_order_details(order_details):
     if order_details is None:
         logger.warning("order_details is None.")
         return False
     return True
-async def check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used=False):
+
+async def check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
     country = await fetch_ip(order_no[-4:], seller_name)
     if fiat == 'USD':
         if country in prohibited_countries:
@@ -29,7 +30,7 @@ async def check_and_handle_country_restrictions(connection_manager, conn, order_
             return
 
     if oxxo_used and country in accepted_countries_for_oxxo:
-        await get_payment_details(conn, order_no, buyer_name, seller_name, oxxo_used)
+        await get_payment_details(conn, order_no, buyer_name, oxxo_used)
         return False  # Accept orders from specified countries for OXXO payment type
   
     if country and country != "MX":
@@ -53,12 +54,12 @@ async def handle_order_status_4(connection_manager, conn, order_no, order_detail
     logger.debug(f"Logging deposit for {buyer_name} with bank account {bank_account_number} for {amount_deposited}")
     await log_deposit(conn, buyer_name, bank_account_number, amount_deposited)
 
-
-
 async def handle_order_status_1(connection_manager, conn, order_no, order_details):
     seller_name, buyer_name, fiat = order_details.get('seller_name'), order_details.get('buyer_name'), order_details.get('fiat_unit')
     kyc_status = await get_kyc_status(conn, buyer_name)
     oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
+    if oxxo_used:
+        await update_buyer_bank(conn, buyer_name, 'banregio')
     if kyc_status == 0 or kyc_status is None:
         anti_fraud_stage = await get_anti_fraud_stage(conn, buyer_name)
         if anti_fraud_stage is None:
@@ -70,9 +71,7 @@ async def handle_order_status_1(connection_manager, conn, order_no, order_detail
     else:
         if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
             return
-        if oxxo_used:
-            await update_buyer_bank(conn, buyer_name, 'banregio')
-        payment_details = await get_payment_details(conn, order_no, buyer_name, seller_name, oxxo_used=False)
+        payment_details = await get_payment_details(conn, order_no, buyer_name)
         buyer_bank = await get_buyer_bank(conn, buyer_name)
         if buyer_bank and buyer_bank.lower() in ['banregio', 'oxxo']:
             await send_messages(connection_manager, order_no, [payment_details])
@@ -127,7 +126,6 @@ async def handle_text_message(connection_manager, content, order_no, order_detai
 
         if content.isdigit():
             await handle_menu_response(connection_manager, int(content), order_details, order_no, conn)
-
 
 async def handle_image_message(connection_manager, order_no, order_details):
     if not await check_order_details(order_details):
