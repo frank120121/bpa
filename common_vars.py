@@ -194,14 +194,14 @@ bank_accounts = [
         "account_monthly_limit": MONTHLY_LIMITS,
         "oxxo_daily_limit": 0.00
     },
-    {
-        "bank_name": "BBVA",
-        "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
-        "account_number": "0482424657",
-        "account_daily_limit": DAILY_LIMITS,
-        "account_monthly_limit": 250000.00,
-        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
-    },
+    # {
+    #     "bank_name": "BBVA",
+    #     "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
+    #     "account_number": "0482424657",
+    #     "account_daily_limit": DAILY_LIMITS,
+    #     "account_monthly_limit": 250000.00,
+    #     "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
+    # },
     {
         "bank_name": "Nvio",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
@@ -234,6 +234,16 @@ bank_accounts = [
     #     "account_monthly_limit": MONTHLY_LIMITS,
     #     "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
     # },
+
+    {
+        "bank_name": "BBVA",
+        "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
+        "account_number": "0486503160",
+        "account_daily_limit": DAILY_LIMITS,
+        "account_monthly_limit": MONTHLY_LIMITS,
+        "oxxo_daily_limit": BBVA_OXXO_DAILY_LIMIT
+    },
+
     {
         "bank_name": "BANREGIO",
         "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
