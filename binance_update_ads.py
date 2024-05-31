@@ -26,12 +26,12 @@ latest_usd_balance = 0
 def adjust_sell_price_threshold(usd_balance):
     global SELL_PRICE_THRESHOLD
     global BUY_PRICE_THRESHOLD
-    if usd_balance >= 70000:
+    if usd_balance >= 60000:
         SELL_PRICE_THRESHOLD = 0.9898
         BUY_PRICE_THRESHOLD = 1.0120
         logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
     else:
-        adjustment = (70000 - usd_balance) / 1000 * 0.0005
+        adjustment = (60000 - usd_balance) / 1000 * 0.0005
         SELL_PRICE_THRESHOLD = min(0.9898 + adjustment, 0.9995)
         BUY_PRICE_THRESHOLD = min(1.0120 + adjustment, 1.0245)
         logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
@@ -110,14 +110,24 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             our_current_price = float(our_ad_data['adv']['price'])
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
-        logger.debug(f"Base Price: {base_price}")
-        transAmount_threshold = float(ad['transAmount'])  # Ensure it's a float
+        if ad['transAmount'] is not None:
+            transAmount_threshold = float(ad['transAmount'])  # Ensure it's a float
+        else:
+            transAmount_threshold = 4000.00
         custom_price_threshold = determine_price_threshold(ad['payTypes'], is_buy)
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount_threshold, custom_price_threshold, is_buy)
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
 
         if not filtered_ads:
-            logger.debug(f"No competitor ads found for {advNo}")
+            logger.debug(f"Fileter ads for {advNo} is empty.")
+            new_ratio = max(MIN_RATIO, min(MAX_RATIO, round((custom_price_threshold * 100), 2)))
+            if new_ratio == current_priceFloatingRatio:
+                logger.debug(f"Ratio unchanged")
+                return
+            else:
+                logger.debug(f"Updating ad {advNo} with new ratio: {new_ratio}. No filtered ads found.")
+                await api_instance.update_ad(advNo, new_ratio)
+                await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount)
             return
 
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
@@ -140,6 +150,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             logger.debug(f"Ratio unchanged")
             return
         else:
+            logger.debug(f"Updating ad with filter ads")
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount)
             logger.debug(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
@@ -203,6 +214,7 @@ async def start_update_ads(is_buy=True):
 
 async def run_ads_update():
     fetch_balances_task = asyncio.create_task(fetch_and_calculate_total_balance())
+    await asyncio.sleep(5)  # Ensure balance is fetched initially
     buy_task = asyncio.create_task(start_update_ads(is_buy=True))
     sell_task = asyncio.create_task(start_update_ads(is_buy=False))
     await asyncio.gather(fetch_balances_task, buy_task, sell_task)

@@ -15,7 +15,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
     global cache
 
     # Create a cache key based on the function's arguments
-    cache_key = (asset_type, fiat, transAmount, tuple(sorted(payTypes)) if payTypes else None)
+    cache_key = (trade_type, asset_type, fiat, transAmount, tuple(sorted(payTypes)) if payTypes else None)
 
     # Check if these parameters are in the cache and if the cached result is less than 5 seconds old
     if cache_key in cache:
@@ -38,7 +38,8 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
                 "page": 1,
                 "publisherType": "merchant",
                 "rows": 20,
-                "tradeType": trade_type
+                "tradeType": trade_type,
+                "transAmount": transAmount,
             }
             
             if payTypes:

@@ -85,36 +85,48 @@ async def get_access_token(refresh_token=None):
             logger.error(f"An error occurred: {e}\n{traceback.format_exc()}")
 
 async def outlook_fetch_ip(last_four):
-    logger.debug(f"Searching ip for: {last_four}")
-    access_token, refresh_token, expiration_time = await load_tokens()
-    
-    if datetime.datetime.now() >= expiration_time:
-        access_token = await get_access_token(refresh_token)
+    max_retries = 5
+    retry_count = 0
 
-    async with aiohttp.ClientSession() as session:
-        if not access_token:
-            access_token = await get_access_token(refresh_token)
-
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
+    while retry_count < max_retries:
         try:
-            response = await session.get("https://graph.microsoft.com/v1.0/me/messages?$top=2", headers=headers)
-            emails_data = await response.json()
-            emails = emails_data.get('value', [])
-            for email in emails:
-                subject = email.get("subject")
-                if f"[Binance] Tienes una nueva orden P2P {last_four}" in subject:
-                    email_content = email.get("body", {}).get("content", "")
-                    ip_match = re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", email_content)
-                    logger.debug(f"Ip found: {ip_match.group(0)}")
-                    if ip_match:
-                        return ip_match.group(0)
-                        
+            logger.info(f"Searching IP for: {last_four}")
+            access_token, refresh_token, expiration_time = await load_tokens()
+
+            if datetime.datetime.now() >= expiration_time:
+                access_token = await get_access_token(refresh_token)
+
+            async with aiohttp.ClientSession() as session:
+                if not access_token:
+                    access_token = await get_access_token(refresh_token)
+
+                headers = {
+                    "Authorization": f"Bearer {access_token}",
+                    "Content-Type": "application/json"
+                }
+                response = await session.get("https://graph.microsoft.com/v1.0/me/messages?$top=2", headers=headers)
+                emails_data = await response.json()
+                emails = emails_data.get('value', [])
+                for email in emails:
+                    subject = email.get("subject")
+                    if f"[Binance] Tienes una nueva orden P2P {last_four}" in subject:
+                        email_content = email.get("body", {}).get("content", "")
+                        ip_match = re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", email_content)
+                        if ip_match:
+                            logger.info(f"IP found: {ip_match.group(0)}")
+                            return ip_match.group(0)
+
+            retry_count += 1
+            await asyncio.sleep(1)
+
         except Exception as e:
             logger.error(f"An unexpected error occurred: {e}")
             logger.error(f"Full exception traceback: {traceback.format_exc()}")
+            retry_count += 1
+            await asyncio.sleep(1)
+
+    logger.warning("No matching email found after maximum retries")
+    return None
 
 async def main():
     access_token, refresh_token, expiration_time = await load_tokens()

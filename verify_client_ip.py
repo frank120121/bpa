@@ -38,7 +38,7 @@ async def fetch_ip(last_four_digits, seller_name):
 
         
 async def main():
-    last_four_digits = '9952'
+    last_four_digits = '1248'
     seller_name = 'MUÑOZ PEREA MARIA FERNANDA'
     logger.info(f'Fetching ip for {last_four_digits}')
     country = await fetch_ip(last_four_digits, seller_name)

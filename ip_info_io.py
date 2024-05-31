@@ -6,7 +6,7 @@ import time
 logger = logging.getLogger(__name__)
 
 def get_ip_origin(ip_address, max_retries=3, initial_backoff=1, max_backoff=5):
-    logger.info(f"Getting IP details for: {ip_address}")
+    logger.debug(f"Getting IP details for: {ip_address}")
     access_token = '51a4ceb0f429f2'
     handler = ipinfo.getHandler(access_token)
     retries = 0
