@@ -29,7 +29,7 @@ async def check_and_handle_country_restrictions(connection_manager, conn, order_
             await add_to_blacklist(conn, buyer_name, order_no, country)
             return
 
-    if oxxo_used and country in accepted_countries_for_oxxo:
+    if oxxo_used and country not in ['NG', 'KH', 'TJ', 'GH']:
         await get_payment_details(conn, order_no, buyer_name, oxxo_used)
         return False  # Accept orders from specified countries for OXXO payment type
   

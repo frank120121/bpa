@@ -65,11 +65,11 @@ async def remove_from_blacklist_accepted_countries(conn, accepted_countries):
     
 async def main():
     conn = await create_connection(DB_FILE)
-    # await remove_from_blacklist_no_country(conn)
-    # accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE']
-    # await remove_from_blacklist_accepted_countries(conn, accepted_countries_for_oxxo)
+    await remove_from_blacklist_no_country(conn)
+    accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE', 'BE', 'EC', 'RU', 'TH', 'IN', 'UA', 'DE', 'JP', 'US']
+    await remove_from_blacklist_accepted_countries(conn, accepted_countries_for_oxxo)
 
-    # await print_table_contents(conn, 'P2PBlacklist')
+    await print_table_contents(conn, 'P2PBlacklist')
     # Get blacklist counts by country
     # counts = await get_blacklist_counts_by_country(conn)
     

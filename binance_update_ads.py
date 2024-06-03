@@ -26,12 +26,12 @@ latest_usd_balance = 0
 def adjust_sell_price_threshold(usd_balance):
     global SELL_PRICE_THRESHOLD
     global BUY_PRICE_THRESHOLD
-    if usd_balance >= 60000:
+    if usd_balance >= 65000:
         SELL_PRICE_THRESHOLD = 0.9898
         BUY_PRICE_THRESHOLD = 1.0120
         logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
     else:
-        adjustment = (60000 - usd_balance) / 1000 * 0.0005
+        adjustment = (65000 - usd_balance) / 1000 * 0.0005
         SELL_PRICE_THRESHOLD = min(0.9898 + adjustment, 0.9995)
         BUY_PRICE_THRESHOLD = min(1.0120 + adjustment, 1.0245)
         logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
