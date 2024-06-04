@@ -253,3 +253,9 @@ payment_concept = (
     f"Para ayuda, escriba la palabra 'ayuda'."
 )
 
+async def verified_customer_greeting(buyer_name): 
+    
+    return (
+        f"¡Hola {buyer_name}!\n\n"
+        f"Es un placer atenderte. Estoy en linea y al pendiente. En un momento te envio los detalles del pago."
+    )

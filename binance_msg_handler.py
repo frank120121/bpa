@@ -1,4 +1,4 @@
-from lang_utils import get_message_by_language, determine_language, get_default_reply, payment_concept, payment_warning, invalid_country
+from lang_utils import get_message_by_language, determine_language, get_default_reply, payment_concept, payment_warning, invalid_country, verified_customer_greeting
 from binance_db_get import get_account_number, is_menu_presented, get_kyc_status, get_anti_fraud_stage, get_buyer_bank, has_specific_bank_identifiers
 from binance_db_set import update_total_spent, update_buyer_bank
 from binance_bank_deposit import get_payment_details
@@ -69,6 +69,8 @@ async def handle_order_status_1(connection_manager, conn, order_no, order_detail
         if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
             return
     else:
+        greeting = await verified_customer_greeting(buyer_name)
+        await connection_manager.send_text_message(greeting, order_no)
         if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
             return
         payment_details = await get_payment_details(conn, order_no, buyer_name)

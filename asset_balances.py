@@ -197,7 +197,7 @@ async def total_usd():
 
 async def main():
     usd_balance = await total_usd()
-    logger.debug(f"Total USD balance: {usd_balance}")
+    print(f"Total USD balance: {usd_balance}")
 
 if __name__ == "__main__":
     asyncio.run(main())
