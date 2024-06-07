@@ -34,6 +34,7 @@ class BinanceAPI:
                     self.last_call = asyncio.get_event_loop().time()
 
                     try:
+                        logger.info(f"API call to '{method} {endpoint}''")
                         payload["timestamp"] = await get_server_timestamp()
                         query_string = urlencode(payload)
                         signature = self.hashing(query_string)
@@ -44,6 +45,9 @@ class BinanceAPI:
                         }
                         query_string += f"&signature={signature}"
                         async with self.session.post(f"{endpoint}?{query_string}", json=payload, headers=headers) as response:
+
+                            if response.status != 200:
+                                logger.info(f'response: {response}')
                             if response.status == 200:
                                 #log a short and simple message
                                 logger.debug(f"API call to '{method}' successful.")

@@ -12,9 +12,9 @@ from asset_balances import total_usd
 logger = logging.getLogger(__name__)
 
 # Constants
-BUY_PRICE_THRESHOLD = 1.0120
-SELL_PRICE_THRESHOLD = 0.9945
-PRICE_THRESHOLD_2 = 1.0205
+BUY_PRICE_THRESHOLD = 1.014
+SELL_PRICE_THRESHOLD = 0.9808
+PRICE_THRESHOLD_2 = 1.019
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
 RATIO_ADJUSTMENT = 0.05
@@ -26,14 +26,14 @@ latest_usd_balance = 0
 def adjust_sell_price_threshold(usd_balance):
     global SELL_PRICE_THRESHOLD
     global BUY_PRICE_THRESHOLD
-    if usd_balance >= 65000:
-        SELL_PRICE_THRESHOLD = 0.9708
-        BUY_PRICE_THRESHOLD = 1.0075
+    if usd_balance >= 60000:
+        SELL_PRICE_THRESHOLD = 0.9808
+        BUY_PRICE_THRESHOLD = 1.014
         logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
     else:
-        adjustment = (65000 - usd_balance) / 1000 * 0.0005
-        SELL_PRICE_THRESHOLD = min(0.9708 + adjustment, 0.9845)
-        BUY_PRICE_THRESHOLD = min(1.0075 + adjustment, 1.0245)
+        adjustment = (60000 - usd_balance) / 1000 * 0.0003
+        SELL_PRICE_THRESHOLD = min(0.9808 + adjustment, 0.994)
+        BUY_PRICE_THRESHOLD = min(1.014 + adjustment, 1.10)
         logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
 async def fetch_and_calculate_total_balance():
     while True:
@@ -90,6 +90,10 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
         logger.debug(f'Ads_data: {ads_data}')
 
         if not our_ad_data:
+            return
+            if advNo in ['12601438033869934592', '12601117035243544576', '12598158630177452032']:
+                return
+            logger.info(f"Ad number {advNo} not found in ads data. Fetching details...")
             our_ad_data = await api_instance.get_ad_detail(advNo)
             if our_ad_data is None or 'data' not in our_ad_data:
                 logger.error(f"Failed to get details for ad number {advNo}")
@@ -208,7 +212,7 @@ async def start_update_ads(is_buy=True):
                 logger.debug(f"Using USD Balance: {usd_balance}")
                 adjust_sell_price_threshold(usd_balance)
                 await main_loop(api_instances, is_buy)
-                await asyncio.sleep(0.1)  # Adjust sleep time as needed
+                await asyncio.sleep(0.01)  # Adjust sleep time as needed
         finally:
             await SingletonBinanceAPI.close_all()
 
