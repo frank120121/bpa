@@ -16,6 +16,7 @@ if sys.platform == 'win32':
 advNo_to_target_spot = {ad['advNo']: ad['target_spot'] for _, ads in ads_dict.items() for ad in ads}
 advNo_to_fiat = {ad['advNo']: ad['fiat'] for _, ads in ads_dict.items() for ad in ads}
 advNo_to_transAmount = {ad['advNo']: ad['transAmount'] for _, ads in ads_dict.items() for ad in ads}
+advNo_to_minTransAmount = {ad['advNo']: ad['minTransAmount'] for _, ads in ads_dict.items() for ad in ads}
 
 async def populate_ads_with_details():
     async with aiohttp.ClientSession() as session:
@@ -49,6 +50,7 @@ async def process_ad(ad_info, api_instance):
         ad_details['target_spot'] = advNo_to_target_spot[advNo]
         fiat = advNo_to_fiat.get(advNo)
         transAmount = advNo_to_transAmount.get(advNo)
+        minTransAmount = advNo_to_minTransAmount.get(advNo)
 
         logger.debug(f"Updated target_spot for advNo {advNo} to {advNo_to_target_spot[advNo]}")
         await update_ad_in_database(
@@ -60,7 +62,8 @@ async def process_ad(ad_info, api_instance):
             surplusAmount=ad_details['data']['surplusAmount'],
             account=ad_info['account'],
             fiat=fiat,
-            transAmount=transAmount
+            transAmount=transAmount,
+            minTransAmount=minTransAmount
         )
 
 if __name__ == "__main__":

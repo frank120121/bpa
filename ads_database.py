@@ -27,7 +27,8 @@ async def create_database():
                 payTypes TEXT NOT NULL DEFAULT '[]',
                 `Group` TEXT NOT NULL DEFAULT 'Unknown',
                 merchant_id INTEGER REFERENCES merchants(id),
-                trade_type TEXT NOT NULL  -- Add trade_type column
+                trade_type TEXT NOT NULL,
+                minTransAmount REAL DEFAULT 0.0
             )
         ''')
         await conn.commit()
@@ -63,7 +64,8 @@ async def fetch_all_ads_from_database(trade_type=None):
             'transAmount': ad[9],
             'payTypes': json.loads(ad[10]) if ad[10] and ad[10].strip().startswith('[') else None,
             'Group': ad[11],
-            'trade_type': ad[12]  # Assuming 'trade_type' is the 13th column in your table
+            'trade_type': ad[12],
+            'minTransAmount': ad[13] if ad[13] is not None else 0.0
         }
         for ad in ads
     ]
@@ -86,13 +88,14 @@ async def get_ad_from_database(advNo):
             'fiat': ad[8],
             'transAmount': ad[9],
             'payTypes': json.loads(ad[10]) if ad[10] is not None else None,  # Deserialize or set to None
-            'Group': ad[11]  # Include Group
+            'Group': ad[11],
+            'trade_type': ad[12],
+            'minTransAmount': ad[13] if ad[13] is not None else 0.0
         }
-
     return None
 
-async def update_ad_in_database(target_spot, advNo, asset_type, floating_ratio, price, surplusAmount, account, fiat, transAmount):
-    logger.debug(f"Attempting to update {advNo} with price: {price}, floating_ratio: {floating_ratio}, asset_type: {asset_type}, target_spot: {target_spot}, fiat: {fiat}, transAmount: {transAmount}")
+async def update_ad_in_database(target_spot, advNo, asset_type, floating_ratio, price, surplusAmount, account, fiat, transAmount, minTransAmount):
+    logger.debug(f"Attempting to update {advNo} with price: {price}, floating_ratio: {floating_ratio}, asset_type: {asset_type}, target_spot: {target_spot}, fiat: {fiat}, transAmount: {transAmount}, minTransAmount: {minTransAmount}")
 
     async with aiosqlite.connect(DB_PATH) as conn:
         c = await conn.cursor()
@@ -100,9 +103,9 @@ async def update_ad_in_database(target_spot, advNo, asset_type, floating_ratio, 
             # Update only specific fields without changing payTypes and Group
             await c.execute("""
                 UPDATE ads
-                SET target_spot = ?, asset_type = ?, price = ?, floating_ratio = ?, last_updated = datetime('now'), account = ?, surplused_amount = ?, fiat = ?, transAmount = ?
+                SET target_spot = ?, asset_type = ?, price = ?, floating_ratio = ?, last_updated = datetime('now'), account = ?, surplused_amount = ?, fiat = ?, transAmount = ?, minTransAmount = ?
                 WHERE advNo = ?""", 
-                (target_spot, asset_type, price, floating_ratio, account, surplusAmount, fiat, transAmount, advNo))
+                (target_spot, asset_type, price, floating_ratio, account, surplusAmount, fiat, transAmount, minTransAmount, advNo))
             await conn.commit()
 
             logger.debug(f"Updated ad {advNo} successfully without modifying payTypes and Group.")
@@ -117,7 +120,7 @@ async def insert_initial_ads():
             pay_types_serialized = json.dumps(ad.get('payTypes', []))  # Serialize payTypes to JSON
             # Use account_name instead of ad['account']
             ads_to_insert.append((ad['advNo'], ad['target_spot'], ad['asset_type'], account_name,
-                                  ad['fiat'], ad['transAmount'], pay_types_serialized, ad['Group'], ad['trade_type']))
+                                  ad['fiat'], ad['transAmount'], pay_types_serialized, ad['Group'], ad['trade_type'], ad['minTransAmount']))
     await insert_multiple_ads(ads_to_insert)
 
 async def insert_multiple_ads(ads_list):
@@ -125,8 +128,8 @@ async def insert_multiple_ads(ads_list):
         c = await conn.cursor()
         for ad in ads_list:
             await c.execute(
-                """INSERT OR REPLACE INTO ads (advNo, target_spot, asset_type, account, fiat, transAmount, payTypes, `Group`, trade_type) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT OR REPLACE INTO ads (advNo, target_spot, asset_type, account, fiat, transAmount, payTypes, `Group`, trade_type, minTransAmount) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 ad  # Pass the tuple directly
             )
         await conn.commit()

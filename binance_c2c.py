@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 async def send_http_request(method, url, api_key, secret_key, params=None, body=None):
     try:
+        logger.info(f"Sending {method} request to {url}")
         params = params or {}
         params['timestamp'] = await get_server_timestamp()
         query_string = urlencode(params)
@@ -108,6 +109,7 @@ async def run_websocket(KEY, SECRET):
 
     while retry_count < max_retries:
         try:
+            logger.info(f"Fetching chat credentials...")
             response = await send_http_request("GET", uri_path, KEY, SECRET)
             if 'chatWssUrl' in response:
                 wss_url = f"{response['chatWssUrl']}/{response['listenKey']}?token={response['listenToken']}&clientType=web"

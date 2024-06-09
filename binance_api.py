@@ -22,7 +22,7 @@ class BinanceAPI:
     def hashing(self, query_string):
         return hmac.new(self.SECRET.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
 
-    async def api_call(self, method, endpoint, payload, max_retries=30, initial_retry_delay=0.5, max_retry_delay=1.5):
+    async def api_call(self, method, endpoint, payload, max_retries=30, initial_retry_delay=0.1, max_retry_delay=1.5):
         async with self.semaphore:
             retry_delay = initial_retry_delay
             for retry_count in range(max_retries):
@@ -57,6 +57,8 @@ class BinanceAPI:
                                 await asyncio.sleep(retry_delay)
                                 retry_delay = min(retry_delay * 2, max_retry_delay)
                             elif response.status == 400:  # Timestamp error
+                                await asyncio.sleep(retry_delay)
+                                return None
                                 logger.error(f"Timestamp error: {await response.text()}. Retrying after delay.")
                                 await asyncio.sleep(retry_delay)
                                 retry_delay = min(retry_delay * 2, max_retry_delay)

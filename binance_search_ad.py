@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Initialize a cache dictionary
 cache = {}
 
-async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, payTypes=None):
+async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount=None, payTypes=None):
     global cache
 
     # Create a cache key based on the function's arguments
@@ -20,7 +20,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
     # Check if these parameters are in the cache and if the cached result is less than 5 seconds old
     if cache_key in cache:
         cached_result, timestamp = cache[cache_key]
-        if datetime.now() - timestamp < timedelta(seconds=0.005):
+        if datetime.now() - timestamp < timedelta(seconds=1):
             logger.debug(f"Returning cached result for {asset_type} {fiat} {transAmount} {payTypes}")
             return cached_result
 
@@ -30,6 +30,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount, pay
     while attempts < max_attempts:
         attempts += 1
         try:
+            logger.debug(f"Fetching ads search for {asset_type} {fiat} {transAmount} {payTypes}...")
             timestamp = str(await get_server_timestamp())
 
             payload = {
@@ -103,7 +104,7 @@ if __name__ == "__main__":
         async def main():
             # Define your asset types, fiat, and transAmount combinations
             search_params = [
-                {'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount': 5000, 'payTypes': None},
+                {'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount': None, 'payTypes': None},
                 # Add more combinations if necessary
             ]
 
