@@ -57,8 +57,6 @@ class BinanceAPI:
                                 await asyncio.sleep(retry_delay)
                                 retry_delay = min(retry_delay * 2, max_retry_delay)
                             elif response.status == 400:  # Timestamp error
-                                await asyncio.sleep(retry_delay)
-                                return None
                                 logger.error(f"Timestamp error: {await response.text()}. Retrying after delay.")
                                 await asyncio.sleep(retry_delay)
                                 retry_delay = min(retry_delay * 2, max_retry_delay)

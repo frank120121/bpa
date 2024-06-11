@@ -30,6 +30,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount=None
     while attempts < max_attempts:
         attempts += 1
         try:
+            await asyncio.sleep(0.2)  # Rate limit
             logger.debug(f"Fetching ads search for {asset_type} {fiat} {transAmount} {payTypes}...")
             timestamp = str(await get_server_timestamp())
 
@@ -58,7 +59,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount=None
             }
             
             async with aiohttp.ClientSession() as session:
-                logger.debug(f'Calling fetch_ads_search for {asset_type} {fiat} {transAmount} {payTypes}')
+                logger.info(f'Api call Asset:{asset_type}, endpoint: {SEARCH_ADS}')
                 async with session.post(full_url, json=payload, headers=headers) as response:
                     if response.status == 200:
                         response_data = await response.json()

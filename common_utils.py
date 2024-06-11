@@ -30,6 +30,7 @@ class ServerTimestampCache:
                 for attempt in range(3):
                     for endpoint in endpoints:
                         try:
+                            logger.info(f"Attempting to fetch server time from {endpoint}...")
                             start_time = int(time.time() * 1000)
                             async with session.get(endpoint) as response:
                                 if response.status == 200:

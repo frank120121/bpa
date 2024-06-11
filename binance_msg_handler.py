@@ -12,7 +12,7 @@ from common_vars import prohibited_countries
 import logging
 logger = logging.getLogger(__name__)
 
-accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE']
+accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE', 'BE', 'EC', 'RU', 'TH', 'IN', 'UA', 'DE', 'JP', 'US', 'RU', 'FR']
 
 async def check_order_details(order_details):
     if order_details is None:

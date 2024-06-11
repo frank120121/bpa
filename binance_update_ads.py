@@ -12,13 +12,13 @@ from asset_balances import total_usd
 logger = logging.getLogger(__name__)
 
 # Constants
-BUY_PRICE_THRESHOLD = 1.005
+BUY_PRICE_THRESHOLD = 1.0065
 SELL_PRICE_THRESHOLD = 0.9888
 PRICE_THRESHOLD_2 = 1.01
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
 RATIO_ADJUSTMENT = 0.05
-DIFF_THRESHOLD = 0.15
+DIFF_THRESHOLD = 0.10
 
 balance_lock = asyncio.Lock()
 latest_usd_balance = 0
@@ -27,13 +27,13 @@ def adjust_sell_price_threshold(usd_balance):
     global SELL_PRICE_THRESHOLD
     global BUY_PRICE_THRESHOLD
     if usd_balance >= 60000:
-        SELL_PRICE_THRESHOLD = 0.9888
-        BUY_PRICE_THRESHOLD = 1.005
+        SELL_PRICE_THRESHOLD = 0.978
+        BUY_PRICE_THRESHOLD = 1.0069
         logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
     else:
         adjustment = (60000 - usd_balance) / 1000 * 0.0005
-        SELL_PRICE_THRESHOLD = min(0.988 + adjustment, 0.996)
-        BUY_PRICE_THRESHOLD = min(1.005 + adjustment, 1.10)
+        SELL_PRICE_THRESHOLD = min(0.9815 + adjustment, 0.9945)
+        BUY_PRICE_THRESHOLD = min(1.0055 + adjustment, 1.10)
         logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
 async def fetch_and_calculate_total_balance():
     while True:
@@ -130,7 +130,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
                 logger.debug(f"Ratio unchanged")
                 return
             else:
-                logger.debug(f"Updating ad {advNo} with new ratio: {new_ratio}. No filtered ads found.")
+                logger.debug(f" No filtered ads found. New ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}.")
                 await api_instance.update_ad(advNo, new_ratio)
                 await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount, minTransAmount)
             return
@@ -156,7 +156,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             logger.debug(f"Ratio unchanged")
             return
         else:
-            logger.debug(f"Updating ad with filter ads")
+            logger.debug(f"Updating with filter ad: new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}.")
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount, minTransAmount)
             logger.debug(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
@@ -193,6 +193,7 @@ async def main_loop(api_instances, is_buy=True):
     tasks = []
     for group_key, ads_group in grouped_ads.items():
         tasks.append(asyncio.create_task(process_ads(ads_group, api_instances, all_ads, is_buy)))
+        await asyncio.sleep(0.15)
     await asyncio.gather(*tasks)
 
 async def start_update_ads(is_buy=True):
@@ -214,7 +215,6 @@ async def start_update_ads(is_buy=True):
                 logger.debug(f"Using USD Balance: {usd_balance}")
                 adjust_sell_price_threshold(usd_balance)
                 await main_loop(api_instances, is_buy)
-                await asyncio.sleep(0.75)  # Adjust sleep time as needed
         finally:
             await SingletonBinanceAPI.close_all()
 
