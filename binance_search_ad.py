@@ -30,7 +30,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount=None
     while attempts < max_attempts:
         attempts += 1
         try:
-            await asyncio.sleep(0.2)  # Rate limit
+            await asyncio.sleep(0.05)  # Rate limit
             logger.debug(f"Fetching ads search for {asset_type} {fiat} {transAmount} {payTypes}...")
             timestamp = str(await get_server_timestamp())
 

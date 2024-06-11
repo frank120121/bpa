@@ -103,7 +103,9 @@ class BinanceAPI:
 
     async def fetch_ads_search(self, trade_type, asset_type, fiat, transAmount, payTypes=None):
         try:
+            await asyncio.sleep(0.05)
             result = await search_ads(self.KEY, self.SECRET, trade_type, asset_type, fiat, transAmount, payTypes)
+            await asyncio.sleep(0.05)
             if not result:
                 logger.error("Failed to fetch ads data.")
             return result
