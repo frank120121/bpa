@@ -34,7 +34,7 @@ class BinanceAPI:
                     self.last_call = asyncio.get_event_loop().time()
 
                     try:
-                        logger.info(f"API call to '{method} {endpoint}''")
+                        logger.debug(f"API call to '{method} {endpoint}''")
                         payload["timestamp"] = await get_server_timestamp()
                         query_string = urlencode(payload)
                         signature = self.hashing(query_string)

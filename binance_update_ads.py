@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 BUY_PRICE_THRESHOLD = 1.0065
-SELL_PRICE_THRESHOLD = 0.9888
+SELL_PRICE_THRESHOLD = 0.9845
 PRICE_THRESHOLD_2 = 1.01
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
@@ -26,13 +26,13 @@ latest_usd_balance = 0
 def adjust_sell_price_threshold(usd_balance):
     global SELL_PRICE_THRESHOLD
     global BUY_PRICE_THRESHOLD
-    if usd_balance >= 60000:
-        SELL_PRICE_THRESHOLD = 0.978
+    if usd_balance >= 65000:
+        SELL_PRICE_THRESHOLD = 0.9845
         BUY_PRICE_THRESHOLD = 1.0069
         logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
     else:
-        adjustment = (60000 - usd_balance) / 1000 * 0.0005
-        SELL_PRICE_THRESHOLD = min(0.9815 + adjustment, 0.9945)
+        adjustment = (65000 - usd_balance) / 1000 * 0.0005
+        SELL_PRICE_THRESHOLD = min(0.9845 + adjustment, 0.9945)
         BUY_PRICE_THRESHOLD = min(1.0055 + adjustment, 1.10)
         logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
 async def fetch_and_calculate_total_balance():
@@ -94,7 +94,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             logger.debug(f"Ad number {advNo} not found in ads data. Fetching details from database...")
             our_ad_data = await get_ad_from_database(advNo)
             if our_ad_data is None:
-                logger.info(f"Ad number {advNo} not found in ads data. Fetching details from API...")
+                logger.debug(f"Ad number {advNo} not found in ads data. Fetching details from API...")
                 our_ad_data = await api_instance.get_ad_detail(advNo)
                 if our_ad_data is None or 'data' not in our_ad_data:
                     logger.error(f"Failed to get details for ad number {advNo}")
@@ -124,6 +124,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
         if not filtered_ads:
+            logger.debug(f"No filtered ads found for {ad['asset_type']} {ad['fiat']} {ad['transAmount']} {ad['payTypes']}.")
             return
             logger.debug(f"Fileter ads for {advNo} is empty.")
             new_ratio = max(MIN_RATIO, min(MAX_RATIO, round((custom_price_threshold * 100), 2)))
@@ -139,10 +140,8 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             return
 
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
-        logger.debug(f'Competitor ad: {competitor_ad}')
         competitor_price = float(competitor_ad['adv']['price'])
         competitor_ratio = (competitor_price / base_price) * 100
-
 
         if (our_current_price >= competitor_price and is_buy) or (our_current_price <= competitor_price and not is_buy):
             new_ratio_unbounded = competitor_ratio - RATIO_ADJUSTMENT if is_buy else competitor_ratio + RATIO_ADJUSTMENT
@@ -156,7 +155,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
 
         new_ratio = max(MIN_RATIO, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
         new_diff = abs(new_ratio - current_priceFloatingRatio)
-        if new_ratio == current_priceFloatingRatio or new_diff < 0.03:
+        if new_ratio == current_priceFloatingRatio and new_diff < 0.015:
             logger.debug(f"Ratio unchanged")
             return
         else:
@@ -178,7 +177,7 @@ async def process_ads(ads_group, api_instances, all_ads, is_buy=True):
         api_instance = api_instances[account]
         payTypes_list = ad['payTypes'] if ad['payTypes'] is not None else []
         await asyncio.sleep(0.05)
-        ads_data = await api_instance.fetch_ads_search('BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], None, payTypes_list)
+        ads_data = await api_instance.fetch_ads_search('BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], payTypes_list)
         await asyncio.sleep(0.05)
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
             logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")

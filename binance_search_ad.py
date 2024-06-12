@@ -20,7 +20,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount=None
     # Check if these parameters are in the cache and if the cached result is less than 5 seconds old
     if cache_key in cache:
         cached_result, timestamp = cache[cache_key]
-        if datetime.now() - timestamp < timedelta(seconds=1):
+        if datetime.now() - timestamp < timedelta(seconds=0.5):
             logger.debug(f"Returning cached result for {asset_type} {fiat} {transAmount} {payTypes}")
             return cached_result
 
@@ -59,7 +59,7 @@ async def search_ads(KEY, SECRET, trade_type ,asset_type, fiat, transAmount=None
             }
             
             async with aiohttp.ClientSession() as session:
-                logger.info(f'Api call Asset:{asset_type}, endpoint: {SEARCH_ADS}')
+                logger.debug(f'Api call Asset:{asset_type}, endpoint: {SEARCH_ADS}')
                 async with session.post(full_url, json=payload, headers=headers) as response:
                     if response.status == 200:
                         response_data = await response.json()
