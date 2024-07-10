@@ -1,113 +1,194 @@
-#binance_api.py
-import hashlib
+import aiohttp
+import asyncio
 import hmac
+import hashlib
+import logging
 from urllib.parse import urlencode
 from common_utils import get_server_timestamp
-import logging
-import asyncio
-from binance_search_ad import search_ads
+import time
+from asyncio import Lock
 
 logger = logging.getLogger(__name__)
 
 class BinanceAPI:
-    def __init__(self, KEY, SECRET, session, semaphore, min_delay, last_call, lock):
-        self.KEY = KEY
-        self.SECRET = SECRET
-        self.session = session
-        self.semaphore = semaphore
-        self.min_delay = min_delay
-        self.last_call = last_call
-        self.lock = lock
+    BASE_URL = "https://api.binance.com"
+    instance_count = 0  # Class-level variable to count instances
+    last_request_time = 0  # Timestamp of the last request made
+    rate_limit_delay = 0.3  # Minimum delay between requests in seconds
+    request_lock = Lock()  # Lock to ensure rate limiting is respected globally
 
-    def hashing(self, query_string):
-        return hmac.new(self.SECRET.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+    def __init__(self, api_key, api_secret, client_type='WEB'):
+        self.api_key = api_key
+        self.api_secret = api_secret
+        self.client_type = client_type
+        self.session = aiohttp.ClientSession()
+        BinanceAPI.instance_count += 1  # Increment instance count
+        logger.debug(f"Number of BinanceAPI instances created: {BinanceAPI.instance_count}")  # Log the instance count
 
-    async def api_call(self, method, endpoint, payload, max_retries=30, initial_retry_delay=0.1, max_retry_delay=1.5):
-        async with self.semaphore:
-            retry_delay = initial_retry_delay
-            for retry_count in range(max_retries):
-                async with self.lock:
-                    current_time = asyncio.get_event_loop().time()
-                    elapsed_time = current_time - self.last_call
-                    if elapsed_time < self.min_delay:
-                        await asyncio.sleep(self.min_delay - elapsed_time)
-                    self.last_call = asyncio.get_event_loop().time()
+    def _generate_signature(self, query_string):
+        return hmac.new(
+            self.api_secret.encode('utf-8'),
+            query_string.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
 
-                    try:
-                        logger.debug(f"API call to '{method} {endpoint}''")
-                        payload["timestamp"] = await get_server_timestamp()
-                        query_string = urlencode(payload)
-                        signature = self.hashing(query_string)
-                        headers = {
-                            "Content-Type": "application/json;charset=utf-8",
-                            "X-MBX-APIKEY": self.KEY,
-                            "clientType": "WEB",
-                        }
-                        query_string += f"&signature={signature}"
-                        async with self.session.post(f"{endpoint}?{query_string}", json=payload, headers=headers) as response:
+    def _add_optional_headers(self, headers, x_gray_env, x_trace_id, x_user_id):
+        if x_gray_env:
+            headers['x-gray-env'] = x_gray_env
+        if x_trace_id:
+            headers['x-trace-id'] = x_trace_id
+        if x_user_id:
+            headers['x-user-id'] = x_user_id
 
-                            if response.status != 200:
-                                logger.info(f'response: {response}')
-                            if response.status == 200:
-                                #log a short and simple message
-                                logger.debug(f"API call to '{method}' successful.")
-                                return await response.json()
-                            elif response.status == 429:  # Too many requests
-                                logger.warning("Rate limit exceeded. Retrying after delay.")
-                                await asyncio.sleep(retry_delay)
-                                retry_delay = min(retry_delay * 2, max_retry_delay)
-                            elif response.status == 400:  # Timestamp error
-                                logger.error(f"Timestamp error: {await response.text()}. Retrying after delay.")
-                                await asyncio.sleep(retry_delay)
-                                retry_delay = min(retry_delay * 2, max_retry_delay)
+    def _prepare_headers(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        headers = {
+            'clientType': self.client_type,
+            'X-MBX-APIKEY': self.api_key
+        }
+        self._add_optional_headers(headers, x_gray_env, x_trace_id, x_user_id)
+        return headers
+
+    async def _make_request(self, method, endpoint, params=None, headers=None, body=None, retries=5, backoff_factor=2):
+        if params is None:
+            params = {}
+
+        params['timestamp'] = await get_server_timestamp()
+        query_string = urlencode(params)
+        signature = self._generate_signature(query_string)
+        query_string += f"&signature={signature}"
+        
+        url = f"{self.BASE_URL}{endpoint}?{query_string}"
+
+        for attempt in range(retries):
+            try:
+                # Implement global rate limiting for specific endpoints
+                if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
+                    async with BinanceAPI.request_lock:
+                        current_time = time.time()
+                        time_since_last_request = current_time - BinanceAPI.last_request_time
+                        if time_since_last_request < BinanceAPI.rate_limit_delay:
+                            wait_time = BinanceAPI.rate_limit_delay - time_since_last_request
+                            logger.debug(f"Rate limiting: waiting for {wait_time:.2f} seconds before next request.")
+                            await asyncio.sleep(wait_time)
+                        BinanceAPI.last_request_time = time.time()  # Update last request time
+
+                logger.debug(f"Request: method={method}, url={url}, headers={headers}, body={body}")
+                async with self.session.request(method, url, headers=headers, json=body) as response:
+                    content_type = response.headers.get('Content-Type', '')
+                    if 'application/json' in content_type:
+                        resp_json = await response.json()
+                        logger.debug(f"Response status: {response.status}, Response body: {resp_json}")
+                        if response.status == 200:
+                            logger.debug("Request success")
+                            return resp_json
+                        elif response.status in [429, 83628]:  # Handle rate limiting
+                            retry_after = response.headers.get('Retry-After')
+                            if retry_after:
+                                retry_after = int(retry_after)
                             else:
-                                logger.error(f"API call to '{method} {endpoint}' with payload '{str(payload)[:50]}...' failed with status code {response.status}: {await response.text()}")
-                                return None
-                    except Exception as e:
-                        logger.error(f"API call to '{method} {endpoint}' with payload '{str(payload)[:50]}...' failed: {e}")
-
-                    if retry_count < max_retries - 1:
-                        logger.warning(f"Retrying API call in {retry_delay} seconds (attempt {retry_count + 2}/{max_retries})")
-                        await asyncio.sleep(retry_delay)
-                        retry_delay = min(retry_delay * 2, max_retry_delay)
+                                retry_after = 30
+                            logger.info(f"Rate limited. Retrying after {retry_after} seconds...")
+                            await asyncio.sleep(retry_after)
+                            BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
+                        elif response.status == 400:  # Bad request
+                            if 'Timestamp' in resp_json:
+                                if 'ahead of the server' in resp_json:
+                                    logger.warning("Timestamp ahead of server, decrementing buffer and retrying...")
+                                    await get_server_timestamp(decrement_buffer=True)
+                                elif 'behind the server' in resp_json:
+                                    logger.warning("Timestamp behind server, incrementing buffer and retrying...")
+                                    await get_server_timestamp(increment_buffer=True)
+                                elif 'Too many attempts' in resp_json:
+                                    logger.warning("Too many requests, retrying...")
+                                    await asyncio.sleep(2 * backoff_factor ** attempt)
+                                continue  # Retry the request
+                            logger.error(f"Bad request: {resp_json}")
+                            await asyncio.sleep(2 * backoff_factor ** attempt)
+                            return None
+                        else:
+                            logger.error(f"Response: {resp_json}")
+                            return resp_json
                     else:
-                        logger.error("Max retries reached. Exiting.")
-                        return None
+                        logger.error(f"Unexpected content type: {content_type} for URL: {url}")
+                        text_response = await response.text()
+                        logger.debug(f"Response status: {response.status}, Response body: {text_response}")
+                        return text_response
+            except aiohttp.ClientError as e:
+                logger.error(f"Client error during request: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error during request: {e}")
 
-    async def close_session(self):
-        await self.session.close()
+            await asyncio.sleep(backoff_factor ** attempt)
+        logger.error(f"Exceeded max retries for URL: {url}")
+        return None
+    
+    async def get_ad_detail(self, ads_no, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        endpoint = "/sapi/v1/c2c/ads/getDetailByNo"
+        params = {
+            'adsNo': ads_no
+        }
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
 
-    async def get_ad_detail(self, advNo):
-        logger.debug(f'calling get_ad_detail')
-        return await self.api_call(
-            'post',
-            "https://api.binance.com/sapi/v1/c2c/ads/getDetailByNo",
-            {
-                "adsNo": advNo
-            }
-        )
-
-    async def update_ad(self, advNo, priceFloatingRatio):
+        return await self._make_request('POST', endpoint, params, headers)
+    
+    async def update_ad(self, advNo, priceFloatingRatio, x_gray_env=None, x_trace_id=None, x_user_id=None):
         if advNo in ['12590489123493851136', '12590488417885061120']:
             logger.debug(f"Ad: {advNo} is in the skip list")
             return
-        logger.debug(f"Updating ad: {advNo} with rate: {priceFloatingRatio}")
-        return await self.api_call(
-            'post',
-            "https://api.binance.com/sapi/v1/c2c/ads/update",
-            {
-                "advNo": advNo,
-                "priceFloatingRatio": priceFloatingRatio
-            }
-        )
+        endpoint = "/sapi/v1/c2c/ads/update"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        body = {
+            "advNo": advNo,
+            "priceFloatingRatio": priceFloatingRatio
+        }
+        
+        return await self._make_request('POST', endpoint, headers=headers, body=body)
+    
+    async def fetch_ads_search(self, trade_type, asset, fiat, trans_amount, pay_types, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        endpoint = "/sapi/v1/c2c/ads/search"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        body = {
+            "asset": asset,
+            "fiat": fiat,
+            "page": 1,
+            "publisherType": "merchant",
+            "rows": 20,
+            "tradeType": trade_type,
+            "transAmount": trans_amount,
+        }
+        if pay_types:
+            body['payTypes'] = pay_types
 
-    async def fetch_ads_search(self, trade_type, asset_type, fiat, transAmount, payTypes=None):
-        try:
-            await asyncio.sleep(0.05)
-            result = await search_ads(self.KEY, self.SECRET, trade_type, asset_type, fiat, transAmount, payTypes)
-            await asyncio.sleep(0.05)
-            if not result:
-                logger.error("Failed to fetch ads data.")
-            return result
-        except Exception as e:
-            logger.error(f"An error occurred: {e}")
+        return await self._make_request('POST', endpoint, headers=headers, body=body)
+    
+    async def retrieve_chat_credential(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        endpoint = "/sapi/v1/c2c/chat/retrieveChatCredential"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+
+        return await self._make_request('GET', endpoint, headers=headers)
+
+    async def get_counterparty_order_statistics(self, order_number, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        logger.debug('calling get_counterparty_order_statistics')
+        endpoint = "/sapi/v1/c2c/orderMatch/queryCounterPartyOrderStatistic"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        body = {
+            "orderNumber": order_number
+        }
+        return await self._make_request('POST', endpoint, headers=headers, body=body)
+    
+    async def get_user_order_detail(self, ad_order_no_req, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        endpoint = "/sapi/v1/c2c/orderMatch/getUserOrderDetail"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+
+        return await self._make_request('POST', endpoint, headers=headers, body=ad_order_no_req)
+
+    async def check_if_can_release_coin(self, confirm_order_paid_req, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        endpoint = "/sapi/v1/c2c/orderMatch/checkIfCanReleaseCoin"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+
+        return await self._make_request('POST', endpoint, headers=headers, body=confirm_order_paid_req)
+
+    async def close_session(self):
+        await self.session.close()
+        BinanceAPI.instance_count -= 1  # Decrement instance count
+        logger.debug(f"BinanceAPI instance closed. Number of instances remaining: {BinanceAPI.instance_count}")  # Log the instance count

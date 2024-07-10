@@ -21,30 +21,23 @@ advNo_to_minTransAmount = {ad['advNo']: ad['minTransAmount'] for _, ads in ads_d
 async def populate_ads_with_details():
     async with aiohttp.ClientSession() as session:
         try:
+            logger.info("Fetching ads from database...")
             ads_info = await fetch_all_ads_from_database()
             logger.debug(f"Fetched ads from database: {ads_info}")
 
-            tasks = []
-            for i, ad_info in enumerate(ads_info):
+            for ad_info in ads_info:
                 account = ad_info['account']
                 KEY = credentials_dict[account]['KEY']
                 SECRET = credentials_dict[account]['SECRET']
                 api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
-                tasks.append(asyncio.create_task(delayed_process(i * 2, ad_info, api_instance)))
-            await asyncio.gather(*tasks)
+                await process_ad(ad_info, api_instance)
         finally:
             await SingletonBinanceAPI.close_all()
         logger.info("All ads processed successfully.")
 
-async def delayed_process(delay, ad_info, api_instance):
-    """Wait for the specified delay and then process the ad."""
-    await process_ad(ad_info, api_instance)
-
 async def process_ad(ad_info, api_instance):
     advNo = ad_info['advNo']
     ad_details = await api_instance.get_ad_detail(advNo)
-    logger.debug(f"Ad details fetched from BinanceAPI for advNo {advNo}: {ad_details}")
-
     if ad_details and advNo in advNo_to_target_spot:
         # Update target_spot, fiat, and transAmount using the mappings
         ad_details['target_spot'] = advNo_to_target_spot[advNo]

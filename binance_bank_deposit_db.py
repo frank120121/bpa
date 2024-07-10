@@ -260,11 +260,11 @@ async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
         # Initialize the database (create tables and insert initial data)
-        await clear_accounts(conn)
-        await initialize_database(conn)
-        # Print table contents for verification
-        await print_table_contents(conn, 'mxn_bank_accounts')
-        await print_table_contents(conn, 'oxxo_debit_cards')
+        # await clear_accounts(conn)
+        # await initialize_database(conn)
+        # # Print table contents for verification
+        # await print_table_contents(conn, 'mxn_bank_accounts')
+        # await print_table_contents(conn, 'oxxo_debit_cards')
         # await remove_bank_account(conn, '0482424657')
         # await remove_bank_account(conn, '012778015323351288')
         # await remove_bank_account(conn, '012778015939990486')
@@ -313,6 +313,8 @@ async def main():
         # print(f"Total deposit sum for account '1593999048' in March 2024: {deposit_sum}")
     
         # await sum_recent_deposits('1532335128')
+        month = await get_monthly_deposit_sum(conn, '0486503160', 2024, 2)
+        print(f"Total deposit sum for account: {month}")
         await conn.close()
     else:
         logger.error("Error! Cannot create the database connection.")

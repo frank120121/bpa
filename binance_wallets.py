@@ -91,7 +91,7 @@ class BinanceWallets:
         if asset == 'BTC':
             target = 0.25
         elif asset == 'ETH':
-            target = 1.000
+            target = 1.25
         balance = self.combined_balances.get(asset, 0)
         return target - balance
 

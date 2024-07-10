@@ -1,10 +1,13 @@
+# common_utils.py
 import hashlib
 import hmac
 import time
 import aiohttp
 import asyncio
-from binance_endpoints import TIME_ENDPOINT_V1, TIME_ENDPOINT_V3
 import logging
+import ntplib
+
+from binance_endpoints import TIME_ENDPOINT_V1, TIME_ENDPOINT_V3
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +22,30 @@ class ServerTimestampCache:
     lock = asyncio.Lock()  # Add a lock to prevent concurrent fetches
     buffer_ms = 1000  # Initial buffer of 1000ms
     max_buffer_ms = 3000  # Maximum buffer limit
+    min_buffer_ms = 0  # Minimum buffer limit
+
+    @classmethod
+    async def sync_ntp_time(cls):
+        try:
+            client = ntplib.NTPClient()
+            response = client.request('pool.ntp.org')
+            ntp_time = response.tx_time
+            current_time = time.time()
+            time_difference = ntp_time - current_time
+            logger.info(f"NTP time synced: {ntp_time} (Difference: {time_difference}s)")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync NTP time: {e}")
+            return False
 
     @classmethod
     async def fetch_server_time(cls):
         async with cls.lock:  # Ensure only one fetch is happening at a time
             if cls.is_initialized:
                 return  # If already initialized, no need to fetch again
+
+            await cls.sync_ntp_time()  # Sync system time with NTP
+
             async with aiohttp.ClientSession() as session:
                 endpoints = [TIME_ENDPOINT_V3, TIME_ENDPOINT_V1]
                 for attempt in range(3):
@@ -47,7 +68,7 @@ class ServerTimestampCache:
                                     return
                         except Exception as e:
                             logger.error(f"Attempt {attempt + 1}: Failed to fetch server time from {endpoint}: {e}")
-                            await asyncio.sleep(0.2)  # Pause for 1 second before retrying
+                            await asyncio.sleep(0.2 * (2 ** attempt))  # Exponential backoff
 
                 cls.is_initialized = False
                 logger.error("Failed to update server timestamp from all endpoints. Using local time instead.")
@@ -69,7 +90,7 @@ class ServerTimestampCache:
             cls.is_maintenance_task_started = True
             asyncio.create_task(cls.maintain_timestamp())
 
-async def get_server_timestamp(increment_buffer=False):
+async def get_server_timestamp(increment_buffer=False, decrement_buffer=False):
     await ServerTimestampCache.ensure_initialized()
     await ServerTimestampCache.ensure_maintenance_task_started()
     if ServerTimestampCache.offset is None:
@@ -79,6 +100,9 @@ async def get_server_timestamp(increment_buffer=False):
     if increment_buffer:
         ServerTimestampCache.buffer_ms = min(ServerTimestampCache.max_buffer_ms, ServerTimestampCache.buffer_ms + 200)  # Increment buffer by 200ms if required
         logger.debug(f"Incrementing buffer to: {ServerTimestampCache.buffer_ms} ms")
+    elif decrement_buffer:
+        ServerTimestampCache.buffer_ms = max(ServerTimestampCache.min_buffer_ms, ServerTimestampCache.buffer_ms - 200)  # Decrement buffer by 200ms if required
+        logger.debug(f"Decrementing buffer to: {ServerTimestampCache.buffer_ms} ms")
 
     current_timestamp = int(time.time() * 1000) + ServerTimestampCache.offset + ServerTimestampCache.buffer_ms
     logger.debug(f"Returning server timestamp: {current_timestamp} (Local time: {int(time.time() * 1000)}, Offset: {ServerTimestampCache.offset}, Buffer: {ServerTimestampCache.buffer_ms} ms)")
@@ -96,14 +120,7 @@ async def make_api_call(api_function, *args, **kwargs):
             if 'recvWindow' in str(e):
                 # Increment buffer and try again if recvWindow error occurs
                 logger.warning(f"recvWindow error detected. Attempt {attempt + 1} of {retry_attempts}. Retrying...")
-                await asyncio.sleep(1)  # Exponential backoff
+                await asyncio.sleep(1 * (2 ** attempt))  # Exponential backoff with jitter
             else:
                 logger.error(f"API call failed: {e}")
                 break
-
-# Example usage:
-# async def example_api_function(timestamp, *args, **kwargs):
-#     # Simulated API call using the timestamp
-#     pass
-
-# asyncio.run(make_api_call(example_api_function))

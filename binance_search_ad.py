@@ -105,12 +105,12 @@ if __name__ == "__main__":
         async def main():
             # Define your asset types, fiat, and transAmount combinations
             search_params = [
-                {'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount': None, 'payTypes': None},
+                {'asset_type': 'USDT', 'fiat': 'USD', 'transAmount': '300', 'payTypes': ['BANK']},
                 # Add more combinations if necessary
             ]
 
             # Create tasks for each combination
-            tasks = [search_ads(KEY, SECRET, 'SELL', param['asset_type'], param['fiat'], param['transAmount'], param['payTypes']) for param in search_params]
+            tasks = [search_ads(KEY, SECRET, 'BUY', param['asset_type'], param['fiat'], param['transAmount'], param['payTypes']) for param in search_params]
             
             results = await asyncio.gather(*tasks)
 

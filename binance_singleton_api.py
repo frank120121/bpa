@@ -1,21 +1,19 @@
 # binance_singleton_api.py
-import aiohttp
 import asyncio
 from binance_api import BinanceAPI
+import logging
+
+logger = logging.getLogger(__name__)
 
 class SingletonBinanceAPI:
     _instances = {}
     _lock = asyncio.Lock()
-    last_call = 0  
-    min_delay = 0.1
 
     @classmethod
-    async def get_instance(cls, account, KEY, SECRET):
+    async def get_instance(cls, account, api_key, api_secret, client_type='WEB'):
         async with cls._lock:
             if account not in cls._instances:
-                session = aiohttp.ClientSession()
-                semaphore = asyncio.Semaphore(1)  
-                cls._instances[account] = BinanceAPI(KEY, SECRET, session, semaphore, cls.min_delay, cls.last_call, cls._lock)
+                cls._instances[account] = BinanceAPI(api_key, api_secret, client_type)
             return cls._instances[account]
 
     @classmethod
@@ -24,4 +22,3 @@ class SingletonBinanceAPI:
             for instance in cls._instances.values():
                 await instance.close_session()
             cls._instances = {}
-

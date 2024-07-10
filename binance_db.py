@@ -108,6 +108,7 @@ async def get_orders_by_total_price(conn, total_price):
     except Exception as e:
         logger.error(f"Error retrieving orders with total price {total_price}: {e}")
         return []
+        
 async def main():  
     sql_create_merchants_table = """CREATE TABLE IF NOT EXISTS merchants (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,7 +176,7 @@ async def main():
         # await remove(conn, '20624872107382546432')
         # await remove_user(conn, 'LOPEZ GUERRERO FRANCISCO JAVIER')
         # await add_column_if_not_exists(conn, 'users', 'user_bank', 'TEXT', 'NULL')
-        await print_table_contents(conn, 'merchants')
+        await print_table_contents(conn, 'orders')
         # total_price = 10921.00  # Example total price to search for
         # orders = await get_orders_by_total_price(conn, total_price)
         # for order in orders:

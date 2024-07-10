@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Constants
 BUY_PRICE_THRESHOLD = 1.0065
 SELL_PRICE_THRESHOLD = 0.9845
-PRICE_THRESHOLD_2 = 1.01
+PRICE_THRESHOLD_2 = 1.0189
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
 RATIO_ADJUSTMENT = 0.05
@@ -26,14 +26,14 @@ latest_usd_balance = 0
 def adjust_sell_price_threshold(usd_balance):
     global SELL_PRICE_THRESHOLD
     global BUY_PRICE_THRESHOLD
-    if usd_balance >= 65000:
+    if usd_balance >= 55000:
         SELL_PRICE_THRESHOLD = 0.9845
-        BUY_PRICE_THRESHOLD = 1.0069
+        BUY_PRICE_THRESHOLD = 1.0095
         logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
     else:
-        adjustment = (65000 - usd_balance) / 1000 * 0.0005
-        SELL_PRICE_THRESHOLD = min(0.9845 + adjustment, 0.9945)
-        BUY_PRICE_THRESHOLD = min(1.0055 + adjustment, 1.10)
+        adjustment = (55000 - usd_balance) / 1000 * 0.00025
+        SELL_PRICE_THRESHOLD = min(0.9909 + adjustment, 0.9992)
+        BUY_PRICE_THRESHOLD = min(1.0095 + adjustment, 1.10)
         logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
 async def fetch_and_calculate_total_balance():
     while True:
@@ -92,6 +92,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
 
         if not our_ad_data:
             logger.debug(f"Ad number {advNo} not found in ads data. Fetching details from database...")
+            return
             our_ad_data = await get_ad_from_database(advNo)
             if our_ad_data is None:
                 logger.debug(f"Ad number {advNo} not found in ads data. Fetching details from API...")
@@ -124,7 +125,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
         if not filtered_ads:
-            logger.debug(f"No filtered ads found for {ad['asset_type']} {ad['fiat']} {ad['transAmount']} {ad['payTypes']}.")
+            logger.info(f"No filtered ads found for {ad['asset_type']} {ad['fiat']} {ad['transAmount']} {ad['payTypes']}.")
             return
             logger.debug(f"Fileter ads for {advNo} is empty.")
             new_ratio = max(MIN_RATIO, min(MAX_RATIO, round((custom_price_threshold * 100), 2)))
@@ -133,15 +134,14 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
                 return
             else:
                 logger.debug(f" No filtered ads found. New ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}.")
-                await asyncio.sleep(0.05)
                 await api_instance.update_ad(advNo, new_ratio)
-                await asyncio.sleep(0.05)
                 await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount, minTransAmount)
             return
-
+            
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
         competitor_price = float(competitor_ad['adv']['price'])
         competitor_ratio = (competitor_price / base_price) * 100
+
 
         if (our_current_price >= competitor_price and is_buy) or (our_current_price <= competitor_price and not is_buy):
             new_ratio_unbounded = competitor_ratio - RATIO_ADJUSTMENT if is_buy else competitor_ratio + RATIO_ADJUSTMENT
@@ -155,14 +155,12 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
 
         new_ratio = max(MIN_RATIO, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
         new_diff = abs(new_ratio - current_priceFloatingRatio)
-        if new_ratio == current_priceFloatingRatio and new_diff < 0.015:
+        if new_ratio == current_priceFloatingRatio and new_diff < 0.005:
             logger.debug(f"Ratio unchanged")
             return
         else:
             logger.debug(f"Updating with filter ad: new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}.")
-            await asyncio.sleep(0.05)
             await api_instance.update_ad(advNo, new_ratio)
-            await asyncio.sleep(0.05)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount, minTransAmount)
             logger.debug(f"Ad: {asset_type} - start price: {our_current_price}, ratio: {current_priceFloatingRatio}. Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}")
 
@@ -176,9 +174,7 @@ async def process_ads(ads_group, api_instances, all_ads, is_buy=True):
         account = ad['account']
         api_instance = api_instances[account]
         payTypes_list = ad['payTypes'] if ad['payTypes'] is not None else []
-        await asyncio.sleep(0.05)
         ads_data = await api_instance.fetch_ads_search('BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], payTypes_list)
-        await asyncio.sleep(0.05)
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
             logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
             continue
@@ -187,7 +183,6 @@ async def process_ads(ads_group, api_instances, all_ads, is_buy=True):
             logger.debug(f"No valid ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}.")
             continue
         await analyze_and_update_ads(ad, api_instance, current_ads_data, all_ads, is_buy)
-        await asyncio.sleep(0.05)
 
 async def main_loop(api_instances, is_buy=True):
     all_ads = await fetch_all_ads_from_database('BUY' if is_buy else 'SELL')
@@ -197,11 +192,11 @@ async def main_loop(api_instances, is_buy=True):
     for ad in all_ads:
         group_key = ad['Group']
         grouped_ads.setdefault(group_key, []).append(ad)
+        logger.debug(f"Grouped ads: {group_key} - {len(grouped_ads[group_key])}")
 
     tasks = []
     for group_key, ads_group in grouped_ads.items():
         tasks.append(asyncio.create_task(process_ads(ads_group, api_instances, all_ads, is_buy)))
-        await asyncio.sleep(0.05)
     await asyncio.gather(*tasks)
 
 async def start_update_ads(is_buy=True):
