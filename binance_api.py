@@ -6,6 +6,7 @@ import logging
 from urllib.parse import urlencode
 from common_utils import get_server_timestamp
 import time
+from datetime import datetime, timedelta
 from asyncio import Lock
 
 logger = logging.getLogger(__name__)
@@ -14,8 +15,9 @@ class BinanceAPI:
     BASE_URL = "https://api.binance.com"
     instance_count = 0  # Class-level variable to count instances
     last_request_time = 0  # Timestamp of the last request made
-    rate_limit_delay = 0.3  # Minimum delay between requests in seconds
+    rate_limit_delay = 0  # Minimum delay between requests in seconds
     request_lock = Lock()  # Lock to ensure rate limiting is respected globally
+    cache = {}
 
     def __init__(self, api_key, api_secret, client_type='WEB'):
         self.api_key = api_key
@@ -49,31 +51,38 @@ class BinanceAPI:
         return headers
 
     async def _make_request(self, method, endpoint, params=None, headers=None, body=None, retries=5, backoff_factor=2):
-        if params is None:
-            params = {}
 
-        params['timestamp'] = await get_server_timestamp()
-        query_string = urlencode(params)
-        signature = self._generate_signature(query_string)
-        query_string += f"&signature={signature}"
-        
-        url = f"{self.BASE_URL}{endpoint}?{query_string}"
 
         for attempt in range(retries):
             try:
                 # Implement global rate limiting for specific endpoints
                 if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
+                    logger.info(f"Rate limiting for endpoint: {endpoint}")
+                    if endpoint == '/sapi/v1/c2c/ads/update':
+                        BinanceAPI.rate_limit_delay = 1
+                    else:
+                        BinanceAPI.rate_limit_delay = 0.3
                     async with BinanceAPI.request_lock:
                         current_time = time.time()
                         time_since_last_request = current_time - BinanceAPI.last_request_time
                         if time_since_last_request < BinanceAPI.rate_limit_delay:
                             wait_time = BinanceAPI.rate_limit_delay - time_since_last_request
                             logger.debug(f"Rate limiting: waiting for {wait_time:.2f} seconds before next request.")
-                            await asyncio.sleep(wait_time)
-                        BinanceAPI.last_request_time = time.time()  # Update last request time
 
+                if params is None:
+                    params = {}
+
+                params['timestamp'] = await get_server_timestamp()
+                query_string = urlencode(params)
+                signature = self._generate_signature(query_string)
+                query_string += f"&signature={signature}"
+                
+                url = f"{self.BASE_URL}{endpoint}?{query_string}"
                 logger.debug(f"Request: method={method}, url={url}, headers={headers}, body={body}")
+
                 async with self.session.request(method, url, headers=headers, json=body) as response:
+                    BinanceAPI.last_request_time = time.time()  # Update last request time
+
                     content_type = response.headers.get('Content-Type', '')
                     if 'application/json' in content_type:
                         resp_json = await response.json()
@@ -145,6 +154,16 @@ class BinanceAPI:
         return await self._make_request('POST', endpoint, headers=headers, body=body)
     
     async def fetch_ads_search(self, trade_type, asset, fiat, trans_amount, pay_types, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        # Create a cache key based on the function's arguments
+        cache_key = (trade_type, asset, fiat, trans_amount, tuple(sorted(pay_types)) if pay_types else None)
+
+        # Check if these parameters are in the cache and if the cached result is less than 0.5 seconds old
+        if cache_key in BinanceAPI.cache:
+            cached_result, timestamp = BinanceAPI.cache[cache_key]
+            if datetime.now() - timestamp < timedelta(seconds=0.5):
+                logger.info(f"Returning cached result for {asset} {fiat} {trans_amount} {pay_types}")
+                return cached_result
+            
         endpoint = "/sapi/v1/c2c/ads/search"
         headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
         body = {
@@ -159,7 +178,12 @@ class BinanceAPI:
         if pay_types:
             body['payTypes'] = pay_types
 
-        return await self._make_request('POST', endpoint, headers=headers, body=body)
+        response_data = await self._make_request('POST', endpoint, headers=headers, body=body)
+
+        # Cache the result along with the current timestamp 
+        BinanceAPI.cache[cache_key] = (response_data, datetime.now())
+
+        return response_data
     
     async def retrieve_chat_credential(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
         endpoint = "/sapi/v1/c2c/chat/retrieveChatCredential"

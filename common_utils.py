@@ -25,26 +25,11 @@ class ServerTimestampCache:
     min_buffer_ms = 0  # Minimum buffer limit
 
     @classmethod
-    async def sync_ntp_time(cls):
-        try:
-            client = ntplib.NTPClient()
-            response = client.request('pool.ntp.org')
-            ntp_time = response.tx_time
-            current_time = time.time()
-            time_difference = ntp_time - current_time
-            logger.info(f"NTP time synced: {ntp_time} (Difference: {time_difference}s)")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to sync NTP time: {e}")
-            return False
-
-    @classmethod
     async def fetch_server_time(cls):
         async with cls.lock:  # Ensure only one fetch is happening at a time
             if cls.is_initialized:
                 return  # If already initialized, no need to fetch again
 
-            await cls.sync_ntp_time()  # Sync system time with NTP
 
             async with aiohttp.ClientSession() as session:
                 endpoints = [TIME_ENDPOINT_V3, TIME_ENDPOINT_V1]
