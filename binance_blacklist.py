@@ -77,8 +77,9 @@ accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', '
 
 async def main():
     conn = await create_connection(DB_FILE)
-    await remove_from_blacklist_accepted_countries(conn, accepted_countries_for_oxxo)
-    await remove_from_blacklist_no_country(conn)
+
+    # await remove_from_blacklist_accepted_countries(conn, accepted_countries_for_oxxo)
+    # await remove_from_blacklist_no_country(conn)
     await print_table_contents(conn, 'P2PBlacklist')
     
 

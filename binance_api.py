@@ -57,11 +57,12 @@ class BinanceAPI:
             try:
                 # Implement global rate limiting for specific endpoints
                 if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
-                    logger.info(f"Rate limiting for endpoint: {endpoint}")
+                    logger.debug(f"Rate limiting for endpoint: {endpoint}")
                     if endpoint == '/sapi/v1/c2c/ads/update':
-                        BinanceAPI.rate_limit_delay = 1
+                        logger.info("Rate limiting for ad update endpoint")
+                        BinanceAPI.rate_limit_delay = 1.5
                     else:
-                        BinanceAPI.rate_limit_delay = 0.3
+                        BinanceAPI.rate_limit_delay = 0.35
                     async with BinanceAPI.request_lock:
                         current_time = time.time()
                         time_since_last_request = current_time - BinanceAPI.last_request_time
@@ -96,22 +97,23 @@ class BinanceAPI:
                                 retry_after = int(retry_after)
                             else:
                                 retry_after = 30
-                            logger.info(f"Rate limited. Retrying after {retry_after} seconds...")
+                            logger.debug(f"Rate limited. Retrying after {retry_after} seconds...")
                             await asyncio.sleep(retry_after)
                             BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
                         elif response.status == 400:  # Bad request
                             if 'Timestamp' in resp_json:
                                 if 'ahead of the server' in resp_json:
                                     logger.warning("Timestamp ahead of server, decrementing buffer and retrying...")
-                                    await get_server_timestamp(decrement_buffer=True)
+                                    await get_server_timestamp()
                                 elif 'behind the server' in resp_json:
                                     logger.warning("Timestamp behind server, incrementing buffer and retrying...")
-                                    await get_server_timestamp(increment_buffer=True)
+                                    await get_server_timestamp()
                                 elif 'Too many attempts' in resp_json:
                                     logger.warning("Too many requests, retrying...")
                                     await asyncio.sleep(2 * backoff_factor ** attempt)
                                 continue  # Retry the request
-                            logger.error(f"Bad request: {resp_json}")
+                            logger.error(f"Bad request: {resp_json}. URL: {url}")
+                            await get_server_timestamp()
                             await asyncio.sleep(2 * backoff_factor ** attempt)
                             return None
                         else:
@@ -161,7 +163,7 @@ class BinanceAPI:
         if cache_key in BinanceAPI.cache:
             cached_result, timestamp = BinanceAPI.cache[cache_key]
             if datetime.now() - timestamp < timedelta(seconds=0.5):
-                logger.info(f"Returning cached result for {asset} {fiat} {trans_amount} {pay_types}")
+                logger.debug(f"Returning cached result for {asset} {fiat} {trans_amount} {pay_types}")
                 return cached_result
             
         endpoint = "/sapi/v1/c2c/ads/search"

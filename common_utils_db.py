@@ -48,13 +48,18 @@ async def print_table_contents(conn, table_name):
             print(f"Error reading from table {table_name}: {e}")
 
 async def add_column_if_not_exists(conn, table_name, column_name, data_type, default_value):
-    try:
-        await conn.execute(
-            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {data_type} DEFAULT {default_value}"
-        )
-        await conn.commit()
-    except aiosqlite.OperationalError:
-        pass
+    query = f"PRAGMA table_info({table_name})"
+    async with conn.execute(query) as cursor:
+        columns = await cursor.fetchall()
+        column_names = [column[1] for column in columns]
+        if column_name not in column_names:
+            try:
+                await conn.execute(
+                    f"ALTER TABLE {table_name} ADD COLUMN {column_name} {data_type} DEFAULT {default_value}"
+                )
+                await conn.commit()
+            except aiosqlite.OperationalError:
+                pass
 
 async def clear_table(conn, table_name):
     # Validate the table_name to ensure it's a safe and valid identifier

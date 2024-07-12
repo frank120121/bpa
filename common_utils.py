@@ -5,7 +5,6 @@ import time
 import aiohttp
 import asyncio
 import logging
-import ntplib
 
 from binance_endpoints import TIME_ENDPOINT_V1, TIME_ENDPOINT_V3
 
@@ -75,37 +74,13 @@ class ServerTimestampCache:
             cls.is_maintenance_task_started = True
             asyncio.create_task(cls.maintain_timestamp())
 
-async def get_server_timestamp(increment_buffer=False, decrement_buffer=False):
+async def get_server_timestamp():
     await ServerTimestampCache.ensure_initialized()
     await ServerTimestampCache.ensure_maintenance_task_started()
     if ServerTimestampCache.offset is None:
         logger.error("Server timestamp offset is not initialized. Using local time.")
         return int(time.time() * 1000)
-    
-    if increment_buffer:
-        ServerTimestampCache.buffer_ms = min(ServerTimestampCache.max_buffer_ms, ServerTimestampCache.buffer_ms + 200)  # Increment buffer by 200ms if required
-        logger.debug(f"Incrementing buffer to: {ServerTimestampCache.buffer_ms} ms")
-    elif decrement_buffer:
-        ServerTimestampCache.buffer_ms = max(ServerTimestampCache.min_buffer_ms, ServerTimestampCache.buffer_ms - 200)  # Decrement buffer by 200ms if required
-        logger.debug(f"Decrementing buffer to: {ServerTimestampCache.buffer_ms} ms")
 
     current_timestamp = int(time.time() * 1000) + ServerTimestampCache.offset + ServerTimestampCache.buffer_ms
     logger.debug(f"Returning server timestamp: {current_timestamp} (Local time: {int(time.time() * 1000)}, Offset: {ServerTimestampCache.offset}, Buffer: {ServerTimestampCache.buffer_ms} ms)")
     return current_timestamp
-
-async def make_api_call(api_function, *args, **kwargs):
-    retry_attempts = 3
-    for attempt in range(retry_attempts):
-        timestamp = await get_server_timestamp(increment_buffer=(attempt > 0))
-        try:
-            # Pass the timestamp to the API function and make the call
-            response = await api_function(timestamp, *args, **kwargs)
-            return response
-        except Exception as e:
-            if 'recvWindow' in str(e):
-                # Increment buffer and try again if recvWindow error occurs
-                logger.warning(f"recvWindow error detected. Attempt {attempt + 1} of {retry_attempts}. Retrying...")
-                await asyncio.sleep(1 * (2 ** attempt))  # Exponential backoff with jitter
-            else:
-                logger.error(f"API call failed: {e}")
-                break
