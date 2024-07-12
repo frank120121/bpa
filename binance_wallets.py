@@ -1,15 +1,14 @@
-from credentials import credentials_dict
-from common_utils import get_server_timestamp
-from asset_balances import update_balance, get_balance
 import hmac
 import hashlib
 import aiohttp
 import asyncio
 import platform
-
-
 import logging
+from credentials import credentials_dict
+from common_utils import get_server_timestamp
+from asset_balances import update_balance, get_balance
 from logging_config import setup_logging
+
 setup_logging(log_filename='Binance_c2c_logger.log')
 logger = logging.getLogger(__name__)
 
@@ -19,7 +18,6 @@ class BinanceWallets:
         self.free_usd_assets_per_account = {}
         self.detailed_free_usd = {}
         self.credentials_dict = credentials_dict
-
 
     def generate_signature(self, api_secret, payload):
         signature = hmac.new(api_secret.encode('utf-8'), payload.encode('utf-8'), hashlib.sha256).hexdigest()
@@ -40,6 +38,8 @@ class BinanceWallets:
                     if response.status == 200:
                         assets_data = await response.json()
                         self.update_balances(assets_data, account, is_funding=False)
+                    else:
+                        logger.error(f"Failed to get user assets: {response.status} {await response.text()}")
         except Exception as e:
             logger.error(f"An exception occurred in get_user_assets: {e}")
 
@@ -58,6 +58,8 @@ class BinanceWallets:
                     if response.status == 200:
                         funding_data = await response.json()
                         self.update_balances(funding_data, account, is_funding=True)
+                    else:
+                        logger.error(f"Failed to get funding assets: {response.status} {await response.text()}")
         except Exception as e:
             logger.error(f"An exception occurred in get_funding_assets: {e}")
 
@@ -86,7 +88,7 @@ class BinanceWallets:
                 'USDC': sum(float(data.get('free', 0)) for data in asset_data if data['asset'] == 'USDC'),
                 'USDT': sum(float(data.get('free', 0)) for data in asset_data if data['asset'] == 'USDT')
             }
-        
+
     def check_asset_balance(self, asset):
         if asset == 'BTC':
             target = 0.25
@@ -106,6 +108,7 @@ class BinanceWallets:
                 max_account = account
                 most_usd_asset = max(assets, key=assets.get)
         return max_account, most_usd_asset
+
     async def place_order(self, api_key, api_secret, symbol, side, order_type, quantity=None, price=None, timeInForce=None, quoteOrderQty=None):
         try:
             timestamp = await get_server_timestamp()
@@ -125,9 +128,10 @@ class BinanceWallets:
                         order_data = await response.json()
                         logger.debug(f"Order successfully placed: {order_data}")
                     else:
-                        logger.error(f"Failed to place order: {await response.text()}")
+                        logger.error(f"Failed to place order: {response.status} {await response.text()}")
         except Exception as e:
             logger.warning(f"An exception occurred in place_order: {e}")
+
     async def save_balances_to_db(self, account):
         exchange_id = 1
         logger.debug("Calling update_balance from binance_wallets.py")
@@ -135,10 +139,12 @@ class BinanceWallets:
             update_balance(exchange_id, account, self.combined_balances)
         except Exception as e:
             logger.error(f"Error in save_balances_to_db: {e}")
+
     def validate_balances(self, account):
         exchange_id = 1
         balance = get_balance(exchange_id, account)
         logger.debug(f"Balance for account {account} in exchange {exchange_id}: {balance}")
+
     async def main(self):
         for account, cred in credentials_dict.items():
             self.combined_balances = {}
@@ -146,14 +152,15 @@ class BinanceWallets:
             await self.get_funding_assets(cred['KEY'], cred['SECRET'], account)
             await self.save_balances_to_db(account)
             self.validate_balances(account)
+
     async def balances(self):
         for account, cred in credentials_dict.items():
             await self.get_user_assets(cred['KEY'], cred['SECRET'], account)
             await self.get_funding_assets(cred['KEY'], cred['SECRET'], account)
+
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 if __name__ == "__main__":
     wallets = BinanceWallets()
     asyncio.run(wallets.main())
-

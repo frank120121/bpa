@@ -17,18 +17,15 @@ class ServerTimestampCache:
     offset = None
     is_initialized = False
     is_maintenance_task_started = False
-    sync_interval = 900  # Sync every 15 minutes
+    sync_interval = 600  # Sync every 10 minutes
     lock = asyncio.Lock()  # Add a lock to prevent concurrent fetches
-    buffer_ms = 1000  # Initial buffer of 1000ms
-    max_buffer_ms = 3000  # Maximum buffer limit
-    min_buffer_ms = 0  # Minimum buffer limit
+    buffer_ms = None  # Buffer will be set when syncing with Binance API
 
     @classmethod
     async def fetch_server_time(cls):
         async with cls.lock:  # Ensure only one fetch is happening at a time
             if cls.is_initialized:
                 return  # If already initialized, no need to fetch again
-
 
             async with aiohttp.ClientSession() as session:
                 endpoints = [TIME_ENDPOINT_V3, TIME_ENDPOINT_V1]
@@ -46,7 +43,7 @@ class ServerTimestampCache:
                                     round_trip_time = end_time - start_time
                                     current_time = int(time.time() * 1000)
                                     cls.offset = server_time - current_time
-                                    cls.buffer_ms = min(cls.max_buffer_ms, round_trip_time + 500)
+                                    cls.buffer_ms = round_trip_time + 500  # Set buffer based on round-trip time
                                     cls.is_initialized = True
                                     logger.debug(f"Updated server timestamp: {server_time} (Offset: {cls.offset}, Buffer: {cls.buffer_ms} ms)")
                                     return
@@ -74,9 +71,13 @@ class ServerTimestampCache:
             cls.is_maintenance_task_started = True
             asyncio.create_task(cls.maintain_timestamp())
 
-async def get_server_timestamp():
-    await ServerTimestampCache.ensure_initialized()
-    await ServerTimestampCache.ensure_maintenance_task_started()
+async def get_server_timestamp(resync=False):
+    if resync:
+        await ServerTimestampCache.fetch_server_time()
+    else:
+        await ServerTimestampCache.ensure_initialized()
+        await ServerTimestampCache.ensure_maintenance_task_started()
+
     if ServerTimestampCache.offset is None:
         logger.error("Server timestamp offset is not initialized. Using local time.")
         return int(time.time() * 1000)

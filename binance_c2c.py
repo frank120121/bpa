@@ -1,12 +1,9 @@
-
 import aiohttp
 import asyncio
 import json
 import logging
 import websockets
-
 from urllib.parse import urlencode
-
 from binance_endpoints import GET_CHAT_CREDENTIALS
 from binance_merchant_handler import MerchantAccount
 from common_utils import get_server_timestamp, hashing
@@ -20,6 +17,7 @@ async def send_http_request(method, url, api_key, secret_key, params=None, body=
         logger.info(f"Sending {method} request to {url}")
         params = params or {}
         params['timestamp'] = await get_server_timestamp()
+        params['recvWindow'] = 5000  # Adjust recvWindow to account for slight delays
         query_string = urlencode(params)
         signature = hashing(query_string, secret_key)
         final_url = f"{url}?{query_string}&signature={signature}"
@@ -46,7 +44,7 @@ async def on_message(connection_manager, message, KEY, SECRET):
         msg_json = json.loads(message)
         is_self = msg_json.get('self', False)
         if is_self:
-            logger.debug("message was from self")
+            logger.debug("Message was from self")
             return
         msg_type = msg_json.get('type', '')
         if msg_type == 'auto_reply':
@@ -67,6 +65,7 @@ async def on_message(connection_manager, message, KEY, SECRET):
             logger.error("Failed to connect to the database.")
     except Exception as e:
         logger.exception("An exception occurred: %s", e)
+
 class ConnectionManager:
     def __init__(self, uri, api_key, secret_key):
         self.uri = uri
@@ -94,7 +93,7 @@ class ConnectionManager:
         if self.is_connected:
             try:
                 await self.ws.send(message_json)
-                logger.debug(f"Message sent")
+                logger.debug("Message sent")
             except Exception as e:
                 logger.error(f"Message sending failed: {e}.")
         else:
@@ -103,15 +102,15 @@ class ConnectionManager:
 async def run_websocket(KEY, SECRET):
     uri_path = GET_CHAT_CREDENTIALS
     backoff = 1
-    max_backoff = 2  # Maximum backoff time set to 
+    max_backoff = 2  # Maximum backoff time set to 2 seconds
     retry_count = 0
-    max_retries = 2000  # Maximum of 200 retry attempts
+    max_retries = 2000  # Maximum of 2000 retry attempts
 
     while retry_count < max_retries:
         try:
-            logger.info(f"Fetching chat credentials...")
+            logger.info("Fetching chat credentials...")
             response = await send_http_request("GET", uri_path, KEY, SECRET)
-            if 'chatWssUrl' in response:
+            if response and 'chatWssUrl' in response:
                 wss_url = f"{response['chatWssUrl']}/{response['listenKey']}?token={response['listenToken']}&clientType=web"
             else:
                 logger.error(f"Key 'chatWssUrl' not found in API response. Full response: {response}")
@@ -141,7 +140,7 @@ async def run_websocket(KEY, SECRET):
     logger.error(f"Reached maximum retry limit of {max_retries}. Exiting.")
 
 async def on_close(connection_manager, close_status_code, close_msg, KEY, SECRET):
-    logger.debug(f"### closed ###")
+    logger.debug("### closed ###")
 
 async def main_binance_c2c():
     credentials = list(credentials_dict.values())

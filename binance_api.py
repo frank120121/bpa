@@ -100,20 +100,20 @@ class BinanceAPI:
                             logger.debug(f"Rate limited. Retrying after {retry_after} seconds...")
                             await asyncio.sleep(retry_after)
                             BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
-                        elif response.status == 400:  # Bad request
+                        elif response.status == 400:
                             if 'Timestamp' in resp_json:
                                 if 'ahead of the server' in resp_json:
                                     logger.warning("Timestamp ahead of server, decrementing buffer and retrying...")
-                                    await get_server_timestamp()
+                                    await get_server_timestamp(resync=True)
                                 elif 'behind the server' in resp_json:
                                     logger.warning("Timestamp behind server, incrementing buffer and retrying...")
-                                    await get_server_timestamp()
+                                    await get_server_timestamp(resync=True)
                                 elif 'Too many attempts' in resp_json:
                                     logger.warning("Too many requests, retrying...")
                                     await asyncio.sleep(2 * backoff_factor ** attempt)
                                 continue  # Retry the request
-                            logger.error(f"Bad request: {resp_json}. URL: {url}")
-                            await get_server_timestamp()
+                            logger.error(f"Bad request: {resp_json}. Body: {body}")
+                            await get_server_timestamp(resync=True)
                             await asyncio.sleep(2 * backoff_factor ** attempt)
                             return None
                         else:
