@@ -27,11 +27,11 @@ async def fetch_ip(last_four_digits, seller_name):
         if ip:
             break
         else:
-            logger.warning(f"Attempt {attempt + 1}: Could not fetch the IP. Retrying...")
+            logger.debug(f"Attempt {attempt + 1}: Could not fetch the IP. Retrying...")
 
     if ip:
         country = get_ip_origin(ip)
-        logger.info(f"IP from Country: {country}")
+        logger.info(f"{last_four_digits}:IP from: {country}")
         return country
     else:
         logger.error(f"Failed to fetch the IP address after 10 attempts for the last four digits: {last_four_digits}.")

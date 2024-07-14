@@ -5,7 +5,7 @@ import traceback
 import logging
 from ads_database import update_ad_in_database, fetch_all_ads_from_database, get_ad_from_database
 from credentials import credentials_dict
-from binance_singleton_api import SingletonBinanceAPI
+from binance_singleton_api import SingletonBinanceAPI, SharedSession
 from bitso_wallets import bitso_main
 from binance_wallets import BinanceWallets
 from asset_balances import total_usd
@@ -201,26 +201,26 @@ async def main_loop(api_instances, is_buy=True):
     await asyncio.gather(*tasks)
 
 async def start_update_ads(is_buy=True):
-    async with aiohttp.ClientSession() as session:
-        try:
-            all_ads = await fetch_all_ads_from_database()
-            accounts = set(ad['account'] for ad in all_ads)
-            api_instances = {}
+    session = await SharedSession.get_session()
+    try:
+        all_ads = await fetch_all_ads_from_database()
+        accounts = set(ad['account'] for ad in all_ads)
+        api_instances = {}
 
-            for account in accounts:
-                KEY = credentials_dict[account]['KEY']
-                SECRET = credentials_dict[account]['SECRET']
-                api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
-                api_instances[account] = api_instance
+        for account in accounts:
+            KEY = credentials_dict[account]['KEY']
+            SECRET = credentials_dict[account]['SECRET']
+            api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
+            api_instances[account] = api_instance
 
-            while True:
-                async with balance_lock:
-                    usd_balance = latest_usd_balance
-                logger.debug(f"Using USD Balance: {usd_balance}")
-                adjust_sell_price_threshold(usd_balance)
-                await main_loop(api_instances, is_buy)
-        finally:
-            await SingletonBinanceAPI.close_all()
+        while True:
+            async with balance_lock:
+                usd_balance = latest_usd_balance
+            logger.debug(f"Using USD Balance: {usd_balance}")
+            adjust_sell_price_threshold(usd_balance)
+            await main_loop(api_instances, is_buy)
+    finally:
+        await SingletonBinanceAPI.close_all()
 
 async def run_ads_update():
     fetch_balances_task = asyncio.create_task(fetch_and_calculate_total_balance())

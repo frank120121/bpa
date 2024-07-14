@@ -90,7 +90,7 @@ async def outlook_fetch_ip(last_four):
 
     while retry_count < max_retries:
         try:
-            logger.info(f"Searching IP for: {last_four}")
+            logger.debug(f"Searching IP for: {last_four}")
             access_token, refresh_token, expiration_time = await load_tokens()
 
             if datetime.datetime.now() >= expiration_time:
@@ -113,7 +113,7 @@ async def outlook_fetch_ip(last_four):
                         email_content = email.get("body", {}).get("content", "")
                         ip_match = re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", email_content)
                         if ip_match:
-                            logger.info(f"IP found: {ip_match.group(0)}")
+                            logger.debug(f"IP found: {ip_match.group(0)}")
                             return ip_match.group(0)
 
             retry_count += 1

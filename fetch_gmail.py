@@ -9,7 +9,11 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from dotenv import load_dotenv
 import logging
+
+# Set up logging
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
 load_dotenv('.env.email')
 gmail_credentials_json_path = os.getenv('GMAIL_CREDENTIALS_JSON_PATH')
@@ -28,7 +32,7 @@ async def get_gmail_service():
             try:
                 creds.refresh(Request())
             except Exception as e:
-                print("Error refreshing credentials, re-authenticating...")
+                logger.error("Error refreshing credentials, re-authenticating...")
                 creds = None
 
         if not creds:
@@ -84,14 +88,13 @@ async def gmail_fetch_ip(last_four):
             logger.error(f"Error fetching emails: {e}")
             # Optional: Add logic to handle specific exceptions
 
-    logger.warning("No matching email found after maximum retries")
+    logger.warning(f"No matching email found after maximum retries for last four digits: {last_four}")
     return None
 
 async def main():
-    last_four_digits = '1968'
+    last_four_digits = '0032'
     ip_address = await gmail_fetch_ip(last_four_digits)
     print("Extracted IP Address:", ip_address)
 
 if __name__ == "__main__":
     asyncio.run(main())
-

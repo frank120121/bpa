@@ -4,7 +4,7 @@ import aiohttp
 from ads_database import fetch_all_ads_from_database, update_ad_in_database
 from common_vars import ads_dict
 from credentials import credentials_dict
-from binance_singleton_api import SingletonBinanceAPI
+from binance_singleton_api import SingletonBinanceAPI, SharedSession
 import logging
 import sys
 
@@ -19,21 +19,21 @@ advNo_to_transAmount = {ad['advNo']: ad['transAmount'] for _, ads in ads_dict.it
 advNo_to_minTransAmount = {ad['advNo']: ad['minTransAmount'] for _, ads in ads_dict.items() for ad in ads}
 
 async def populate_ads_with_details():
-    async with aiohttp.ClientSession() as session:
-        try:
-            logger.info("Fetching ads from database...")
-            ads_info = await fetch_all_ads_from_database()
-            logger.debug(f"Fetched ads from database: {ads_info}")
+    session = await SharedSession.get_session()
+    try:
+        logger.info("Fetching ads from database...")
+        ads_info = await fetch_all_ads_from_database()
+        logger.debug(f"Fetched ads from database: {ads_info}")
 
-            for ad_info in ads_info:
-                account = ad_info['account']
-                KEY = credentials_dict[account]['KEY']
-                SECRET = credentials_dict[account]['SECRET']
-                api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
-                await process_ad(ad_info, api_instance)
-        finally:
-            await SingletonBinanceAPI.close_all()
-        logger.info("All ads processed successfully.")
+        for ad_info in ads_info:
+            account = ad_info['account']
+            KEY = credentials_dict[account]['KEY']
+            SECRET = credentials_dict[account]['SECRET']
+            api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
+            await process_ad(ad_info, api_instance)
+    finally:
+        await SingletonBinanceAPI.close_all()
+    logger.info("All ads processed successfully.")
 
 async def process_ad(ad_info, api_instance):
     advNo = ad_info['advNo']
