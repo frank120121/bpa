@@ -4,7 +4,7 @@ import unicodedata
 from fuzzywuzzy import process
 from binance_messages import send_messages
 from binance_blacklist import add_to_blacklist
-from lang_utils import payment_concept, payment_warning, anti_fraud_stage3, anti_fraud_not_valid_response, anti_fraud_possible_fraud, anti_fraud_user_denied
+from lang_utils import payment_warning, anti_fraud_stage3, anti_fraud_not_valid_response, anti_fraud_possible_fraud, anti_fraud_user_denied
 from binance_bank_deposit import get_payment_details
 from common_vars import NOT_ACCEPTED_BANKS, ACCEPTED_BANKS, BBVA_BANKS
 from binance_db_set import update_buyer_bank, update_anti_fraud_stage, update_kyc_status
@@ -111,6 +111,6 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
         if anti_fraud_stage == 5 and oxxo_used:
             await send_messages(connection_manager, order_no, [payment_details])
         else:
-            await send_messages(connection_manager, order_no, [payment_warning, payment_concept, payment_details])
+            await send_messages(connection_manager, order_no, [payment_warning, payment_details])
     else:
         await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)

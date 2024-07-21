@@ -3,40 +3,13 @@ import asyncio
 import json
 import logging
 import websockets
-from urllib.parse import urlencode
-from binance_endpoints import GET_CHAT_CREDENTIALS
+from binance_singleton_api import SingletonBinanceAPI
 from binance_merchant_handler import MerchantAccount
-from common_utils import get_server_timestamp, hashing
+from common_utils import get_server_timestamp
 from common_utils_db import create_connection
 from credentials import credentials_dict
 
 logger = logging.getLogger(__name__)
-
-async def send_http_request(method, url, api_key, secret_key, params=None, body=None):
-    try:
-        logger.info(f"Sending {method} request to {url}")
-        params = params or {}
-        params['timestamp'] = await get_server_timestamp()
-        params['recvWindow'] = 5000  # Adjust recvWindow to account for slight delays
-        query_string = urlencode(params)
-        signature = hashing(query_string, secret_key)
-        final_url = f"{url}?{query_string}&signature={signature}"
-        headers = {
-            "Content-Type": "application/json;charset=utf-8",
-            "X-MBX-APIKEY": api_key,
-            "clientType": "WEB"
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.request(method, final_url, json=body, headers=headers) as response:
-                response_data = await response.json()
-                if response.status != 200 or 'data' not in response_data:
-                    logger.error(f"Error {response.status} from API: {response_data}")
-                    return None
-                return response_data['data']
-    except Exception as e:
-        logger.exception(f"An error occurred in send_http_request: {e}")
-        return None
 
 async def on_message(connection_manager, message, KEY, SECRET):
     merchant_account = MerchantAccount()
@@ -99,58 +72,76 @@ class ConnectionManager:
         else:
             logger.error("Failed to send message: WebSocket not connected.")
 
-async def run_websocket(KEY, SECRET):
-    uri_path = GET_CHAT_CREDENTIALS
+async def run_websocket(account, api_key, api_secret):
     backoff = 1
     max_backoff = 2  # Maximum backoff time set to 2 seconds
     retry_count = 0
     max_retries = 2000  # Maximum of 2000 retry attempts
+    api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
 
     while retry_count < max_retries:
         try:
-            logger.info("Fetching chat credentials...")
-            response = await send_http_request("GET", uri_path, KEY, SECRET)
-            if response and 'chatWssUrl' in response:
-                wss_url = f"{response['chatWssUrl']}/{response['listenKey']}?token={response['listenToken']}&clientType=web"
+            logger.debug(f"Fetching chat credentials for account: {account}...")
+            response = await api_instance.retrieve_chat_credential()
+            logger.debug(f"Received response for account {account}: {response}")
+            
+            if response and 'data' in response:
+                data = response['data']
+                if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
+                    wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
+                    logger.debug(f"WebSocket URL constructed for account {account}: {wss_url}")
+                else:
+                    logger.error(f"Missing expected keys in 'data' for account {account}. Full response: {response}")
+                    retry_count += 1
+                    await asyncio.sleep(backoff)
+                    backoff = min(max_backoff, backoff * 2)
+                    continue
             else:
-                logger.error(f"Key 'chatWssUrl' not found in API response. Full response: {response}")
+                logger.error(f"Unexpected structure in API response for account {account}. Full response: {response}")
                 retry_count += 1
                 await asyncio.sleep(backoff)
                 backoff = min(max_backoff, backoff * 2)
                 continue
-            connection_manager = ConnectionManager(wss_url, KEY, SECRET)
-            logger.debug(f"Attempting to connect to WebSocket with URL: {wss_url}")
+
+            connection_manager = ConnectionManager(wss_url, api_key, api_secret)
+            logger.debug(f"Attempting to connect to WebSocket with URL for account {account}: {wss_url}")
             async with websockets.connect(wss_url) as ws:
                 connection_manager.ws = ws
                 connection_manager.is_connected = True
                 async for message in ws:
-                    logger.debug(f"Received message: {message}")
-                    await on_message(connection_manager, message, KEY, SECRET)
+                    logger.debug(f"Received message for account {account}: {message}")
+                    await on_message(connection_manager, message, api_key, api_secret)
             connection_manager.is_connected = False
-            logger.info("WebSocket connection closed gracefully.")
+            logger.info(f"WebSocket connection closed gracefully for account {account}.")
             backoff = 1
             retry_count = 0
 
         except Exception as e:
-            logger.exception("An unexpected error occurred:")
+            logger.exception(f"An unexpected error occurred for account {account}:")
             await asyncio.sleep(backoff)
             backoff = min(max_backoff, backoff * 2)
             retry_count += 1
 
-    logger.error(f"Reached maximum retry limit of {max_retries}. Exiting.")
+    logger.error(f"Reached maximum retry limit of {max_retries} for account {account}. Exiting.")
 
 async def on_close(connection_manager, close_status_code, close_msg, KEY, SECRET):
     logger.debug("### closed ###")
 
 async def main_binance_c2c():
-    credentials = list(credentials_dict.values())
     tasks = []
-    for cred in credentials:
+    for account, cred in credentials_dict.items():
         task = asyncio.create_task(
-            run_websocket(cred['KEY'], cred['SECRET'])
+            run_websocket(account, cred['KEY'], cred['SECRET'])
         )
         tasks.append(task)
+    
     try:
         await asyncio.gather(*tasks)
+        logger.info("Successfully retrieved credentials for all accounts.")
     except KeyboardInterrupt:
         logger.debug("KeyboardInterrupt received. Exiting.")
+    except Exception as e:
+        logger.exception("An unexpected error occurred:")
+
+if __name__ == "__main__":
+    asyncio.run(main_binance_c2c())

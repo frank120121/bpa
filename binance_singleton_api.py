@@ -17,7 +17,7 @@ class SingletonBinanceAPI:
                 cls._instances[account] = BinanceAPI(api_key, api_secret, client_type)
                 logger.info(f"Created new BinanceAPI instance for account: {account}. Number of instances: {len(cls._instances)}")
             else:
-                logger.info(f"Using existing BinanceAPI instance for account: {account}. Number of instances: {len(cls._instances)}")
+                logger.debug(f"Using existing BinanceAPI instance for account: {account}. Number of instances: {len(cls._instances)}")
             return cls._instances[account]
 
     @classmethod

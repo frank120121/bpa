@@ -1,11 +1,10 @@
 #binance_update_ads.py
 import asyncio
-import aiohttp
 import traceback
 import logging
 from ads_database import update_ad_in_database, fetch_all_ads_from_database, get_ad_from_database
 from credentials import credentials_dict
-from binance_singleton_api import SingletonBinanceAPI, SharedSession
+from binance_singleton_api import SingletonBinanceAPI
 from bitso_wallets import bitso_main
 from binance_wallets import BinanceWallets
 from asset_balances import total_usd
@@ -27,14 +26,14 @@ latest_usd_balance = 0
 def adjust_sell_price_threshold(usd_balance):
     global SELL_PRICE_THRESHOLD
     global BUY_PRICE_THRESHOLD
-    if usd_balance >= 55000:
+    if usd_balance >= 60000:
         SELL_PRICE_THRESHOLD = 0.9845
         BUY_PRICE_THRESHOLD = 1.0095
         logger.debug("Adjusted sell price threshold to 0.9898 and buy price threshold to 1.0120")
     else:
-        adjustment = (55000 - usd_balance) / 1000 * 0.00025
-        SELL_PRICE_THRESHOLD = min(0.9909 + adjustment, 0.9992)
-        BUY_PRICE_THRESHOLD = min(1.0095 + adjustment, 1.10)
+        adjustment = (60000 - usd_balance) / 1000 * 0.00025
+        SELL_PRICE_THRESHOLD = min(0.9759 + adjustment, 0.9800)
+        BUY_PRICE_THRESHOLD = min(1.0000 + adjustment, 1.10)
         logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD} and buy price threshold to {BUY_PRICE_THRESHOLD}")
 async def fetch_and_calculate_total_balance():
     while True:
@@ -201,7 +200,6 @@ async def main_loop(api_instances, is_buy=True):
     await asyncio.gather(*tasks)
 
 async def start_update_ads(is_buy=True):
-    session = await SharedSession.get_session()
     try:
         all_ads = await fetch_all_ads_from_database()
         accounts = set(ad['account'] for ad in all_ads)
@@ -220,7 +218,7 @@ async def start_update_ads(is_buy=True):
             adjust_sell_price_threshold(usd_balance)
             await main_loop(api_instances, is_buy)
     finally:
-        await SingletonBinanceAPI.close_all()
+        logger.info(f"Finished updating ads for {'BUY' if is_buy else 'SELL'}.")
 
 async def run_ads_update():
     fetch_balances_task = asyncio.create_task(fetch_and_calculate_total_balance())

@@ -247,11 +247,6 @@ payment_warning = (
     f"Es su responsabilidad realizar la investigación necesaria antes de cualquier inversión ya que las perdidas son reales e irreversibles.\n\n"
 )
 
-payment_concept = (
-    f"Para el concepto estas son opciones validas: pago, o su nombre.\n\n"
-    f"Para que no se cancele el intercambio de forma automática, puede marcar el intercambio como pagado en la opción que dice 'Realizar Pago'.\n\n" 
-    f"Para ayuda, escriba la palabra 'ayuda'."
-)
 
 async def verified_customer_greeting(buyer_name): 
     

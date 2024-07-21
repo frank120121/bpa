@@ -130,30 +130,25 @@ async def log_deposit(conn, deposit_from, bank_account_number, amount_deposited)
     logger.debug(f"Logged deposit of {amount_deposited} from {deposit_from} to account {bank_account_number}")
 
 
-async def sum_recent_deposits(account_number):
-    conn = await create_connection(DB_FILE)
-    
-    # Calculate the timestamp 24 hours ago from now
-    twenty_four_hours_ago = datetime.datetime.now() - datetime.timedelta(days=1)
+async def sum_recent_deposits(conn, account_number):
+    current_date = datetime.datetime.now(datetime.timezone.utc).date()
+    start_of_day = datetime.datetime.combine(current_date, datetime.time.min, tzinfo=datetime.timezone.utc)
     
     try:
-        await initialize_database(conn)  # Assuming this function initializes your DB schemas
-        
-        # Query to find the sum of deposits for the given account in the last 24 hours
-        async with conn.execute('''
+        query = '''
             SELECT SUM(amount_deposited) FROM mxn_deposits
-            WHERE account_number = ? AND timestamp > ?
-        ''', (account_number, twenty_four_hours_ago,)) as cursor:
+            WHERE account_number = ? AND timestamp >= ?
+        '''
+        async with conn.execute(query, (account_number, start_of_day,)) as cursor:
             sum_deposits = await cursor.fetchone()
             sum_deposits = sum_deposits[0] if sum_deposits[0] is not None else 0
         
-        # Log the sum of the deposits
-        logger.debug(f"Total deposits for account {account_number} in the last 24 hours: MXN {sum_deposits}")
+        logger.debug(f"Total deposits for account {account_number} on {current_date}: MXN {sum_deposits}")
+        return sum_deposits
         
     except Exception as e:
         logger.error(f"Error calculating sum of recent deposits: {e}")
-    finally:
-        await conn.close()
+        return 0
 
 async def clear_accounts(conn):
     try:
@@ -313,8 +308,8 @@ async def main():
         # print(f"Total deposit sum for account '1593999048' in March 2024: {deposit_sum}")
     
         # await sum_recent_deposits('1532335128')
-        month = await get_monthly_deposit_sum(conn, '0486503160', 2024, 2)
-        print(f"Total deposit sum for account: {month}")
+        # month = await get_monthly_deposit_sum(conn, '0486503160', 2024, 2)
+        # print(f"Total deposit sum for account: {month}")
         await conn.close()
     else:
         logger.error("Error! Cannot create the database connection.")

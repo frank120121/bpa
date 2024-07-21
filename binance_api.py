@@ -1,3 +1,4 @@
+#binance_api.py
 import aiohttp
 import asyncio
 import hmac
@@ -26,7 +27,7 @@ class BinanceAPI:
         self.session = aiohttp.ClientSession()
         BinanceAPI.instance_count += 1  # Increment instance count
         self.instance_id = BinanceAPI.instance_count  # Assign an instance ID
-        logger.info(f"Instance {self.instance_id} created. Number of BinanceAPI instances: {BinanceAPI.instance_count}")
+        logger.debug(f"Instance {self.instance_id} created. Number of BinanceAPI instances: {BinanceAPI.instance_count}")
 
     def _generate_signature(self, query_string):
         return hmac.new(
@@ -60,9 +61,9 @@ class BinanceAPI:
                         logger.debug(f"Instance {self.instance_id}: Rate limiting for endpoint: {endpoint}")
                         if endpoint == '/sapi/v1/c2c/ads/update':
                             logger.debug(f"Instance {self.instance_id}: Rate limiting for ad update endpoint")
-                            BinanceAPI.rate_limit_delay = 1
+                            BinanceAPI.rate_limit_delay = 0.5
                         else:
-                            BinanceAPI.rate_limit_delay = 0.1
+                            BinanceAPI.rate_limit_delay = 0.05
 
                         current_time = time.time()
                         time_since_last_request = current_time - BinanceAPI.last_request_time
@@ -88,36 +89,30 @@ class BinanceAPI:
                     if 'application/json' in content_type:
                         resp_json = await response.json()
                         logger.debug(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {resp_json}")
+                        
                         if response.status == 200:
                             logger.debug(f"Instance {self.instance_id}: Request success")
                             return resp_json
+                        elif response.status == 400:
+                            error_code = resp_json.get('code')
+                            if error_code == -1021:
+                                logger.info(f"Instance {self.instance_id}: Resyncing server timestamp due to error code -1021")
+                                await get_server_timestamp(resync=True)
+                                continue
+                            else:
+                                logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json}")
+                                return resp_json
                         elif response.status in [429, 83628]:  # Handle rate limiting
+                            logger.info(f"Instance {self.instance_id} Status: {response.status} Response: {resp_json}")
                             retry_after = response.headers.get('Retry-After')
                             if retry_after:
                                 retry_after = int(retry_after)
                             else:
                                 retry_after = 30
-                            logger.debug(f"Instance {self.instance_id}: Rate limited. Retrying after {retry_after} seconds...")
                             await asyncio.sleep(retry_after)
                             BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
-                        elif response.status == 400:
-                            if 'Timestamp' in resp_json:
-                                if 'ahead of the server' in resp_json:
-                                    logger.warning(f"Instance {self.instance_id}: Timestamp ahead of server, decrementing buffer and retrying...")
-                                    await get_server_timestamp(resync=True)
-                                elif 'behind the server' in resp_json:
-                                    logger.warning(f"Instance {self.instance_id}: Timestamp behind server, incrementing buffer and retrying...")
-                                    await get_server_timestamp(resync=True)
-                                elif 'Too many attempts' in resp_json:
-                                    logger.warning(f"Instance {self.instance_id}: Too many requests, retrying...")
-                                    await asyncio.sleep(2 * backoff_factor ** attempt)
-                                continue  # Retry the request
-                            logger.error(f"Instance {self.instance_id}: Bad request: {resp_json}. Body: {body}")
-                            await get_server_timestamp(resync=True)
-                            await asyncio.sleep(2 * backoff_factor ** attempt)
-                            return None
                         else:
-                            logger.error(f"Instance {self.instance_id}: Response: {resp_json}")
+                            logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json}")
                             return resp_json
                     else:
                         logger.error(f"Instance {self.instance_id}: Unexpected content type: {content_type} for URL: {url}")
@@ -132,6 +127,7 @@ class BinanceAPI:
             await asyncio.sleep(backoff_factor ** attempt)
         logger.error(f"Instance {self.instance_id}: Exceeded max retries for URL: {url}")
         return None
+
     
     async def get_ad_detail(self, ads_no, x_gray_env=None, x_trace_id=None, x_user_id=None):
         endpoint = "/sapi/v1/c2c/ads/getDetailByNo"
@@ -162,7 +158,7 @@ class BinanceAPI:
         # Check if these parameters are in the cache and if the cached result is less than 0.5 seconds old
         if cache_key in BinanceAPI.cache:
             cached_result, timestamp = BinanceAPI.cache[cache_key]
-            if datetime.now() - timestamp < timedelta(seconds=0.5):
+            if datetime.now() - timestamp < timedelta(seconds=0.25):
                 logger.debug(f"Instance {self.instance_id}: Returning cached result for {asset} {fiat} {trans_amount} {pay_types}")
                 return cached_result
             
@@ -192,6 +188,7 @@ class BinanceAPI:
         headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
 
         return await self._make_request('GET', endpoint, headers=headers)
+    
 
     async def get_counterparty_order_statistics(self, order_number, x_gray_env=None, x_trace_id=None, x_user_id=None):
         logger.debug(f"Instance {self.instance_id}: calling get_counterparty_order_statistics")
