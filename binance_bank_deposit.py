@@ -244,7 +244,7 @@ async def get_account_details(conn, account_number, buyer_name, order_no, buyer_
         raise
 
 async def initialize_account_cache(conn):
-    for bank in ['nvio', 'bbva', 'banregio', 'santander']:  # Include all banks you need
+    for bank in ['nvio','banregio', 'santander']:  # Include all banks you need
         bank_accounts[bank] = await find_suitable_account(conn, None, None, bank)
 
 async def main():

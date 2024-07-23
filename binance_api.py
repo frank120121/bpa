@@ -5,10 +5,12 @@ import hmac
 import hashlib
 import logging
 from urllib.parse import urlencode
-from common_utils import get_server_timestamp
 import time
 from datetime import datetime, timedelta
 from asyncio import Lock
+
+from common_utils import get_server_timestamp
+from binance_share_session import SharedSession
 
 logger = logging.getLogger(__name__)
 
@@ -19,15 +21,20 @@ class BinanceAPI:
     rate_limit_delay = 0  # Default minimum delay between requests in seconds
     request_lock = Lock()  # Lock to ensure rate limiting is respected globally
     cache = {}
+    ads_list_cache = {}
 
     def __init__(self, api_key, api_secret, client_type='WEB'):
         self.api_key = api_key
         self.api_secret = api_secret
         self.client_type = client_type
-        self.session = aiohttp.ClientSession()
+        self.session = None
         BinanceAPI.instance_count += 1  # Increment instance count
         self.instance_id = BinanceAPI.instance_count  # Assign an instance ID
         logger.debug(f"Instance {self.instance_id} created. Number of BinanceAPI instances: {BinanceAPI.instance_count}")
+
+    async def _init_session(self):
+        if self.session is None:
+            self.session = await SharedSession.get_session()
 
     def _generate_signature(self, query_string):
         return hmac.new(
@@ -53,6 +60,8 @@ class BinanceAPI:
         return headers
 
     async def _make_request(self, method, endpoint, params=None, headers=None, body=None, retries=5, backoff_factor=2):
+        await self._init_session()  # Ensure session is initialized
+
         for attempt in range(retries):
             try:
                 async with BinanceAPI.request_lock:
@@ -117,7 +126,7 @@ class BinanceAPI:
                     else:
                         logger.error(f"Instance {self.instance_id}: Unexpected content type: {content_type} for URL: {url}")
                         text_response = await response.text()
-                        logger.debug(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
+                        logger.info(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
                         return text_response
             except aiohttp.ClientError as e:
                 logger.error(f"Instance {self.instance_id}: Client error during request: {e}")
@@ -151,9 +160,27 @@ class BinanceAPI:
         
         return await self._make_request('POST', endpoint, headers=headers, body=body)
     
-    async def fetch_ads_search(self, trade_type, asset, fiat, trans_amount, pay_types, x_gray_env=None, x_trace_id=None, x_user_id=None):
+    async def ads_list(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        ads_cache_key = (self.instance_id, x_gray_env, x_trace_id, x_user_id)
+        if ads_cache_key in BinanceAPI.ads_list_cache:
+            cached_result, timestamp = BinanceAPI.ads_list_cache[ads_cache_key]
+            if datetime.now() - timestamp < timedelta(seconds=60):
+                logger.info(f"Instance {self.instance_id}: Returning cached ads list")
+                return cached_result
+        endpoint = "/sapi/v1/c2c/ads/listWithPagination"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        body =   {  
+
+            "page": 1, 
+            "rows": 20
+        }
+        ads_response_list = await self._make_request('POST', endpoint, headers=headers, body=body)
+        BinanceAPI.ads_list_cache[ads_cache_key] = (ads_response_list, datetime.now())
+        return ads_response_list
+    
+    async def fetch_ads_search(self, trade_type, asset, fiat, trans_amount, pay_types, page, x_gray_env=None, x_trace_id=None, x_user_id=None):
         # Create a cache key based on the function's arguments
-        cache_key = (trade_type, asset, fiat, trans_amount, tuple(sorted(pay_types)) if pay_types else None)
+        cache_key = (page, trade_type, asset, fiat, trans_amount, tuple(sorted(pay_types)) if pay_types else None)
 
         # Check if these parameters are in the cache and if the cached result is less than 0.5 seconds old
         if cache_key in BinanceAPI.cache:
@@ -167,7 +194,7 @@ class BinanceAPI:
         body = {
             "asset": asset,
             "fiat": fiat,
-            "page": 1,
+            "page": page,
             "publisherType": "merchant",
             "rows": 20,
             "tradeType": trade_type,
@@ -182,13 +209,28 @@ class BinanceAPI:
         BinanceAPI.cache[cache_key] = (response_data, datetime.now())
 
         return response_data
+
+    async def list_orders(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        endpoint = "/sapi/v1/c2c/orderMatch/listOrders"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        body = {
+            "orderStatusList": [
+                1,
+                2,
+                3
+            ],
+            "page": 1,
+            "rows": 20
+        }
+
+        return await self._make_request('POST', endpoint, headers=headers, body=body)
     
     async def retrieve_chat_credential(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
         endpoint = "/sapi/v1/c2c/chat/retrieveChatCredential"
         headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
 
         return await self._make_request('GET', endpoint, headers=headers)
-    
+
 
     async def get_counterparty_order_statistics(self, order_number, x_gray_env=None, x_trace_id=None, x_user_id=None):
         logger.debug(f"Instance {self.instance_id}: calling get_counterparty_order_statistics")
@@ -211,7 +253,8 @@ class BinanceAPI:
 
         return await self._make_request('POST', endpoint, headers=headers, body=confirm_order_paid_req)
 
+
     async def close_session(self):
-        await self.session.close()
+        await SharedSession.close_session()
         BinanceAPI.instance_count -= 1  # Decrement instance count
-        logger.info(f"Instance {self.instance_id}: BinanceAPI instance closed. Number of instances remaining: {BinanceAPI.instance_count}")  # Log the instance count
+        logger.info(f"Instance {self.instance_id}: BinanceAPI instance closed. Number of instances remaining: {BinanceAPI.instance_count}")

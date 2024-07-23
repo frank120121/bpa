@@ -1,4 +1,4 @@
-import aiohttp
+#binance_c2c.py
 import asyncio
 import json
 import logging
@@ -72,72 +72,64 @@ class ConnectionManager:
         else:
             logger.error("Failed to send message: WebSocket not connected.")
 
-async def run_websocket(account, api_key, api_secret):
-    backoff = 1
-    max_backoff = 2  # Maximum backoff time set to 2 seconds
-    retry_count = 0
-    max_retries = 2000  # Maximum of 2000 retry attempts
+async def run_websocket(account, api_key, api_secret, connection_status):
     api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
 
-    while retry_count < max_retries:
-        try:
-            logger.debug(f"Fetching chat credentials for account: {account}...")
-            response = await api_instance.retrieve_chat_credential()
-            logger.debug(f"Received response for account {account}: {response}")
-            
-            if response and 'data' in response:
-                data = response['data']
-                if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
-                    wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
-                    logger.debug(f"WebSocket URL constructed for account {account}: {wss_url}")
-                else:
-                    logger.error(f"Missing expected keys in 'data' for account {account}. Full response: {response}")
-                    retry_count += 1
-                    await asyncio.sleep(backoff)
-                    backoff = min(max_backoff, backoff * 2)
-                    continue
+    try:
+        logger.debug(f"Fetching chat credentials for account: {account}...")
+        response = await api_instance.retrieve_chat_credential()
+        logger.debug(f"Received response for account {account}: {response}")
+        
+        if response and 'data' in response:
+            data = response['data']
+            if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
+                wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
+                logger.debug(f"WebSocket URL constructed for account {account}: {wss_url}")
             else:
-                logger.error(f"Unexpected structure in API response for account {account}. Full response: {response}")
-                retry_count += 1
-                await asyncio.sleep(backoff)
-                backoff = min(max_backoff, backoff * 2)
-                continue
+                logger.error(f"Missing expected keys in 'data' for account {account}. Full response: {response}")
+                connection_status[account] = False
+                return
+                
+        else:
+            logger.error(f"Unexpected structure in API response for account {account}. Full response: {response}")
+            connection_status[account] = False
+            return
 
-            connection_manager = ConnectionManager(wss_url, api_key, api_secret)
-            logger.debug(f"Attempting to connect to WebSocket with URL for account {account}: {wss_url}")
-            async with websockets.connect(wss_url) as ws:
-                connection_manager.ws = ws
-                connection_manager.is_connected = True
-                async for message in ws:
-                    logger.debug(f"Received message for account {account}: {message}")
-                    await on_message(connection_manager, message, api_key, api_secret)
-            connection_manager.is_connected = False
-            logger.info(f"WebSocket connection closed gracefully for account {account}.")
-            backoff = 1
-            retry_count = 0
+        connection_manager = ConnectionManager(wss_url, api_key, api_secret)
+        logger.debug(f"Attempting to connect to WebSocket with URL for account {account}: {wss_url}")
+        async with websockets.connect(wss_url) as ws:
+            connection_manager.ws = ws
+            connection_manager.is_connected = True
+            connection_status[account] = True
+            logger.info(f"WebSocket connection established for account {account}.")
+            async for message in ws:
+                logger.debug(f"Received message for account {account}: {message}")
+                await on_message(connection_manager, message, api_key, api_secret)
+        connection_manager.is_connected = False
+        logger.info(f"WebSocket connection closed gracefully for account {account}.")
+        connection_status[account] = False
 
-        except Exception as e:
-            logger.exception(f"An unexpected error occurred for account {account}:")
-            await asyncio.sleep(backoff)
-            backoff = min(max_backoff, backoff * 2)
-            retry_count += 1
-
-    logger.error(f"Reached maximum retry limit of {max_retries} for account {account}. Exiting.")
-
-async def on_close(connection_manager, close_status_code, close_msg, KEY, SECRET):
-    logger.debug("### closed ###")
+    except Exception as e:
+        logger.exception(f"An unexpected error occurred for account {account}:")
+        connection_status[account] = False
 
 async def main_binance_c2c():
+    connection_status = {}
     tasks = []
     for account, cred in credentials_dict.items():
+        connection_status[account] = False
         task = asyncio.create_task(
-            run_websocket(account, cred['KEY'], cred['SECRET'])
+            run_websocket(account, cred['KEY'], cred['SECRET'], connection_status)
         )
         tasks.append(task)
     
     try:
         await asyncio.gather(*tasks)
-        logger.info("Successfully retrieved credentials for all accounts.")
+        if all(status for status in connection_status.values()):
+            logger.info("All WebSocket connections established successfully.")
+        else:
+            failed_accounts = [account for account, status in connection_status.items() if not status]
+            logger.error(f"Failed to establish WebSocket connections for the following accounts: {failed_accounts}")
     except KeyboardInterrupt:
         logger.debug("KeyboardInterrupt received. Exiting.")
     except Exception as e:

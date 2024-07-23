@@ -138,9 +138,9 @@ async def insert_multiple_ads(ads_list):
 async def main():
     conn = await create_connection(DB_PATH)
     if conn is not None:
-        # await clear_ads_table()
-        # await create_database()
-        # await insert_initial_ads()
+        await clear_ads_table()
+        await create_database()
+        await insert_initial_ads()
 
         await print_table_contents(conn, 'ads')
         await conn.close()

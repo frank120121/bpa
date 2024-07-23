@@ -105,7 +105,7 @@ if __name__ == "__main__":
         async def main():
             # Define your asset types, fiat, and transAmount combinations
             search_params = [
-                {'asset_type': 'USDT', 'fiat': 'USD', 'transAmount': '300', 'payTypes': ['BANK']},
+                {'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount': '1500', 'payTypes': []},
                 # Add more combinations if necessary
             ]
 

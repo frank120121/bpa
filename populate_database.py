@@ -4,6 +4,7 @@ from ads_database import fetch_all_ads_from_database, update_ad_in_database
 from common_vars import ads_dict
 from credentials import credentials_dict
 from binance_singleton_api import SingletonBinanceAPI
+from binance_share_session import SharedSession
 import logging
 import sys
 
@@ -59,5 +60,12 @@ async def process_ad(account, KEY, SECRET, ad_info):
             minTransAmount=minTransAmount
         )
 
+async def main():
+    try:
+        await populate_ads_with_details()
+    finally:
+        await SingletonBinanceAPI.close_all()
+        await SharedSession.close_session()
+
 if __name__ == "__main__":
-    asyncio.run(populate_ads_with_details())
+    asyncio.run(main())
