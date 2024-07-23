@@ -76,18 +76,7 @@ def check_if_ads_avail(ads_list, adjusted_target_spot):
     else:
         return adjusted_target_spot
     
-async def retry_fetch_ads(api_instance, ad, is_buy, page_start=2, page_end=3):
-    for page in range(page_start, page_end):
-        ads_data = await api_instance.fetch_ads_search('BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], ad['payTypes'], page)
-        if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
-            logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {ad['payTypes']} on page {page}.")
-            continue
 
-        current_ads_data = ads_data['data']
-        if isinstance(current_ads_data, list) and current_ads_data:
-            return current_ads_data
-
-    return []
 async def is_ad_online(api_instance, advNo):
     try:
         response = await api_instance.get_ad_detail(advNo)
@@ -116,20 +105,14 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
         logger.debug(f'Ads_data: {ads_data}')
 
         if not our_ad_data:
-            if not await is_ad_online(api_instance, advNo):
-                logger.debug(f"Ad number {advNo} is not online. Skipping...")
-                return
-            # Retry fetching ads for pages 2 and 3 if no our_ad_data is found
-            ads_data = await retry_fetch_ads(api_instance, ad, is_buy)
-            if not ads_data:
-                logger.debug(f"No ads data found after retrying up to page 3 for ad number {advNo}.")
-                return
-            else:
-                our_ad_data = next((item for item in ads_data if item['adv']['advNo'] == advNo), None)
+            logger.error(f"Ad not found in ads data for advNo {advNo}.")
+            return
         else:
             our_current_price = float(our_ad_data['adv']['price'])
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
+        if asset_type == 'USDT':
+            logger.info(f"Base price for {asset_type}: {base_price}")
         
         # Fetch the lowest ask price from shared_data and calculate BUY_PRICE_THRESHOLD
         async with lowest_ask_lock:
@@ -151,7 +134,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
         if not filtered_ads:
             logger.info("No filtered ads found.")
             return
-            
+        
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
         competitor_price = float(competitor_ad['adv']['price'])
@@ -199,52 +182,66 @@ async def process_ads(ads_group, api_instances, all_ads, is_buy=True):
             continue
         await analyze_and_update_ads(ad, api_instance, current_ads_data, all_ads, is_buy)
 
-async def main_loop(api_instances, is_buy=True):
-    all_ads = await fetch_all_ads_from_database('BUY' if is_buy else 'SELL')
+async def main_loop(api_instances, all_ads, is_buy=True):
     logger.debug(f"All ads: {len(all_ads)}")
+    logger.debug(f"Ads data: {all_ads}")
+    ads_to_update = [ad for ad in all_ads if 'trade_type' in ad and ad['trade_type'] == ('BUY' if is_buy else 'SELL')]
+    logger.debug(f"Ads to update: {len(ads_to_update)}")
 
     grouped_ads = {}
-    for ad in all_ads:
+    for ad in ads_to_update:
         group_key = ad['Group']
         grouped_ads.setdefault(group_key, []).append(ad)
         logger.debug(f"Grouped ads: {group_key} - {len(grouped_ads[group_key])}")
 
     tasks = []
     for group_key, ads_group in grouped_ads.items():
-        tasks.append(asyncio.create_task(process_ads(ads_group, api_instances, all_ads, is_buy)))
+        tasks.append(asyncio.create_task(process_ads(ads_group, api_instances, ads_to_update, is_buy)))
     await asyncio.gather(*tasks)
 
-async def start_update_ads(is_buy=True):
+async def start_update_ads(api_instances, all_ads, is_buy=True):
     try:
-        all_ads = await fetch_all_ads_from_database()
-        accounts = set(ad['account'] for ad in all_ads)
-        api_instances = {}
-
-        for account in accounts:
-            KEY = credentials_dict[account]['KEY']
-            SECRET = credentials_dict[account]['SECRET']
-            api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
-            api_instances[account] = api_instance
-
         while True:
             async with balance_lock:
                 usd_balance = latest_usd_balance
             logger.debug(f"Using USD Balance: {usd_balance}")
             adjust_sell_price_threshold(usd_balance)
-            await main_loop(api_instances, is_buy)
+            await main_loop(api_instances, all_ads, is_buy)
     finally:
-        logger.info(f"Finished updating ads for {'BUY' if is_buy else 'SELL'}.")
+        logger.debug(f"Finished updating ads for {'BUY' if is_buy else 'SELL'}.")
 
 async def update_ads_main():
-    logger.info("Starting ads update...")
     fetch_balances_task = asyncio.create_task(fetch_and_calculate_total_balance())
-    await asyncio.sleep(5)  # Ensure balance is fetched initially
-    buy_task = asyncio.create_task(start_update_ads(is_buy=True))
-    sell_task = asyncio.create_task(start_update_ads(is_buy=False))
+    await asyncio.sleep(5)
+    online_ads = []
+    all_ads = await fetch_all_ads_from_database()
+    logger.debug(f"All ads fetched from database: {len(all_ads)}")  # Log all ads fetched
+
+    accounts = {ad['account'] for ad in all_ads}
+    api_instances = {}
+    
+    for account in accounts:
+        KEY = credentials_dict[account]['KEY']
+        SECRET = credentials_dict[account]['SECRET']
+        api_instances[account] = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
+    # Fetch ads from API instances and log the responses
+    for account in api_instances:
+        response = await api_instances[account].ads_list()
+        logger.debug(f"Response from account {account}: {response}")  # Log raw API response
+        if response['code'] == '000000' and 'data' in response:
+            online_ads.extend(ad for ad in response['data'] if ad['advStatus'] == 1)
+
+    # Filter online buy and sell ads and log intermediate results
+    online_buy_ads = [ad for ad in all_ads if 'trade_type' in ad and ad['trade_type'] == 'BUY' and any(online_ad['advNo'] == ad['advNo'] for online_ad in online_ads)]
+    online_sell_ads = [ad for ad in all_ads if 'trade_type' in ad and ad['trade_type'] == 'SELL' and any(online_ad['advNo'] == ad['advNo'] for online_ad in online_ads)]
+
+    buy_task = asyncio.create_task(start_update_ads(api_instances, online_buy_ads, is_buy=True))
+    sell_task = asyncio.create_task(start_update_ads(api_instances, online_sell_ads, is_buy=False))
     await asyncio.gather(fetch_balances_task, buy_task, sell_task)
 
 async def main():
     try:
+        logger.debug("Starting ads update...")
         await update_ads_main()
     finally:
         await SingletonBinanceAPI.close_all()

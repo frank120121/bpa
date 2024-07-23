@@ -1,4 +1,4 @@
-#binance_api.py
+# binance_api.py
 import aiohttp
 import asyncio
 import hmac
@@ -22,6 +22,7 @@ class BinanceAPI:
     request_lock = Lock()  # Lock to ensure rate limiting is respected globally
     cache = {}
     ads_list_cache = {}
+    get_ad_detail_cache = {}
 
     def __init__(self, api_key, api_secret, client_type='WEB'):
         self.api_key = api_key
@@ -70,9 +71,9 @@ class BinanceAPI:
                         logger.debug(f"Instance {self.instance_id}: Rate limiting for endpoint: {endpoint}")
                         if endpoint == '/sapi/v1/c2c/ads/update':
                             logger.debug(f"Instance {self.instance_id}: Rate limiting for ad update endpoint")
-                            BinanceAPI.rate_limit_delay = 0.5
+                            BinanceAPI.rate_limit_delay = 0.6
                         else:
-                            BinanceAPI.rate_limit_delay = 0.05
+                            BinanceAPI.rate_limit_delay = 0.1
 
                         current_time = time.time()
                         time_since_last_request = current_time - BinanceAPI.last_request_time
@@ -137,58 +138,46 @@ class BinanceAPI:
         logger.error(f"Instance {self.instance_id}: Exceeded max retries for URL: {url}")
         return None
 
-    
+    async def _handle_cache(self, cache_dict, cache_key, func, ttl, *args, **kwargs):
+        current_time = datetime.now()
+
+        if cache_key in cache_dict:
+            cached_result, timestamp = cache_dict[cache_key]
+            logger.debug(f"Instance {self.instance_id}: Cached timestamp {timestamp}, Current time {current_time}")
+
+            if current_time - timestamp < timedelta(seconds=ttl):
+                logger.debug(f"Instance {self.instance_id}: Returning cached result for key {cache_key}")
+                return cached_result
+            else:
+                logger.debug(f"Instance {self.instance_id}: Cache expired for key {cache_key}, fetching new data")
+        else:
+            logger.debug(f"Instance {self.instance_id}: No cache found for key {cache_key}, fetching new data")
+
+        response_data = await func(*args, **kwargs)
+        cache_dict[cache_key] = (response_data, current_time)
+        return response_data
+
+    async def ads_list(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        ads_cache_key = (self.instance_id, x_gray_env, x_trace_id, x_user_id)
+        endpoint = "/sapi/v1/c2c/ads/listWithPagination"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        body = {
+            "page": 1,
+            "rows": 20
+        }
+        return await self._handle_cache(BinanceAPI.ads_list_cache, ads_cache_key, self._make_request, 60, 'POST', endpoint, headers=headers, body=body)
+
     async def get_ad_detail(self, ads_no, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        get_ad_detail_cache_key = (ads_no)
         endpoint = "/sapi/v1/c2c/ads/getDetailByNo"
         params = {
             'adsNo': ads_no
         }
         headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        return await self._handle_cache(BinanceAPI.get_ad_detail_cache, get_ad_detail_cache_key, self._make_request, 60, 'POST', endpoint, params, headers)
 
-        return await self._make_request('POST', endpoint, params, headers)
-    
-    async def update_ad(self, advNo, priceFloatingRatio, x_gray_env=None, x_trace_id=None, x_user_id=None):
-        if advNo in ['12590489123493851136', '12590488417885061120']:
-            logger.debug(f"Instance {self.instance_id}: Ad: {advNo} is in the skip list")
-            return
-        endpoint = "/sapi/v1/c2c/ads/update"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
-        body = {
-            "advNo": advNo,
-            "priceFloatingRatio": priceFloatingRatio
-        }
-        
-        return await self._make_request('POST', endpoint, headers=headers, body=body)
-    
-    async def ads_list(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
-        ads_cache_key = (self.instance_id, x_gray_env, x_trace_id, x_user_id)
-        if ads_cache_key in BinanceAPI.ads_list_cache:
-            cached_result, timestamp = BinanceAPI.ads_list_cache[ads_cache_key]
-            if datetime.now() - timestamp < timedelta(seconds=60):
-                logger.info(f"Instance {self.instance_id}: Returning cached ads list")
-                return cached_result
-        endpoint = "/sapi/v1/c2c/ads/listWithPagination"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
-        body =   {  
-
-            "page": 1, 
-            "rows": 20
-        }
-        ads_response_list = await self._make_request('POST', endpoint, headers=headers, body=body)
-        BinanceAPI.ads_list_cache[ads_cache_key] = (ads_response_list, datetime.now())
-        return ads_response_list
-    
     async def fetch_ads_search(self, trade_type, asset, fiat, trans_amount, pay_types, page, x_gray_env=None, x_trace_id=None, x_user_id=None):
-        # Create a cache key based on the function's arguments
         cache_key = (page, trade_type, asset, fiat, trans_amount, tuple(sorted(pay_types)) if pay_types else None)
-
-        # Check if these parameters are in the cache and if the cached result is less than 0.5 seconds old
-        if cache_key in BinanceAPI.cache:
-            cached_result, timestamp = BinanceAPI.cache[cache_key]
-            if datetime.now() - timestamp < timedelta(seconds=0.25):
-                logger.debug(f"Instance {self.instance_id}: Returning cached result for {asset} {fiat} {trans_amount} {pay_types}")
-                return cached_result
-            
         endpoint = "/sapi/v1/c2c/ads/search"
         headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
         body = {
@@ -202,13 +191,20 @@ class BinanceAPI:
         }
         if pay_types:
             body['payTypes'] = pay_types
+        return await self._handle_cache(BinanceAPI.cache, cache_key, self._make_request, 0.20, 'POST', endpoint, headers=headers, body=body)
 
-        response_data = await self._make_request('POST', endpoint, headers=headers, body=body)
-
-        # Cache the result along with the current timestamp 
-        BinanceAPI.cache[cache_key] = (response_data, datetime.now())
-
-        return response_data
+    
+    async def update_ad(self, advNo, priceFloatingRatio, x_gray_env=None, x_trace_id=None, x_user_id=None):
+        if advNo in ['12590489123493851136', '12590488417885061120']:
+            logger.debug(f"Instance {self.instance_id}: Ad: {advNo} is in the skip list")
+            return
+        endpoint = "/sapi/v1/c2c/ads/update"
+        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        body = {
+            "advNo": advNo,
+            "priceFloatingRatio": priceFloatingRatio
+        }
+        return await self._make_request('POST', endpoint, headers=headers, body=body)
 
     async def list_orders(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
         endpoint = "/sapi/v1/c2c/orderMatch/listOrders"
@@ -222,7 +218,6 @@ class BinanceAPI:
             "page": 1,
             "rows": 20
         }
-
         return await self._make_request('POST', endpoint, headers=headers, body=body)
     
     async def retrieve_chat_credential(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
