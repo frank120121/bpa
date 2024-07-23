@@ -134,58 +134,27 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             our_current_price = float(our_ad_data['adv']['price'])
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
-        if asset_type == 'USDT':
-            logger.info(f"Base price for {asset_type}: {base_price}")
         
         # Fetch the lowest ask price from shared_data and calculate BUY_PRICE_THRESHOLD
         async with lowest_ask_lock:
             lowest_ask = shared_data["lowest_ask"]
         if lowest_ask is not None and asset_type == 'USDT':
-            logger.info(f"Lowest ask price for USDT: {lowest_ask}")
+            logger.debug(f"Lowest ask price for USDT: {lowest_ask}")
             global BUY_PRICE_THRESHOLD
             global SELL_PRICE_THRESHOLD
             SELL_PRICE_THRESHOLD = (lowest_ask / base_price) - 0.005
             BUY_PRICE_THRESHOLD = (lowest_ask * 1.0124) / base_price
 
-            logger.info(f"Updated BUY_PRICE_THRESHOLD to {BUY_PRICE_THRESHOLD}")
-            logger.info(f"Updated SELL_PRICE_THRESHOLD to {SELL_PRICE_THRESHOLD}")
+            logger.debug(f"Updated BUY_PRICE_THRESHOLD to {BUY_PRICE_THRESHOLD}")
+            logger.debug(f"Updated SELL_PRICE_THRESHOLD to {SELL_PRICE_THRESHOLD}")
 
         custom_price_threshold = determine_price_threshold(ad['payTypes'], is_buy)
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
+
+
         if not filtered_ads:
-            logger.info(
-                f"No filtered ads found. "
-                f"Type: {'BUY' if is_buy else 'SELL'}, "
-                f"Asset: {ad['asset_type']}, "
-                f"Fiat: {ad['fiat']}, "
-                f"Transaction Amount: {transAmount}, "
-                f"Base Price: {base_price}, "
-                f"Price Threshold: {custom_price_threshold}. "
-                f"Minimum Transaction Amount: {minTransAmount}. "
-                f"Ads Data: {ads_data}. "
-                f"All Ads: {all_ads}"
-            )
-
-            # Retry fetching ads for pages 2 and 3 if no filtered ads are found
-            for page in range(2, 4):
-                ads_data = await api_instance.fetch_ads_search('BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], ad['payTypes'], page)
-                if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
-                    logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {ad['payTypes']} on page {page}.")
-                    continue
-
-                current_ads_data = ads_data['data']
-                if not isinstance(current_ads_data, list) or not current_ads_data:
-                    logger.debug(f"No valid ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {ad['payTypes']} on page {page}.")
-                    continue
-
-                filtered_ads = filter_ads(current_ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
-
-                if filtered_ads:
-                    break
-
-            if not filtered_ads:
-                logger.info("No filtered ads found after checking up to page 3.")
-                return
+            logger.info("No filtered ads found.")
+            return
             
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
