@@ -25,11 +25,11 @@ balance_lock = asyncio.Lock()
 latest_usd_balance = 0
 BUY_PRICE_THRESHOLD = 1.0065  # Default threshold
 
-def adjust_sell_price_threshold(usd_balance):
-    global SELL_PRICE_THRESHOLD
-    if usd_balance >= 60000:
-        SELL_PRICE_THRESHOLD = 0.9845
-        logger.debug("Adjusted sell price threshold to 0.9845")
+# def adjust_sell_price_threshold(usd_balance):
+#     global SELL_PRICE_THRESHOLD
+#     if usd_balance >= 60000:
+#         SELL_PRICE_THRESHOLD = 0.9845
+#         logger.debug("Adjusted sell price threshold to 0.9845")
     # else:
     #     adjustment = (60000 - usd_balance) / 1000 * 0.00025
     #     SELL_PRICE_THRESHOLD = min(0.9759 + adjustment, 0.9800)
@@ -126,8 +126,12 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
                 return
             else:
                 our_ad_data = next((item for item in ads_data if item['adv']['advNo'] == advNo), None)
-        else:
+        
+        if our_ad_data:
             our_current_price = float(our_ad_data['adv']['price'])
+        else:
+            logger.info(f"No our_ad_data found for ad number {advNo}.")
+            return
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
         
@@ -146,7 +150,6 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
 
         custom_price_threshold = determine_price_threshold(ad['payTypes'], is_buy)
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
-
 
         if not filtered_ads:
             logger.info("No filtered ads found.")
@@ -227,10 +230,10 @@ async def start_update_ads(is_buy=True):
             api_instances[account] = api_instance
 
         while True:
-            async with balance_lock:
-                usd_balance = latest_usd_balance
-            logger.debug(f"Using USD Balance: {usd_balance}")
-            adjust_sell_price_threshold(usd_balance)
+            # async with balance_lock:
+            #     usd_balance = latest_usd_balance
+            # logger.debug(f"Using USD Balance: {usd_balance}")
+            # adjust_sell_price_threshold(usd_balance)
             await main_loop(api_instances, is_buy)
     finally:
         logger.info(f"Finished updating ads for {'BUY' if is_buy else 'SELL'}.")

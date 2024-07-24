@@ -127,7 +127,7 @@ async def log_deposit(conn, deposit_from, bank_account_number, amount_deposited)
                        (timestamp, bank_account_number, amount_deposited, deposit_from, year, month))
     await conn.execute('UPDATE mxn_bank_accounts SET account_balance = account_balance + ? WHERE account_number = ?', (amount_deposited, bank_account_number))
     await conn.commit()
-    logger.debug(f"Logged deposit of {amount_deposited} from {deposit_from} to account {bank_account_number}")
+    logger.info(f"Logged deposit of {amount_deposited} from {deposit_from} to account {bank_account_number}")
 
 
 async def sum_recent_deposits(conn, account_number):
@@ -258,8 +258,8 @@ async def main():
         await clear_accounts(conn)
         await initialize_database(conn)
         # # Print table contents for verification
-        await print_table_contents(conn, 'mxn_bank_accounts')
-        await print_table_contents(conn, 'oxxo_debit_cards')
+        await print_table_contents(conn, 'mxn_deposits')
+        # await print_table_contents(conn, 'oxxo_debit_cards')
         # await remove_bank_account(conn, '0482424657')
         # await remove_bank_account(conn, '012778015323351288')
         # await remove_bank_account(conn, '012778015939990486')

@@ -51,7 +51,7 @@ async def handle_order_status_4(connection_manager, conn, order_no, order_detail
     amount_deposited = order_details.get('total_price')
     bank_account_number = await get_account_number(conn, order_no)
     buyer_name = order_details.get('buyer_name')
-    logger.debug(f"Logging deposit for {buyer_name} with bank account {bank_account_number} for {amount_deposited}")
+    logger.info(f"Logging deposit for {buyer_name} with bank account {bank_account_number} for {amount_deposited}")
     await log_deposit(conn, buyer_name, bank_account_number, amount_deposited)
 
 async def handle_order_status_1(connection_manager, conn, order_no, order_details):
