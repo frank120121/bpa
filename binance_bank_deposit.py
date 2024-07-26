@@ -17,7 +17,8 @@ bank_accounts = {
     'nvio': [],
     # 'bbva': [],
     'banregio': [],
-    'santander': []
+    'santander': [],
+    # 'spin by oxxo': []
 }
 
 logger = logging.getLogger(__name__)
@@ -214,7 +215,7 @@ async def get_account_details(conn, account_number, buyer_name, order_no, buyer_
         if account_details:
             logger.debug(f"Details retrieved for account {account_number}")
 
-            if buyer_bank.lower() in ['oxxo', 'banregio']:
+            if buyer_bank.lower() in ['oxxo', 'banregio',]:
                 bank_name = "NO SE ACEPTA TRANSFERENCIA SOLO DEPOSITO EN EFECTIVO"
                 beneficiary_name = "NO SE ACEPTA TRANSFERENCIA SOLO DEPOSITO EN EFECTIVO"
                 account_label = "Número de tarjeta de debito"

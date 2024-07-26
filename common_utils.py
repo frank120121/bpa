@@ -22,10 +22,13 @@ class ServerTimestampCache:
     buffer_ms = None  # Buffer will be set when syncing with Binance API
 
     @classmethod
-    async def fetch_server_time(cls):
-        async with cls.lock:  # Ensure only one fetch is happening at a time
-            if cls.is_initialized:
-                return  # If already initialized, no need to fetch again
+    async def fetch_server_time(cls, resync=False):
+        logger.debug("Fetching server time...")
+        async with cls.lock:
+            logger.debug("Acquired lock for fetching server time")
+            if cls.is_initialized and not resync:
+                logger.debug("Server timestamp is already initialized. Skipping fetch.")
+                return 
 
             async with aiohttp.ClientSession() as session:
                 endpoints = [TIME_ENDPOINT_V3, TIME_ENDPOINT_V1]
@@ -53,7 +56,7 @@ class ServerTimestampCache:
 
                 cls.is_initialized = False
                 logger.error("Failed to update server timestamp from all endpoints. Using local time instead.")
-                cls.offset = 0  # Fallback to local system time
+                cls.offset = 0
 
     @classmethod
     async def maintain_timestamp(cls):
@@ -73,7 +76,8 @@ class ServerTimestampCache:
 
 async def get_server_timestamp(resync=False):
     if resync:
-        await ServerTimestampCache.fetch_server_time()
+        logger.info("Resyncing server timestamp...")
+        await ServerTimestampCache.fetch_server_time(resync=True)
     else:
         await ServerTimestampCache.ensure_initialized()
         await ServerTimestampCache.ensure_maintenance_task_started()

@@ -8,7 +8,7 @@ from urllib.parse import urlencode
 import time
 from datetime import datetime, timedelta
 from asyncio import Lock
-
+from traceback import format_exc
 from common_utils import get_server_timestamp
 from binance_share_session import SharedSession
 
@@ -110,15 +110,11 @@ class BinanceAPI:
                                 await get_server_timestamp(resync=True)
                                 continue
                             else:
-                                logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json}")
+                                logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
                                 return resp_json
                         elif response.status in [429, 83628]:  # Handle rate limiting
                             logger.info(f"Instance {self.instance_id} Status: {response.status} Response: {resp_json}")
-                            retry_after = response.headers.get('Retry-After')
-                            if retry_after:
-                                retry_after = int(retry_after)
-                            else:
-                                retry_after = 30
+                            retry_after = 1
                             await asyncio.sleep(retry_after)
                             BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
                         else:
@@ -130,9 +126,9 @@ class BinanceAPI:
                         logger.info(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
                         return text_response
             except aiohttp.ClientError as e:
-                logger.error(f"Instance {self.instance_id}: Client error during request: {e}")
+                logger.error(f"Instance {self.instance_id}: Client error during request: {e}\n{format_exc()}")
             except Exception as e:
-                logger.error(f"Instance {self.instance_id}: Unexpected error during request: {e}")
+                logger.error(f"Instance {self.instance_id}: Unexpected error during request: {e}\n{format_exc()}")
 
             await asyncio.sleep(backoff_factor ** attempt)
         logger.error(f"Instance {self.instance_id}: Exceeded max retries for URL: {url}")

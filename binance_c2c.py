@@ -9,6 +9,8 @@ from common_utils import get_server_timestamp
 from common_utils_db import create_connection
 from credentials import credentials_dict
 
+RETRY_DELAY = 10  
+
 logger = logging.getLogger(__name__)
 
 async def on_message(connection_manager, message, KEY, SECRET):
@@ -103,7 +105,7 @@ async def run_websocket(account, api_key, api_secret, connection_status):
             connection_status[account] = True
             logger.info(f"WebSocket connection established for account {account}.")
             async for message in ws:
-                logger.debug(f"Received message for account {account}: {message}")
+                logger.info(f"Received message for account {account}: {message}")
                 await on_message(connection_manager, message, api_key, api_secret)
         connection_manager.is_connected = False
         logger.info(f"WebSocket connection closed gracefully for account {account}.")
@@ -116,6 +118,8 @@ async def run_websocket(account, api_key, api_secret, connection_status):
 async def main_binance_c2c():
     connection_status = {}
     tasks = []
+
+    # Initial connection attempt for all accounts
     for account, cred in credentials_dict.items():
         connection_status[account] = False
         task = asyncio.create_task(
@@ -125,11 +129,27 @@ async def main_binance_c2c():
     
     try:
         await asyncio.gather(*tasks)
-        if all(status for status in connection_status.values()):
-            logger.info("All WebSocket connections established successfully.")
-        else:
+        
+        while True:
+            # Check for failed connections
             failed_accounts = [account for account, status in connection_status.items() if not status]
-            logger.error(f"Failed to establish WebSocket connections for the following accounts: {failed_accounts}")
+            if not failed_accounts:
+                logger.info("All WebSocket connections established successfully.")
+                break
+
+            logger.error(f"Retrying failed WebSocket connections for the following accounts: {failed_accounts}")
+
+            # Retry failed connections after a delay
+            await asyncio.sleep(RETRY_DELAY)
+            retry_tasks = []
+            for account in failed_accounts:
+                cred = credentials_dict[account]
+                retry_task = asyncio.create_task(
+                    run_websocket(account, cred['KEY'], cred['SECRET'], connection_status)
+                )
+                retry_tasks.append(retry_task)
+            await asyncio.gather(*retry_tasks)
+
     except KeyboardInterrupt:
         logger.debug("KeyboardInterrupt received. Exiting.")
     except Exception as e:

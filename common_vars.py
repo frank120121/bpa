@@ -143,6 +143,7 @@ HSBC_OXXO_DAILY_LIMIT = 20000.00
 CAJAPOPULAR_OXXO_DAILY_LIMIT = 20000.00
 INVEX_OXXO_DAILY_LIMIT = 19000.00
 BANREGIO_OXXO_DAILY_LIMIT = 30000.00
+SPIN_OXXO_DAILY_LIMIT = 10000.00
 
 #Oxxo Limits too low
 AFIRME_OXXO_DAILY_LIMIT = 5000.00
@@ -292,7 +293,31 @@ bank_accounts = [
         "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
         "account_monthly_limit": OXXO_MONTHLY_LIMIT,
         "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
-    }
+    },
+    {
+        "bank_name": "SPIN BY OXXO",
+        "beneficiary": "MARTHA GUERRERO LOPEZ",
+        "account_number": "2242170760065560",
+        "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": SPIN_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "SPIN BY OXXO",
+        "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
+        "account_number": "2242170760324680",
+        "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": SPIN_OXXO_DAILY_LIMIT
+    },
+    {
+        "bank_name": "SPIN BY OXXO",
+        "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
+        "account_number": "2242170760314240",
+        "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,
+        "account_monthly_limit": OXXO_MONTHLY_LIMIT,
+        "oxxo_daily_limit": SPIN_OXXO_DAILY_LIMIT
+    },
 
 ]
 
