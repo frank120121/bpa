@@ -9,7 +9,8 @@ from common_utils import get_server_timestamp
 from common_utils_db import create_connection
 from credentials import credentials_dict
 
-RETRY_DELAY = 10  
+RETRY_DELAY = 0.1
+MAX_RETRY_DELAY = 1 
 
 logger = logging.getLogger(__name__)
 
@@ -75,85 +76,87 @@ class ConnectionManager:
             logger.error("Failed to send message: WebSocket not connected.")
 
 async def run_websocket(account, api_key, api_secret, connection_status):
-    api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
+    retry_delay = RETRY_DELAY
+    while True:
+        try:
+            # Get the API instance and retrieve credentials
+            api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
+            logger.debug(f"Fetching chat credentials for account: {account}...")
+            response = await api_instance.retrieve_chat_credential()
+            logger.debug(f"Received response for account {account}: {response}")
 
-    try:
-        logger.debug(f"Fetching chat credentials for account: {account}...")
-        response = await api_instance.retrieve_chat_credential()
-        logger.debug(f"Received response for account {account}: {response}")
-        
-        if response and 'data' in response:
-            data = response['data']
-            if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
-                wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
-                logger.debug(f"WebSocket URL constructed for account {account}: {wss_url}")
+            if response and 'data' in response:
+                data = response['data']
+                if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
+                    wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
+                    logger.debug(f"WebSocket URL constructed for account {account}: {wss_url}")
+                else:
+                    raise ValueError(f"Missing expected keys in 'data' for account {account}. Full response: {response}")
             else:
-                logger.error(f"Missing expected keys in 'data' for account {account}. Full response: {response}")
-                connection_status[account] = False
-                return
+                raise ValueError(f"Unexpected structure in API response for account {account}. Full response: {response}")
+
+            # Establish WebSocket connection
+            connection_manager = ConnectionManager(wss_url, api_key, api_secret)
+            logger.debug(f"Attempting to connect to WebSocket with URL for account {account}: {wss_url}")
+            async with websockets.connect(wss_url) as ws:
+                connection_manager.ws = ws
+                connection_manager.is_connected = True
+                connection_status[account] = True
+                logger.info(f"Updated connection status for {account}: {connection_status[account]}")
                 
-        else:
-            logger.error(f"Unexpected structure in API response for account {account}. Full response: {response}")
+                # Log the current status for debugging
+                logger.debug(f"Updated connection_status after connection for {account}: {connection_status}")
+                
+                # Listen for messages
+                logger.info(f"Entering WebSocket message loop for account {account}")
+                async for message in ws:
+                    logger.debug(f"Received message for account {account}: {message}")
+                    await on_message(connection_manager, message, api_key, api_secret)
+                
+                # Reset retry delay after a successful connection
+                retry_delay = RETRY_DELAY
+
+        except Exception as e:
+            logger.exception(f"An unexpected error occurred for account {account}: {e}")
             connection_status[account] = False
-            return
+            logger.info(f"Updated connection status for {account}: {connection_status[account]}")
+            connection_manager.is_connected = False
 
-        connection_manager = ConnectionManager(wss_url, api_key, api_secret)
-        logger.debug(f"Attempting to connect to WebSocket with URL for account {account}: {wss_url}")
-        async with websockets.connect(wss_url) as ws:
-            connection_manager.ws = ws
-            connection_manager.is_connected = True
-            connection_status[account] = True
-            logger.info(f"WebSocket connection established for account {account}.")
-            async for message in ws:
-                logger.info(f"Received message for account {account}: {message}")
-                await on_message(connection_manager, message, api_key, api_secret)
-        connection_manager.is_connected = False
-        logger.info(f"WebSocket connection closed gracefully for account {account}.")
-        connection_status[account] = False
+            # Incremental backoff with a maximum limit
+            retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)
+            logger.info(f"Retrying connection for account {account} in {retry_delay} seconds.")
+            await asyncio.sleep(retry_delay)
 
-    except Exception as e:
-        logger.exception(f"An unexpected error occurred for account {account}:")
-        connection_status[account] = False
+
+async def check_connections(connection_status):
+    while True:
+        logger.info(f"Current connection status: {connection_status}")
+        failed_accounts = [account for account, status in connection_status.items() if not status]
+        logger.info(f"Failed accounts: {failed_accounts}")
+        if failed_accounts:
+            logger.warning(f"Detected {len(failed_accounts)} failed connections: {failed_accounts}")
+            # Here you could implement additional logic to handle failed connections
+        else:
+            logger.info("All WebSocket connections are currently established.")
+        await asyncio.sleep(30)  # Check every 30 seconds
 
 async def main_binance_c2c():
+    logger.info("Starting main_binance_c2c function")
     connection_status = {}
     tasks = []
 
     # Initial connection attempt for all accounts
     for account, cred in credentials_dict.items():
         connection_status[account] = False
+        logger.info(f"Updated connection status for {account}: {connection_status[account]}")
         task = asyncio.create_task(
             run_websocket(account, cred['KEY'], cred['SECRET'], connection_status)
         )
         tasks.append(task)
-    
-    try:
-        await asyncio.gather(*tasks)
-        
-        while True:
-            # Check for failed connections
-            failed_accounts = [account for account, status in connection_status.items() if not status]
-            if not failed_accounts:
-                logger.info("All WebSocket connections established successfully.")
-                break
 
-            logger.error(f"Retrying failed WebSocket connections for the following accounts: {failed_accounts}")
+    # Add the connection checker task
+    checker_task = asyncio.create_task(check_connections(connection_status))
+    tasks.append(checker_task)
 
-            # Retry failed connections after a delay
-            await asyncio.sleep(RETRY_DELAY)
-            retry_tasks = []
-            for account in failed_accounts:
-                cred = credentials_dict[account]
-                retry_task = asyncio.create_task(
-                    run_websocket(account, cred['KEY'], cred['SECRET'], connection_status)
-                )
-                retry_tasks.append(retry_task)
-            await asyncio.gather(*retry_tasks)
-
-    except KeyboardInterrupt:
-        logger.debug("KeyboardInterrupt received. Exiting.")
-    except Exception as e:
-        logger.exception("An unexpected error occurred:")
-
-if __name__ == "__main__":
-    asyncio.run(main_binance_c2c())
+    # Keep all tasks running
+    await asyncio.gather(*tasks)
