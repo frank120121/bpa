@@ -220,10 +220,6 @@ async def total_usd():
 async def main():
     usd_balance = await total_usd()
     print(f"Total USD balance: {usd_balance}")
-    #print total asset balances
-    total_balances = get_total_asset_balances()
-    print(f"Total asset balances:{total_balances}")
-    conn = await create_connection(DATABASE_PATH)
-    await print_table_contents(conn, 'balances')
+
 if __name__ == "__main__":
     asyncio.run(main())
