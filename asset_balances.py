@@ -2,6 +2,7 @@ import sqlite3
 import asyncio
 import aiosqlite
 import logging
+from common_utils_db import print_table_contents, create_connection
 logger = logging.getLogger(__name__)
 
 DATABASE_PATH = 'C:/Users/p7016/Documents/bpa/asset_balances.db'
@@ -110,6 +111,14 @@ def update_balance(exchange_id, account, combined_balances):
     connection = sqlite3.connect(DATABASE_PATH)
     cursor = connection.cursor()
     
+    # First, get all assets currently in the database for this account
+    cursor.execute('''
+        SELECT asset FROM balances 
+        WHERE exchange_id = ? AND account = ?
+    ''', (exchange_id, account))
+    existing_assets = set(row[0] for row in cursor.fetchall())
+
+    # Update or insert balances
     for asset, balance in combined_balances.items():
         logging.debug(f"Updating {account} - {asset}: {balance}")
         try:
@@ -117,10 +126,23 @@ def update_balance(exchange_id, account, combined_balances):
                 INSERT OR REPLACE INTO balances (exchange_id, account, asset, balance)
                 VALUES (?, ?, ?, ?)
             ''', (exchange_id, account, asset, balance))
+            existing_assets.discard(asset)  # Remove from set as it's been updated
             logging.debug(f"Successfully updated {account} - {asset}: {balance}")
         except sqlite3.Error as e:
             logging.error(f"Failed to update {account} - {asset}: {balance}, Error: {str(e)}")
-        
+
+    # Set balance to zero for assets not in combined_balances but in the database
+    for asset in existing_assets:
+        logging.debug(f"Setting zero balance for {account} - {asset}")
+        try:
+            cursor.execute('''
+                UPDATE balances SET balance = 0
+                WHERE exchange_id = ? AND account = ? AND asset = ?
+            ''', (exchange_id, account, asset))
+            logging.debug(f"Successfully set zero balance for {account} - {asset}")
+        except sqlite3.Error as e:
+            logging.error(f"Failed to set zero balance for {account} - {asset}, Error: {str(e)}")
+
     connection.commit()
     connection.close()
 
@@ -198,6 +220,10 @@ async def total_usd():
 async def main():
     usd_balance = await total_usd()
     print(f"Total USD balance: {usd_balance}")
-
+    #print total asset balances
+    total_balances = get_total_asset_balances()
+    print(f"Total asset balances:{total_balances}")
+    conn = await create_connection(DATABASE_PATH)
+    await print_table_contents(conn, 'balances')
 if __name__ == "__main__":
     asyncio.run(main())
