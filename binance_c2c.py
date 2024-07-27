@@ -130,9 +130,9 @@ async def run_websocket(account, api_key, api_secret, connection_status):
 
 async def check_connections(connection_status):
     while True:
-        logger.info(f"Current connection status: {connection_status}")
+        logger.debug(f"Current connection status: {connection_status}")
         failed_accounts = [account for account, status in connection_status.items() if not status]
-        logger.info(f"Failed accounts: {failed_accounts}")
+        logger.debug(f"Failed accounts: {failed_accounts}")
         if failed_accounts:
             logger.warning(f"Detected {len(failed_accounts)} failed connections: {failed_accounts}")
             # Here you could implement additional logic to handle failed connections
@@ -141,14 +141,14 @@ async def check_connections(connection_status):
         await asyncio.sleep(30)  # Check every 30 seconds
 
 async def main_binance_c2c():
-    logger.info("Starting main_binance_c2c function")
+    logger.debug("Starting main_binance_c2c function")
     connection_status = {}
     tasks = []
 
     # Initial connection attempt for all accounts
     for account, cred in credentials_dict.items():
         connection_status[account] = False
-        logger.info(f"Updated connection status for {account}: {connection_status[account]}")
+        logger.debug(f"Updated connection status for {account}: {connection_status[account]}")
         task = asyncio.create_task(
             run_websocket(account, cred['KEY'], cred['SECRET'], connection_status)
         )

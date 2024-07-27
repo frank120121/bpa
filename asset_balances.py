@@ -206,7 +206,7 @@ async def total_usd():
                 await cursor.execute('''
                     SELECT SUM(balance)
                     FROM balances
-                    WHERE asset IN ('USD', 'USDC', 'USDT', 'TUSD')
+                    WHERE asset IN ('USD', 'USDC', 'USDT', 'TUSD', 'DAI')
                 ''')
                 total_usd = await cursor.fetchone()
                 total_usd = total_usd[0] if total_usd[0] is not None else 0

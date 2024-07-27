@@ -137,7 +137,7 @@ class BinanceWallets:
         logger.debug("Calling update_balance from binance_wallets.py")
         try:
             update_balance(exchange_id, account, self.combined_balances)
-            logger.info(f"Cached balances for account {account}: {self.combined_balances}")
+            logger.debug(f"Cached balances for account {account}: {self.combined_balances}")
         except Exception as e:
             logger.error(f"Error in save_balances_to_db: {e}")
 

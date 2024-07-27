@@ -1,4 +1,5 @@
 # binance_api.py
+import json
 import aiohttp
 import asyncio
 import hmac
@@ -96,35 +97,38 @@ class BinanceAPI:
 
                 async with self.session.request(method, url, headers=headers, json=body) as response:
                     content_type = response.headers.get('Content-Type', '')
-                    if 'application/json' in content_type:
+                    try:
                         resp_json = await response.json()
                         logger.debug(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {resp_json}")
-                        
-                        if response.status == 200:
-                            logger.debug(f"Instance {self.instance_id}: Request success")
-                            return resp_json
-                        elif response.status == 400:
-                            error_code = resp_json.get('code')
-                            if error_code == -1021:
-                                logger.info(f"Instance {self.instance_id}: Resyncing server timestamp due to error code -1021")
-                                await get_server_timestamp(resync=True)
-                                continue
-                            else:
-                                logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
-                                return resp_json
-                        elif response.status in [429, 83628]:  # Handle rate limiting
-                            logger.info(f"Instance {self.instance_id} Status: {response.status} Response: {resp_json}")
+                    except aiohttp.ContentTypeError:
+                        text_response = await response.text()
+                        logger.debug(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
+                        try:
+                            resp_json = json.loads(text_response)
+                        except json.JSONDecodeError:
+                            logger.error(f"Instance {self.instance_id}: Unexpected content type: {content_type} for URL: {url}")
+                            logger.info(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
+                            return text_response
+
+                    if response.status == 200:
+                        logger.debug(f"Instance {self.instance_id}: Request success")
+                        return resp_json
+                    else:
+                        error_code = resp_json.get('code')
+                        if error_code == -1021:
+                            await get_server_timestamp(resync=True)
+                            continue
+                        elif error_code in [83628, -1003]:
                             retry_after = 1
                             await asyncio.sleep(retry_after)
                             BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
+                            continue
+                        elif error_code == 83015:
+                            continue
                         else:
-                            logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json}")
+                            logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
                             return resp_json
-                    else:
-                        logger.error(f"Instance {self.instance_id}: Unexpected content type: {content_type} for URL: {url}")
-                        text_response = await response.text()
-                        logger.info(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
-                        return text_response
+
             except aiohttp.ClientError as e:
                 logger.error(f"Instance {self.instance_id}: Client error during request: {e}\n{format_exc()}")
             except Exception as e:

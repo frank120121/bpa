@@ -14,26 +14,42 @@ from TESTbitso_price_listener import shared_data, lowest_ask_lock
 logger = logging.getLogger(__name__)
 
 # Constants
-SELL_PRICE_THRESHOLD = 0.9845
+SELL_PRICE_THRESHOLD = 0.9945
+SELL_PRICE_ADJUSTMENT = 0
 PRICE_THRESHOLD_2 = 1.0189
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
 RATIO_ADJUSTMENT = 0.05
 DIFF_THRESHOLD = 0.15
+BASE = 0.005
+
 
 balance_lock = asyncio.Lock()
 latest_usd_balance = 0
 BUY_PRICE_THRESHOLD = 1.0065  # Default threshold
 
 def adjust_sell_price_threshold(usd_balance):
-    global SELL_PRICE_THRESHOLD
-    if usd_balance >= 50000:
-        SELL_PRICE_THRESHOLD = 0.9845
-        logger.debug("Adjusted sell price threshold to 0.9845")
+    max_threshold_balance = 49500
+    neutral_balance = 40000
+    min_balance = 30000
+    
+    global SELL_PRICE_ADJUSTMENT
+    # Below 30000
+    if usd_balance <= min_balance:
+        SELL_PRICE_ADJUSTMENT = BASE - 0.01
+    # Between 30000 and 40000
+    elif min_balance < usd_balance < neutral_balance:
+        # Linear interpolation between BASE - 0.01 and 0
+        SELL_PRICE_ADJUSTMENT = (usd_balance - min_balance) / (neutral_balance - min_balance) * (0 - (BASE - 0.01)) + (BASE - 0.01)
+    # Between 40000 and 49500
+    elif neutral_balance <= usd_balance <= max_threshold_balance:
+        # Linear interpolation between 0 and BASE + 0.0105
+        SELL_PRICE_ADJUSTMENT = (usd_balance - neutral_balance) / (max_threshold_balance - neutral_balance) * ((BASE + 0.0075) - 0)
+    # Above 49500
     else:
-        adjustment = (60000 - usd_balance) / 1000 * 0.00025
-        SELL_PRICE_THRESHOLD = min(0.9759 + adjustment, 0.9800)
-        logger.debug(f"Adjusted sell price threshold to {SELL_PRICE_THRESHOLD}")
+        SELL_PRICE_ADJUSTMENT = BASE + 0.0105
+    
+
 
 async def fetch_and_calculate_total_balance():
     while True:
@@ -48,7 +64,7 @@ async def fetch_and_calculate_total_balance():
             logger.debug(f"Fetched USD Balance: {usd_balance}")
         except Exception as e:
             logger.error(f"Error fetching balance: {e}")
-        await asyncio.sleep(300)  # Fetch balance every 5 minutes
+        await asyncio.sleep(60)  # Fetch balance every 1 minute
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_threshold, minTransAmount, is_buy=True):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
@@ -142,17 +158,35 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             logger.debug(f"Lowest ask price for USDT: {lowest_ask}")
             global BUY_PRICE_THRESHOLD
             global SELL_PRICE_THRESHOLD
-            SELL_PRICE_THRESHOLD = (lowest_ask / base_price) - 0.005
-            BUY_PRICE_THRESHOLD = (lowest_ask * 1.0124) / base_price
+            
+            previous_sell_price_threshold = SELL_PRICE_THRESHOLD
+            previous_buy_price_threshold = BUY_PRICE_THRESHOLD
+            average_price = (lowest_ask + base_price) / 2
+            min_diff = 0.0020
+            new_sell_price_threshold = (average_price / base_price) - (SELL_PRICE_ADJUSTMENT)
+            new_buy_price_threshold = (average_price * 1.0124) / base_price
+            current_diff = 0
 
-            logger.debug(f"Updated BUY_PRICE_THRESHOLD to {BUY_PRICE_THRESHOLD}")
-            logger.debug(f"Updated SELL_PRICE_THRESHOLD to {SELL_PRICE_THRESHOLD}")
+            if is_buy:
+                current_diff = abs(new_buy_price_threshold - previous_buy_price_threshold)
+                if current_diff > min_diff:
+                    BUY_PRICE_THRESHOLD = new_buy_price_threshold
+                else:
+                    logger.debug(f"Diff less than {min_diff}. Not updating BUY_PRICE_THRESHOLD")
+            else:
+                current_diff = abs(new_sell_price_threshold - previous_sell_price_threshold)
+                if current_diff > min_diff:
+                    SELL_PRICE_THRESHOLD = new_sell_price_threshold
+                else:
+                    logger.debug(f"Diff less than {min_diff}. Not updating SELL_PRICE_THRESHOLD")
+
 
         custom_price_threshold = determine_price_threshold(ad['payTypes'], is_buy)
+        logger.info(f"Custom price threshold: {custom_price_threshold}")
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
 
         if not filtered_ads:
-            logger.info("No filtered ads found.")
+            logger.debug("No filtered ads found.")
             return
             
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
@@ -169,6 +203,8 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             else:
                 logger.debug(f"Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}. Not enough diff: {diff_ratio}")
                 return
+            
+
 
         new_ratio = max(MIN_RATIO, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
         new_diff = abs(new_ratio - current_priceFloatingRatio)
@@ -176,6 +212,8 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             logger.debug(f"Ratio unchanged")
             return
         else:
+            if asset_type == 'USDT':
+                logger.info(f"Updating ad: new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}. ad number: {advNo}. Base price: {base_price}. Price threshold: {custom_price_threshold}. Is buy: {is_buy}.")
             logger.debug(f"Updating with filter ad: new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}.")
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount, minTransAmount)
