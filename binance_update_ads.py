@@ -182,7 +182,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
 
 
         custom_price_threshold = determine_price_threshold(ad['payTypes'], is_buy)
-        logger.info(f"Custom price threshold: {custom_price_threshold}")
+        logger.debug(f"Custom price threshold: {custom_price_threshold}")
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
 
         if not filtered_ads:
@@ -213,7 +213,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             return
         else:
             if asset_type == 'USDT':
-                logger.info(f"Updating ad: new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}. ad number: {advNo}. Base price: {base_price}. Price threshold: {custom_price_threshold}. Is buy: {is_buy}.")
+                logger.debug(f"Updating ad: new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}. ad number: {advNo}. Base price: {base_price}. Price threshold: {custom_price_threshold}. Is buy: {is_buy}.")
             logger.debug(f"Updating with filter ad: new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}.")
             await api_instance.update_ad(advNo, new_ratio)
             await update_ad_in_database(target_spot, advNo, asset_type, new_ratio, our_current_price, surplusAmount, ad['account'], fiat, transAmount, minTransAmount)

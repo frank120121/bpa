@@ -61,7 +61,7 @@ class BinanceAPI:
         self._add_optional_headers(headers, x_gray_env, x_trace_id, x_user_id)
         return headers
 
-    async def _make_request(self, method, endpoint, params=None, headers=None, body=None, retries=5, backoff_factor=2):
+    async def _make_request(self, method, endpoint, params=None, headers=None, body=None, retries=5, backoff_factor=2, timeout=30):
         await self._init_session()  # Ensure session is initialized
 
         for attempt in range(retries):
@@ -95,7 +95,7 @@ class BinanceAPI:
                 url = f"{self.BASE_URL}{endpoint}?{query_string}"
                 logger.debug(f"Instance {self.instance_id}: Request: method={method}, url={url}, headers={headers}, body={body}")
 
-                async with self.session.request(method, url, headers=headers, json=body) as response:
+                async with self.session.request(method, url, headers=headers, json=body, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
                     content_type = response.headers.get('Content-Type', '')
                     try:
                         resp_json = await response.json()
@@ -129,15 +129,21 @@ class BinanceAPI:
                             logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
                             return resp_json
 
+            except asyncio.TimeoutError:
+                logger.error(f"Instance {self.instance_id}: Request timed out (attempt {attempt + 1}/{retries})")
             except aiohttp.ClientError as e:
                 logger.error(f"Instance {self.instance_id}: Client error during request: {e}\n{format_exc()}")
             except Exception as e:
                 logger.error(f"Instance {self.instance_id}: Unexpected error during request: {e}\n{format_exc()}")
 
-            await asyncio.sleep(backoff_factor ** attempt)
+            # Exponential backoff
+            wait_time = backoff_factor ** attempt
+            logger.info(f"Instance {self.instance_id}: Retrying in {wait_time:.2f} seconds...")
+            await asyncio.sleep(wait_time)
+
         logger.error(f"Instance {self.instance_id}: Exceeded max retries for URL: {url}")
         return None
-
+    
     async def _handle_cache(self, cache_dict, cache_key, func, ttl, *args, **kwargs):
         current_time = datetime.now()
 
