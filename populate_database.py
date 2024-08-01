@@ -4,7 +4,7 @@ from ads_database import fetch_all_ads_from_database, update_ad_in_database
 from common_vars import ads_dict
 from credentials import credentials_dict
 from binance_singleton_api import SingletonBinanceAPI
-from binance_share_data import SharedSession, ad_details_dict
+from binance_share_data import SharedData, SharedSession
 import logging
 import sys
 
@@ -20,59 +20,82 @@ advNo_to_minTransAmount = {ad['advNo']: ad['minTransAmount'] for _, ads in ads_d
 
 async def populate_ads_with_details():
     try:
-        logger.debug("Fetching ads from database...")
+        logger.info("Fetching ads from database to update...")
         ads_info = await fetch_all_ads_from_database()
-        logger.debug(f"Fetched ads from database: {ads_info}")
+        logger.info(f"Fetched {len(ads_info)} ads from database.")
 
+        # Update ads details and save to database
         tasks = []
         for ad_info in ads_info:
             account = ad_info['account']
             KEY = credentials_dict[account]['KEY']
             SECRET = credentials_dict[account]['SECRET']
-            tasks.append(process_ad(account, KEY, SECRET, ad_info))
+            tasks.append(update_ad_detail(account, KEY, SECRET, ad_info))
         
         await asyncio.gather(*tasks)
+        logger.info("Ads details updated in the database.")
+        
+        # Fetch updated ads from database and populate SharedData
+        logger.info("Fetching updated ads from database...")
+        updated_ads_info = await fetch_all_ads_from_database()
+        logger.info(f"Fetched {len(updated_ads_info)} updated ads from database.")
+
+        # Populate SharedData with updated ads
+        logger.info("Populating SharedData with updated ads...")
+        await populate_shared_data(updated_ads_info)
+        ads_count = await SharedData.len()
+        logger.info(f"SharedData populated with {ads_count} ads.")
     finally:
         logger.info("All ads processed successfully.")
 
-async def process_ad(account, KEY, SECRET, ad_info):
-    api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
-    advNo = ad_info['advNo']
-    ad_details = await api_instance.get_ad_detail(advNo)
-    if ad_details and advNo in advNo_to_target_spot:
-        # Update target_spot, fiat, and transAmount using the mappings
-        ad_details['target_spot'] = advNo_to_target_spot[advNo]
-        fiat = advNo_to_fiat.get(advNo)
-        transAmount = advNo_to_transAmount.get(advNo)
-        minTransAmount = advNo_to_minTransAmount.get(advNo)
+async def update_ad_detail(account, KEY, SECRET, ad_info):
+    logger.info(f"Updating ad details for account: {account}, advNo: {ad_info['advNo']}")
+    try:
+        api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)
+        advNo = ad_info['advNo']
+        ad_details = await api_instance.get_ad_detail(advNo)
+        if ad_details and advNo in advNo_to_target_spot:
+            # Update ad details using the mappings and save to database
+            ad_info['target_spot'] = advNo_to_target_spot[advNo]
+            ad_info['fiat'] = advNo_to_fiat.get(advNo)
+            ad_info['transAmount'] = advNo_to_transAmount.get(advNo)
+            ad_info['minTransAmount'] = advNo_to_minTransAmount.get(advNo)
 
-        # Update shared data structure
-        await ad_details_dict.put(advNo, {
-            'target_spot': ad_details['target_spot'],
-            'asset_type': ad_details['data']['asset'],
-            'floating_ratio': ad_details['data']['priceFloatingRatio'],
-            'price': ad_details['data']['price'],
-            'surplusAmount': ad_details['data']['surplusAmount'],
-            'account': ad_info['account'],
-            'fiat': fiat,
-            'transAmount': transAmount,
-            'minTransAmount': minTransAmount
-        })
+            # Update database
+            await update_ad_in_database(
+                target_spot=ad_info['target_spot'],
+                advNo=advNo,
+                asset_type=ad_info['asset_type'],
+                floating_ratio=ad_info['floating_ratio'],
+                price=ad_info['price'],
+                surplusAmount=ad_info['surplused_amount'],
+                account=ad_info['account'],
+                fiat=ad_info['fiat'],
+                transAmount=ad_info['transAmount'],
+                minTransAmount=ad_info['minTransAmount']
+            )
+    except Exception as e:
+        logger.error(f"Error updating ad details for advNo {ad_info['advNo']}: {e}")
 
-        logger.debug(f"Updated target_spot for advNo {advNo} to {advNo_to_target_spot[advNo]}")
-        await update_ad_in_database(
-            target_spot=ad_details['target_spot'],
-            advNo=advNo,
-            asset_type=ad_details['data']['asset'],
-            floating_ratio=ad_details['data']['priceFloatingRatio'],
-            price=ad_details['data']['price'],
-            surplusAmount=ad_details['data']['surplusAmount'],
-            account=ad_info['account'],
-            fiat=fiat,
-            transAmount=transAmount,
-            minTransAmount=minTransAmount
-        )
-
+async def populate_shared_data(ads_info):
+    logger.info(f"Starting to populate SharedData with {len(ads_info)} ads.")
+    successful_additions = 0
+    try:
+        for ad_info in ads_info:
+            advNo = ad_info['advNo']
+            success = await SharedData.set_ad(advNo, ad_info)
+            if success:
+                successful_additions += 1
+                logger.info(f"Ad {advNo} successfully set in SharedData.")
+            else:
+                logger.warning(f"Failed to set ad {advNo} in SharedData.")
+        
+        ads_count = await SharedData.len()
+        logger.info(f"SharedData populated with {ads_count} ads. Successful additions: {successful_additions}")
+    except Exception as e:
+        logger.error(f"Error in populate_shared_data: {e}")
+    finally:
+        logger.info("Exiting populate_shared_data.")
 async def main():
     try:
         await populate_ads_with_details()

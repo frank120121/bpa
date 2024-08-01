@@ -6,7 +6,7 @@ from common_utils_db import create_connection, DB_FILE
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-class USDTOrderManager:
+class ExchangeRateManager:
     def __init__(self):
         self.orders = []
         self.lock = asyncio.Lock()
@@ -88,7 +88,7 @@ async def main():
             target_mxn = 50000  # The target MXN amount
             orders = await fetch_orders(conn, target_mxn)
 
-            manager = USDTOrderManager()
+            manager = ExchangeRateManager()
             for order in orders:
                 exchange_rate = order['total_price'] / order['amount']
                 await manager.add_order(order['amount'], order['total_price'], exchange_rate)

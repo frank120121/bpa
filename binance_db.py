@@ -105,7 +105,18 @@ async def get_orders_by_total_price(conn, total_price):
     except Exception as e:
         logger.error(f"Error retrieving orders with total price {total_price}: {e}")
         return []
-        
+
+#async function to log orders with a given order status
+async def log_orders_by_status(conn, order_status):
+    try:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT * FROM orders WHERE order_status = ?", (order_status,))
+            rows = await cursor.fetchall()
+            return rows
+    except Exception as e:
+        logger.error(f"Error retrieving orders with order status {order_status}: {e}")
+        return []
+
 async def main():  
     sql_create_merchants_table = """CREATE TABLE IF NOT EXISTS merchants (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -174,7 +185,11 @@ async def main():
         # await remove(conn, '20624872107382546432')
         # await remove_user(conn, 'LOPEZ GUERRERO FRANCISCO JAVIER')
         # await add_column_if_not_exists(conn, 'users', 'user_bank', 'TEXT', 'NULL')
-        await print_table_contents(conn, 'orders')
+        #log orders with a given order status
+        order_status = 8
+        orders = await log_orders_by_status(conn, order_status)
+        for order in orders:
+            print(order)
         # total_price = 10921.00  # Example total price to search for
         # orders = await get_orders_by_total_price(conn, total_price)
         # for order in orders:

@@ -44,23 +44,23 @@ async def delete_orders_with_null_merchant_id(conn):
 async def delete_orders_with_specific_status(conn):
     async with conn.cursor() as cursor:
         # Delete all orders where order_status is not 1, 4, or 2
-        sql = "DELETE FROM orders WHERE order_status NOT IN (4)"
+        sql = "DELETE FROM orders WHERE order_status NOT IN (4, 8, 1, 2)"
         await execute_and_commit(conn, sql)
-        logger.info("Deleted orders with order_status not in (4)")
+        logger.info("Deleted orders with order_status not in (4, 8, 1, 2)")
 
 async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
         logger.info("Database connection established")
         # Call the function to update merchant_ids for existing orders
-        await update_merchant_ids_for_existing_orders(conn)
+        # await update_merchant_ids_for_existing_orders(conn)
         # await delete_orders_with_specific_status(conn)
         
         # # Call the function to delete orders with null merchant_id
         # await delete_orders_with_null_merchant_id(conn)
 
         # Print table contents for verification
-        await print_table_contents(conn, 'orders')
+        # await print_table_contents(conn, 'orders')
         await conn.close()
         logger.info("Database connection closed")
     else:

@@ -23,7 +23,7 @@ bank_accounts = {
     # 'bbva': [],
     'banregio': [],
     'santander': [],
-    # 'spin by oxxo': []
+    'spin by oxxo': []
 }
 
 logger = logging.getLogger(__name__)
@@ -92,7 +92,7 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank):
         account_details = []
         for acc in accounts:
             daily_balance = await sum_recent_deposits(conn, acc[0])
-            print(f"Daily balance for account {acc[0]}: MXN {daily_balance}")
+            logger.debug(f"Daily balance for account {acc[0]}: MXN {daily_balance}")
             if daily_balance <= acc[3]:  # Check if daily deposits are within the daily limit
                 account_details.append({
                     'account_number': acc[0],
@@ -258,7 +258,7 @@ async def initialize_account_cache(conn):
         bank_accounts[bank] = await find_suitable_account(conn, None, None, bank)
         #log the balance for each account
         for account in bank_accounts[bank]:
-            logger.info(f"Balance for account {account['account_number']}: MXN {account['balance']}, daily limit: MXN {account['daily_limit']}")
+            logger.debug(f"Balance for account {account['account_number']}: MXN {account['balance']}, daily limit: MXN {account['daily_limit']}")
 
 async def main():
     conn = await create_connection(DB_FILE)
