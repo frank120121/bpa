@@ -127,12 +127,18 @@ async def log_deposit(conn, deposit_from, bank_account_number, amount_deposited)
                        (timestamp, bank_account_number, amount_deposited, deposit_from, year, month))
     await conn.execute('UPDATE mxn_bank_accounts SET account_balance = account_balance + ? WHERE account_number = ?', (amount_deposited, bank_account_number))
     await conn.commit()
-    logger.info(f"Logged deposit of {amount_deposited} from {deposit_from} to account {bank_account_number}")
+    logger.debug(f"Logged deposit of {amount_deposited} from {deposit_from} to account {bank_account_number}")
 
 
 async def sum_recent_deposits(conn, account_number):
-    current_date = datetime.datetime.now(datetime.timezone.utc).date()
-    start_of_day = datetime.datetime.combine(current_date, datetime.time.min, tzinfo=datetime.timezone.utc)
+    # Get the current date and time in the local timezone
+    current_time = datetime.datetime.now()
+    current_date = current_time.date()
+    
+    # Calculate the start of the day in the local timezone
+    start_of_day = datetime.datetime.combine(current_date, datetime.time.min)
+
+    logger.debug(f"Calculating total deposits for account {account_number} on {current_date}... Start of day: {start_of_day}")
     
     try:
         query = '''
@@ -256,7 +262,7 @@ async def main():
     if conn is not None:
         # Initialize the database (create tables and insert initial data)
         # await clear_accounts(conn)
-        await initialize_database(conn)
+        # await initialize_database(conn)
         # # Print table contents for verification
         await print_table_contents(conn, 'mxn_bank_accounts')
         # await print_table_contents(conn, 'oxxo_debit_cards')

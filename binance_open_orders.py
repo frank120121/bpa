@@ -2,9 +2,12 @@ import logging
 import asyncio
 from binance_singleton_api import SingletonBinanceAPI
 from credentials import credentials_dict
-from binance_share_session import SharedSession
+from binance_share_data import SharedSession
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 async def open_orders(account, KEY, SECRET):
     api_instance = await SingletonBinanceAPI.get_instance(account, KEY, SECRET)

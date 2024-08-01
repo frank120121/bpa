@@ -8,6 +8,11 @@ from common_vars import BBVA_BANKS, DB_FILE
 from common_utils_db import create_connection, print_table_contents
 from asyncio import Lock
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
 bank_accounts_lock = Lock()
 
 # Configuration Management
@@ -87,6 +92,7 @@ async def find_suitable_account(conn, order_no, buyer_name, buyer_bank):
         account_details = []
         for acc in accounts:
             daily_balance = await sum_recent_deposits(conn, acc[0])
+            print(f"Daily balance for account {acc[0]}: MXN {daily_balance}")
             if daily_balance <= acc[3]:  # Check if daily deposits are within the daily limit
                 account_details.append({
                     'account_number': acc[0],
@@ -123,7 +129,7 @@ async def get_payment_details(conn, order_no, buyer_name, oxxo_used=False):
             logger.warning(f"Bank '{buyer_bank}' not supported.")
             if buyer_bank == 'oxxo' or oxxo_used:
                 buyer_bank = 'banregio'
-                logger.info(f"Updating buyer bank to 'banregio' for OXXO payment.")
+                logger.debug(f"Updating buyer bank to 'banregio' for OXXO payment.")
                 await update_buyer_bank(conn, buyer_name, 'banregio')
             else:
                 buyer_bank = 'nvio'
@@ -143,6 +149,9 @@ async def get_payment_details(conn, order_no, buyer_name, oxxo_used=False):
                     for original_account in bank_accounts[buyer_bank]:
                         if original_account['account_number'] == assigned_account_number:
                             original_account['balance'] += amount_to_deposit
+                            if original_account['balance'] > original_account['daily_limit']:
+                                #remove the account from the list
+                                bank_accounts[buyer_bank].remove(original_account)
                             logger.info(f"New balance for account {assigned_account_number}: MXN {original_account['balance']}")
                             break
 
@@ -245,8 +254,11 @@ async def get_account_details(conn, account_number, buyer_name, order_no, buyer_
         raise
 
 async def initialize_account_cache(conn):
-    for bank in ['nvio','banregio', 'santander']:  # Include all banks you need
+    for bank in ['nvio','banregio', 'santander', 'spin by oxxo']:  # Include all banks you need
         bank_accounts[bank] = await find_suitable_account(conn, None, None, bank)
+        #log the balance for each account
+        for account in bank_accounts[bank]:
+            logger.info(f"Balance for account {account['account_number']}: MXN {account['balance']}, daily limit: MXN {account['daily_limit']}")
 
 async def main():
     conn = await create_connection(DB_FILE)
@@ -254,13 +266,12 @@ async def main():
         try:
             order_no = 1  # Example order number
             buyer_name = 'John Doe'  # Example buyer name
-            buyer_bank = 'beanregio'  # Explicitly testing 'oxxo'
+            buyer_bank = 'banregio'  # Explicitly testing 'oxxo'
 
             # Testing the find_suitable_account function directly for 'oxxo'
             suitable_accounts = await find_suitable_account(conn, order_no, buyer_name, buyer_bank)
-            print(f"Suitable accounts for 'oxxo': {suitable_accounts}")
+            print(f"Suitable accounts: {suitable_accounts}")
             # await print_table_contents(conn, 'mxn_bank_accounts')
-            await print_table_contents(conn, 'oxxo_debit_cards')
         except Exception as e:
             logger.error(f"Error in main: {e}")
         finally:

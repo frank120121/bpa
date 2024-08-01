@@ -10,8 +10,8 @@ from common_utils_db import create_connection
 from common_vars import DB_FILE
 from binance_bank_deposit import initialize_account_cache
 from binance_singleton_api import SingletonBinanceAPI
-from binance_share_session import SharedSession
-from TESTbitso_price_listener import fetch_lowest_ask  # Import the function
+from binance_share_data import SharedSession
+from TESTbitso_price_listener import fetch_prices  # Import the function
 
 setup_logging(log_filename='Binance_c2c_logger.log')
 logger = logging.getLogger(__name__)
@@ -20,10 +20,11 @@ asyncio.get_event_loop().set_debug(True)
 async def main():
     tasks = []
     try:
-        # Start fetch_lowest_ask before the other tasks
-        tasks.append(asyncio.create_task(fetch_lowest_ask()))
-        await asyncio.sleep(5)  # Ensure fetch_lowest_ask has time to update shared_data
+        # Start fetch_prices before other tasks
+        tasks.append(asyncio.create_task(fetch_prices()))
+        await asyncio.sleep(5)  # Ensure fetch_prices has time to update shared_data
 
+        # Start other main tasks
         tasks.append(asyncio.create_task(main_binance_c2c()))
         tasks.append(asyncio.create_task(update_ads_main()))
         await asyncio.gather(*tasks)

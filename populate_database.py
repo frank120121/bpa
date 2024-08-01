@@ -4,7 +4,7 @@ from ads_database import fetch_all_ads_from_database, update_ad_in_database
 from common_vars import ads_dict
 from credentials import credentials_dict
 from binance_singleton_api import SingletonBinanceAPI
-from binance_share_session import SharedSession
+from binance_share_data import SharedSession, ad_details_dict
 import logging
 import sys
 
@@ -45,6 +45,19 @@ async def process_ad(account, KEY, SECRET, ad_info):
         fiat = advNo_to_fiat.get(advNo)
         transAmount = advNo_to_transAmount.get(advNo)
         minTransAmount = advNo_to_minTransAmount.get(advNo)
+
+        # Update shared data structure
+        await ad_details_dict.put(advNo, {
+            'target_spot': ad_details['target_spot'],
+            'asset_type': ad_details['data']['asset'],
+            'floating_ratio': ad_details['data']['priceFloatingRatio'],
+            'price': ad_details['data']['price'],
+            'surplusAmount': ad_details['data']['surplusAmount'],
+            'account': ad_info['account'],
+            'fiat': fiat,
+            'transAmount': transAmount,
+            'minTransAmount': minTransAmount
+        })
 
         logger.debug(f"Updated target_spot for advNo {advNo} to {advNo_to_target_spot[advNo]}")
         await update_ad_in_database(

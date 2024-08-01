@@ -1,5 +1,6 @@
 import aiosqlite
 from common_vars import DB_FILE
+from common_utils_db import create_connection
 import logging
 logger = logging.getLogger(__name__)
 
@@ -155,3 +156,19 @@ async def has_specific_bank_identifiers(conn, order_no, identifiers):
     except Exception as e:
         logger.error(f"Error checking bank identifiers for order {order_no}: {e}")
         return False  # Consider how to handle exceptions; returning False is cautious
+
+async def main():
+    conn = await create_connection(DB_FILE)
+    if conn is not None:
+        try:
+            order_no = "22651372537565437952"
+            result = await get_order_details(conn, order_no)
+            print(result)
+        finally:
+            await conn.close()
+    else:
+        logger.error("Error! Cannot create the database connection.")
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())

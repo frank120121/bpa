@@ -5,10 +5,13 @@ from common_utils import get_server_timestamp, hashing
 import os
 from dotenv import load_dotenv
 import logging
+from binance_db import insert_or_update_order, DB_FILE
+from common_utils_db import create_connection
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 from binance_endpoints import USER_ORDER_DETAIL
-
-
 
 async def fetch_order_details(KEY, SECRET, order_no):
     attempt_count = 0
@@ -48,34 +51,59 @@ async def fetch_order_details(KEY, SECRET, order_no):
                 logger.error("Maximum retry attempts reached. Aborting operation.")
                 return None 
 
-
-
-if __name__ == "__main__":
+async def main():
+    # Load environment variables
     load_dotenv()
+
+    # Retrieve credentials
     credentials_dict = {
         'account_2': {
             'KEY': os.environ.get('API_KEY_MGL'),
             'SECRET': os.environ.get('API_SECRET_MGL')
         }
     }
+
     account = 'account_2'
     if account in credentials_dict:
         KEY = credentials_dict[account]['KEY']
         SECRET = credentials_dict[account]['SECRET']
     else:
         logger.error(f"Credentials not found for account: {account}")
-        exit()
-    adOrderNo = "20623074265133563904"
-    result = asyncio.run(fetch_order_details(KEY, SECRET, adOrderNo))
+        return
+
+    # Fetch order details
+    adOrderNo = "22651355109194235904"
+    result = await fetch_order_details(KEY, SECRET, adOrderNo)
     print(result)
+
+    if result:
+        # Establish database connection
+        conn = await create_connection("C:/Users/p7016/Documents/bpa/orders_data.db")
+        if conn:
+            try:
+                await insert_or_update_order(conn, result)
+            except Exception as e:
+                logger.error(f"Failed to insert or update order: {e}")
+            finally:
+                await conn.close()
+        else:
+            logger.error("Failed to connect to the database.")
+    
     account_number = None
-    for method in result['data']['payMethods']:
-        for field in method['fields']:
-            if field['fieldName'] == 'Account number':
-                account_number = field['fieldValue']
-                break
+    if result and 'data' in result and 'payMethods' in result['data']:
+        for method in result['data']['payMethods']:
+            if 'fields' in method:
+                for field in method['fields']:
+                    if field['fieldName'] == 'Account number':
+                        account_number = field['fieldValue']
+                        break
+                if account_number:
+                    break
 
     if account_number:
-        print(account_number)
+        print(f"Account number: {account_number}")
     else:
         print("Account number not found.")
+
+if __name__ == "__main__":
+    asyncio.run(main())

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from asyncio import Lock
 from traceback import format_exc
 from common_utils import get_server_timestamp
-from binance_share_session import SharedSession
+from binance_share_data import SharedSession
 
 logger = logging.getLogger(__name__)
 
@@ -129,15 +129,19 @@ class BinanceAPI:
                             logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
                             return resp_json
 
+            except aiohttp.ClientConnectorError as e:
+                logger.error(f"Instance {self.instance_id}: Connection error (attempt {attempt + 1}/{retries}): {e}")
+                wait_time = backoff_factor ** attempt * 2  # Longer wait for connection errors
             except asyncio.TimeoutError:
                 logger.error(f"Instance {self.instance_id}: Request timed out (attempt {attempt + 1}/{retries})")
+                wait_time = backoff_factor ** attempt
             except aiohttp.ClientError as e:
                 logger.error(f"Instance {self.instance_id}: Client error during request: {e}\n{format_exc()}")
+                wait_time = backoff_factor ** attempt
             except Exception as e:
                 logger.error(f"Instance {self.instance_id}: Unexpected error during request: {e}\n{format_exc()}")
+                wait_time = backoff_factor ** attempt
 
-            # Exponential backoff
-            wait_time = backoff_factor ** attempt
             logger.info(f"Instance {self.instance_id}: Retrying in {wait_time:.2f} seconds...")
             await asyncio.sleep(wait_time)
 

@@ -89,12 +89,6 @@ async def insert_transaction(conn, buyer_name, seller_name, total_price, order_d
             """, 
             (buyer_name, seller_name, total_price, order_date)
         )
-async def insert_order(conn, order_tuple):
-    async with conn.cursor() as cursor:
-        await cursor.execute('''INSERT INTO orders(order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount)
-                                VALUES(?,?,?,?,?,?,?,?,?)''', order_tuple)
-        logger.debug(f"Inserted new order: {order_tuple[0]}")
-        return cursor.lastrowid
     
 async def update_kyc_status(conn, name, new_kyc_status):
     try:
@@ -129,20 +123,4 @@ async def set_menu_presented(conn, order_no, value):
         await execute_and_commit(conn, sql, params)
     except Exception as e:
         logger.error(f"Error setting menu_presented for order_no {order_no}: {e}")
-
-
-
-async def update_order_details(conn, order_no, account_number):
-        # Prepare the SQL statement for updating the order
-    sql = '''
-        UPDATE orders
-        SET account_number = ?
-        WHERE order_no = ?
-    '''
-
-    # Execute the SQL statement with the provided account number and order number
-    await conn.execute(sql, (account_number, order_no))
-
-    # Commit the changes to the database
-    await conn.commit()
 

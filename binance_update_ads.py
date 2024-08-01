@@ -5,12 +5,11 @@ import logging
 from ads_database import update_ad_in_database, fetch_all_ads_from_database, get_ad_from_database
 from credentials import credentials_dict
 from binance_singleton_api import SingletonBinanceAPI
-from binance_share_session import SharedSession
+from binance_share_data import SharedSession
 from bitso_wallets import bitso_main
 from binance_wallets import BinanceWallets
 from asset_balances import total_usd
-from TESTbitso_price_listener import shared_data, lowest_ask_lock
-
+from TESTbitso_price_listener import shared_data
 logger = logging.getLogger(__name__)
 
 # Constants
@@ -29,9 +28,9 @@ latest_usd_balance = 0
 BUY_PRICE_THRESHOLD = 1.0065  # Default threshold
 
 def adjust_sell_price_threshold(usd_balance):
-    max_threshold_balance = 49500
-    neutral_balance = 40000
-    min_balance = 30000
+    max_threshold_balance = 30000
+    neutral_balance = 30000
+    min_balance = 20000
     
     global SELL_PRICE_ADJUSTMENT
     # Below 30000
@@ -70,7 +69,7 @@ def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_thre
     own_adv_nos = [ad['advNo'] for ad in own_ads]
     return [ad for ad in ads_data
             if ad['adv']['advNo'] not in own_adv_nos
-            and ((float(ad['adv']['price']) >= base_price * price_threshold) if is_buy else (float(ad['adv']['price']) <= base_price * price_threshold))
+            and ((float(ad['adv']['price']) > (base_price * price_threshold)) if is_buy else (float(ad['adv']['price']) <= base_price * price_threshold))
             and float(ad['adv']['dynamicMaxSingleTransAmount']) >= trans_amount_threshold
             and float(ad['adv']['minSingleTransAmount']) < minTransAmount]
 
@@ -138,7 +137,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             # Retry fetching ads for pages 2 and 3 if no our_ad_data is found
             ads_data = await retry_fetch_ads(api_instance, ad, is_buy)
             if not ads_data:
-                logger.debug(f"No ads data found after retrying up to page 3 for ad number {advNo}.")
+                logger.info(f"No ads data found after retrying up to page 3 for ad number {advNo}.")
                 return
             else:
                 our_ad_data = next((item for item in ads_data if item['adv']['advNo'] == advNo), None)
@@ -151,20 +150,20 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
         
-        # Fetch the lowest ask price from shared_data and calculate BUY_PRICE_THRESHOLD
-        async with lowest_ask_lock:
-            lowest_ask = shared_data["lowest_ask"]
-        if lowest_ask is not None and asset_type == 'USDT':
-            logger.debug(f"Lowest ask price for USDT: {lowest_ask}")
+        # Ensure fetch_prices() updates shared_data with the latest values
+        ask = shared_data.get("weighted_average_ask")
+        bid = shared_data.get("weighted_average_bid")
+        
+        if ask is not None and bid is not None and asset_type == 'USDT':
+            logger.debug(f"Weighted ask for USDT: {ask}. Weighted bid for USDT: {bid}")
             global BUY_PRICE_THRESHOLD
             global SELL_PRICE_THRESHOLD
             
             previous_sell_price_threshold = SELL_PRICE_THRESHOLD
             previous_buy_price_threshold = BUY_PRICE_THRESHOLD
-            average_price = (lowest_ask + base_price) / 2
-            min_diff = 0.0020
-            new_sell_price_threshold = (average_price / base_price) - (SELL_PRICE_ADJUSTMENT)
-            new_buy_price_threshold = (average_price * 1.0124) / base_price
+            min_diff = 0.0005
+            new_sell_price_threshold = round(((bid * 0.987) / base_price), 4)
+            new_buy_price_threshold = round(((ask * 1.013) / base_price), 4)
             current_diff = 0
 
             if is_buy:
@@ -180,19 +179,24 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
                 else:
                     logger.debug(f"Diff less than {min_diff}. Not updating SELL_PRICE_THRESHOLD")
 
+            logger.debug(f"Updated SELL_PRICE_THRESHOLD: {SELL_PRICE_THRESHOLD}. Updated BUY_PRICE_THRESHOLD: {BUY_PRICE_THRESHOLD}.")
 
-        custom_price_threshold = determine_price_threshold(ad['payTypes'], is_buy)
-        logger.debug(f"Custom price threshold: {custom_price_threshold}")
+        custom_price_threshold = round(determine_price_threshold(ad['payTypes'], is_buy), 4)
+        if advNo == '12593308415142735872':
+            logger.debug(f"custom_price_threshold: {custom_price_threshold}. BUY_PRICE_THRESHOLD: {BUY_PRICE_THRESHOLD}. SELL_PRICE_THRESHOLD: {SELL_PRICE_THRESHOLD}.")
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
-
+        if advNo == '12593308415142735872':
+            logger.debug(f"Filtered ads: {filtered_ads}")
         if not filtered_ads:
-            logger.debug("No filtered ads found.")
+            logger.debug(f"No filtered ads found. Asset type: {asset_type}, is_buy: {is_buy}, base price: {base_price}, custom price threshold: {custom_price_threshold}")
             return
             
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
         competitor_price = float(competitor_ad['adv']['price'])
         competitor_ratio = (competitor_price / base_price) * 100
+        if advNo == '12593308415142735872':
+            logger.debug(f"Base price: {base_price}. Custom price threshold: {custom_price_threshold}. Competitor price: {competitor_price}. Competitor ratio: {competitor_ratio}. Buy threshold: {BUY_PRICE_THRESHOLD}. Our current price: {our_current_price}.")
 
         if (our_current_price >= competitor_price and is_buy) or (our_current_price <= competitor_price and not is_buy):
             new_ratio_unbounded = competitor_ratio - RATIO_ADJUSTMENT if is_buy else competitor_ratio + RATIO_ADJUSTMENT
@@ -203,12 +207,10 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             else:
                 logger.debug(f"Competitor ad - spot: {adjusted_target_spot}, price: {competitor_price}, base: {base_price}, ratio: {competitor_ratio}. Not enough diff: {diff_ratio}")
                 return
-            
-
 
         new_ratio = max(MIN_RATIO, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
         new_diff = abs(new_ratio - current_priceFloatingRatio)
-        if new_ratio == current_priceFloatingRatio and new_diff < 0.005:
+        if new_ratio == current_priceFloatingRatio and new_diff < 0.001:
             logger.debug(f"Ratio unchanged")
             return
         else:
@@ -271,7 +273,7 @@ async def start_update_ads(is_buy=True):
             async with balance_lock:
                 usd_balance = latest_usd_balance
             logger.debug(f"Using USD Balance: {usd_balance}")
-            adjust_sell_price_threshold(usd_balance)
+            # adjust_sell_price_threshold(usd_balance)
             await main_loop(api_instances, is_buy)
     finally:
         logger.info(f"Finished updating ads for {'BUY' if is_buy else 'SELL'}.")

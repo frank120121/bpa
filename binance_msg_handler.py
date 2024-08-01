@@ -12,7 +12,7 @@ from common_vars import prohibited_countries
 import logging
 logger = logging.getLogger(__name__)
 
-accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE', 'BE', 'EC', 'RU', 'TH', 'IN', 'UA', 'DE', 'JP', 'US', 'RU', 'FR']
+accepted_countries_for_oxxo = ['MX']
 
 async def check_order_details(order_details):
     if order_details is None:
@@ -29,9 +29,9 @@ async def check_and_handle_country_restrictions(connection_manager, conn, order_
             await add_to_blacklist(conn, buyer_name, order_no, country)
             return
 
-    if oxxo_used and country not in ['NG', 'KH', 'TJ', 'GH']:
-        await get_payment_details(conn, order_no, buyer_name, oxxo_used)
-        return False  # Accept orders from specified countries for OXXO payment type
+    # if oxxo_used and country not in ['NG', 'KH', 'TJ', 'GH']:
+    #     await get_payment_details(conn, order_no, buyer_name, oxxo_used)
+    #     return False  # Accept orders from specified countries for OXXO payment type
   
     if country and country != "MX":
         logger.debug(f"Transaction denied. Seller not from Mexico. Buyer: {buyer_name} added to blacklist.")
@@ -51,7 +51,7 @@ async def handle_order_status_4(connection_manager, conn, order_no, order_detail
     amount_deposited = order_details.get('total_price')
     bank_account_number = await get_account_number(conn, order_no)
     buyer_name = order_details.get('buyer_name')
-    logger.info(f"Logging deposit for {buyer_name} with bank account {bank_account_number} for {amount_deposited}")
+    logger.debug(f"Logging deposit for {buyer_name} with bank account {bank_account_number} for {amount_deposited}")
     await log_deposit(conn, buyer_name, bank_account_number, amount_deposited)
 
 async def handle_order_status_1(connection_manager, conn, order_no, order_details):

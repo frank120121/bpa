@@ -2,8 +2,12 @@
 import aiohttp
 import asyncio
 import logging
+from aiotools import aiodict
 
 logger = logging.getLogger(__name__)
+
+# Shared data structure for ad details
+ad_details_dict = aiodict()
 
 class SharedSession:
     _session = None

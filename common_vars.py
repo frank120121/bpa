@@ -15,20 +15,20 @@ MXN_SELL_AMT = '5000'
 ads_dict = {
     'account_1': [
         {'advNo': '12593303119082127360', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount': '5000', 'payTypes': None, 'Group': '1', 'trade_type': 'BUY', 'minTransAmount': '15000'},
-        {'advNo': '12593308415142735872', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount': '5000', 'payTypes': ['BBVABank'], 'Group': '2', 'trade_type': 'BUY', 'minTransAmount': '2000'},
+        {'advNo': '12593308415142735872', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount': '5000', 'payTypes': None, 'Group': '2', 'trade_type': 'BUY', 'minTransAmount': '5000'},
         {'advNo': '12633943668966330368', 'target_spot': '1', 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount': '5000', 'payTypes': None, 'Group': '3', 'trade_type': 'BUY', 'minTransAmount': '15000'},
-        {'advNo': '12598158630177452032', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'5000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY', 'minTransAmount': '10000'},
+        {'advNo': '12598158630177452032', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'2000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY', 'minTransAmount': '5000'},
         #USDC BUY
         {'advNo': '12622081735207518208', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount': '5000', 'payTypes': None, 'Group': '6', 'trade_type': 'BUY', 'minTransAmount': '10000'},
-        {'advNo': '12603135169369452544', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '1', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        {'advNo': '12603135448257830912', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '2', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        {'advNo': '12603135659574538240', 'target_spot': MFM_SPOT, 'asset_type': 'BNB', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '3', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        {'advNo': '12603135830700572672', 'target_spot': MFM_SPOT, 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '4', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        # {'advNo': '12603136025503506432', 'target_spot': MFM_SPOT, 'asset_type': 'DAI', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '5', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        {'advNo': '12603136311471616000', 'target_spot': MFM_SPOT, 'asset_type': 'DOGE', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '6', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        {'advNo': '12603136554978037760', 'target_spot': MFM_SPOT, 'asset_type': 'ADA', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '7', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        {'advNo': '12603136807525834752', 'target_spot': MFM_SPOT, 'asset_type': 'XRP', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '8', 'trade_type': 'SELL', 'minTransAmount': '100000'},
-        {'advNo': '12603136976317210624', 'target_spot': MFM_SPOT, 'asset_type': 'FDUSD', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '9', 'trade_type': 'SELL', 'minTransAmount': '100000'},
+        {'advNo': '12603135169369452544', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '1', 'trade_type': 'SELL', 'minTransAmount': '50001'},
+        {'advNo': '12603135448257830912', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '2', 'trade_type': 'SELL', 'minTransAmount': '50001'},
+        {'advNo': '12603135659574538240', 'target_spot': MFM_SPOT, 'asset_type': 'BNB', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '3', 'trade_type': 'SELL', 'minTransAmount': '50001'},
+        {'advNo': '12603135830700572672', 'target_spot': MFM_SPOT, 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '4', 'trade_type': 'SELL', 'minTransAmount': '50001'},
+        # {'advNo': '12603136025503506432', 'target_spot': MFM_SPOT, 'asset_type': 'DAI', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '5', 'trade_type': 'SELL', 'minTransAmount': '100000'},
+        {'advNo': '12603136311471616000', 'target_spot': MFM_SPOT, 'asset_type': 'DOGE', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '6', 'trade_type': 'SELL', 'minTransAmount': '50001'},
+        {'advNo': '12603136554978037760', 'target_spot': MFM_SPOT, 'asset_type': 'ADA', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '7', 'trade_type': 'SELL', 'minTransAmount': '50001'},
+        {'advNo': '12603136807525834752', 'target_spot': MFM_SPOT, 'asset_type': 'XRP', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '8', 'trade_type': 'SELL', 'minTransAmount': '50001'},
+        {'advNo': '12603136976317210624', 'target_spot': MFM_SPOT, 'asset_type': 'FDUSD', 'fiat': 'MXN', 'transAmount':'49999', 'payTypes': None, 'Group': '9', 'trade_type': 'SELL', 'minTransAmount': '50001'},
         #USDC SELL
         {'advNo': '12622081020900769792', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'50001', 'payTypes': None, 'Group': '10', 'trade_type': 'SELL', 'minTransAmount': '100000'},
         # {'advNo': '12578447747234050048', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':USD_AMT_1, 'payTypes': ['Zelle'], 'Group': '3'},
@@ -40,23 +40,23 @@ ads_dict = {
     ],
     'account_2': [
         {'advNo': '12593495469168508928', 'target_spot': '1', 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'15000', 'payTypes': None, 'Group': '1', 'trade_type': 'BUY', 'minTransAmount': '50000'},
-        {'advNo': '12593490877264977920', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'5000', 'payTypes': ['BBVABank'], 'Group': '2', 'trade_type': 'BUY', 'minTransAmount': '50000'},
+        {'advNo': '12593490877264977920', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'15000', 'payTypes': ['BBVABank'], 'Group': '2', 'trade_type': 'BUY', 'minTransAmount': '50000'},
         {'advNo': '12598150744306384896', 'target_spot': '1', 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount': '15000', 'payTypes': None, 'Group': '3', 'trade_type': 'BUY', 'minTransAmount': '50000'},
         {'advNo': '12601117035243544576', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'20000', 'payTypes': ['OXXO'], 'Group': '4', 'trade_type': 'BUY', 'minTransAmount': '50000'},
         {'advNo': '12601438033869934592', 'target_spot': '1', 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':'300', 'payTypes': ['BANK'], 'Group': '5', 'trade_type': 'BUY', 'minTransAmount': '300'},
         #USDC BUY
         {'advNo': '12622083293687042048', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'5000', 'payTypes': None, 'Group': '6', 'trade_type': 'BUY', 'minTransAmount': '50000'},
-        {'advNo': '12601682453428781056', 'target_spot': MGL_SPOT, 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '1', 'trade_type': 'SELL', 'minTransAmount': '10000'},
-        {'advNo': '12602501942341144576', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '2', 'trade_type': 'SELL', 'minTransAmount': '10000'},
-        {'advNo': '12602510869029322752', 'target_spot': MGL_SPOT, 'asset_type': 'BNB', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '3', 'trade_type': 'SELL', 'minTransAmount': '10000'},
-        {'advNo': '12602511177784733696', 'target_spot': MGL_SPOT, 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '4', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12601682453428781056', 'target_spot': MGL_SPOT, 'asset_type': 'BTC', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '1', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12602501942341144576', 'target_spot': MGL_SPOT, 'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '2', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12602510869029322752', 'target_spot': MGL_SPOT, 'asset_type': 'BNB', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '3', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12602511177784733696', 'target_spot': MGL_SPOT, 'asset_type': 'ETH', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '4', 'trade_type': 'SELL', 'minTransAmount': '10000'},
         # {'advNo': '12602511596171862016', 'target_spot': MGL_SPOT, 'asset_type': 'DAI', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '5', 'trade_type': 'SELL', 'minTransAmount': '10000'},
-        {'advNo': '12602512111965536256', 'target_spot': MGL_SPOT, 'asset_type': 'DOGE', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '6', 'trade_type': 'SELL', 'minTransAmount': '10000'},
-        {'advNo': '12602513811501113344', 'target_spot': MGL_SPOT, 'asset_type': 'ADA', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '7', 'trade_type': 'SELL', 'minTransAmount': '10000'},
-        {'advNo': '12602514074267328512', 'target_spot': MGL_SPOT, 'asset_type': 'XRP', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '8', 'trade_type': 'SELL', 'minTransAmount': '10000'},
-        {'advNo': '12602514264390385664', 'target_spot': MGL_SPOT, 'asset_type': 'FDUSD', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '9', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12602512111965536256', 'target_spot': MGL_SPOT, 'asset_type': 'DOGE', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '6', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12602513811501113344', 'target_spot': MGL_SPOT, 'asset_type': 'ADA', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '7', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12602514074267328512', 'target_spot': MGL_SPOT, 'asset_type': 'XRP', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '8', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12602514264390385664', 'target_spot': MGL_SPOT, 'asset_type': 'FDUSD', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '9', 'trade_type': 'SELL', 'minTransAmount': '10000'},
         #USDC SELL
-        {'advNo': '12622082668750938112', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':MXN_SELL_AMT, 'payTypes': None, 'Group': '10', 'trade_type': 'SELL', 'minTransAmount': '10000'},
+        {'advNo': '12622082668750938112', 'target_spot': '1', 'asset_type': 'USDC', 'fiat': 'MXN', 'transAmount':'10000', 'payTypes': None, 'Group': '10', 'trade_type': 'SELL', 'minTransAmount': '10000'},
     #     {'advNo': '12590585293541416960', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':USD_AMT_1, 'payTypes': ['Zelle'], 'Group': '3'},
     #     {'advNo': '12590585457789411328', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':USD_AMT_2, 'payTypes': ['Zelle'], 'Group': '4'},
     #     {'advNo': '12590585929304309760', 'target_spot': MFM_SPOT, 'asset_type': 'USDT', 'fiat': 'USD', 'transAmount':USD_AMT_1, 'payTypes': ['SkrillMoneybookers'], 'Group': '5'},
@@ -295,7 +295,7 @@ bank_accounts = [
         "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "SPIN BY OXXO",
+        "bank_name": "BANREGIO",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
         "account_number": "2242170760065560",
         "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,
@@ -303,7 +303,7 @@ bank_accounts = [
         "oxxo_daily_limit": SPIN_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "SPIN BY OXXO",
+        "bank_name": "BANREGIO",
         "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
         "account_number": "2242170760324680",
         "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,
@@ -311,7 +311,7 @@ bank_accounts = [
         "oxxo_daily_limit": SPIN_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "SPIN BY OXXO",
+        "bank_name": "BANREGIO",
         "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
         "account_number": "2242170760314240",
         "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,

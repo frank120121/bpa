@@ -137,7 +137,7 @@ async def check_connections(connection_status):
             logger.warning(f"Detected {len(failed_accounts)} failed connections: {failed_accounts}")
             # Here you could implement additional logic to handle failed connections
         else:
-            logger.info("All WebSocket connections are currently established.")
+            logger.debug("All WebSocket connections are currently established.")
         await asyncio.sleep(30)  # Check every 30 seconds
 
 async def main_binance_c2c():

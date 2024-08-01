@@ -5,7 +5,7 @@ import logging
 from ads_database import update_ad_in_database, fetch_all_ads_from_database, get_ad_from_database
 from credentials import credentials_dict
 from binance_singleton_api import SingletonBinanceAPI
-from binance_share_session import SharedSession
+from binance_share_data import SharedSession
 from bitso_wallets import bitso_main
 from binance_wallets import BinanceWallets
 from asset_balances import total_usd

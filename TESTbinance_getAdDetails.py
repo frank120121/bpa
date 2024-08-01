@@ -2,7 +2,7 @@
 import asyncio
 from credentials import credentials_dict
 from binance_singleton_api import SingletonBinanceAPI
-from binance_share_session import SharedSession
+from binance_share_data import SharedSession
 import logging
 import sys
 

@@ -3,6 +3,9 @@ import asyncio
 import logging
 from prettytable import PrettyTable
 logger = logging.getLogger(__name__)
+
+DB_FILE = 'C:/Users/p7016/Documents/bpa/orders_data.db'
+
 async def create_connection(db_file, num_retries=3, delay_seconds=5):
     logger.debug("Inside async_create_connection function")
     conn = None
@@ -45,7 +48,23 @@ async def print_table_contents(conn, table_name):
             print(f"\nContents of {table_name}:")
             print(table)
         except Exception as e:
-            print(f"Error reading from table {table_name}: {e}")
+            print(f"Error reading from table {table_name}: {e}")\
+            
+async def print_table_schema(conn, table_name):
+    async with conn.cursor() as cursor:
+        try:
+            await cursor.execute(f"PRAGMA table_info({table_name})")
+            columns_info = await cursor.fetchall()
+            schema_table = PrettyTable()
+            schema_table.field_names = ["Column ID", "Name", "Type", "Not Null", "Default Value", "Primary Key"]
+
+            for column in columns_info:
+                schema_table.add_row(column)
+
+            print(f"\nSchema of {table_name}:")
+            print(schema_table)
+        except Exception as e:
+            print(f"Error reading schema from table {table_name}: {e}")
 
 async def add_column_if_not_exists(conn, table_name, column_name, data_type, default_value):
     query = f"PRAGMA table_info({table_name})"
