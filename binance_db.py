@@ -185,7 +185,13 @@ async def main():
                             bank_identifier TEXT NOT NULL,
                             FOREIGN KEY (order_no) REFERENCES orders(order_no)
                             );"""
-
+    sql_create_usd_price_manager_table = """CREATE TABLE IF NOT EXISTS usd_price_manager (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            trade_type TEXT,
+                            exchange_rate_ratio REAL,
+                            mxn_amount REAL
+                            );
+                            """
 
     conn = await create_connection(DB_FILE)
     if conn is not None:

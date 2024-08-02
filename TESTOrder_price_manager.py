@@ -1,6 +1,8 @@
 import asyncio
+import math
+from collections import defaultdict
 import logging
-from common_utils_db import create_connection, DB_FILE
+from common_utils_db import create_connection, DB_FILE, execute_and_commit, clear_table, print_table_contents, print_table_schema
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -10,27 +12,51 @@ class ExchangeRateManager:
     def __init__(self):
         self.orders = []
         self.lock = asyncio.Lock()
-    
-    async def load_orders_from_db(self):
-        pass  # Implementation not required for this example
-    
-    async def save_orders_to_db(self):
-        pass  # Implementation not required for this example
-    
-    async def add_order(self, usdt_amount, mxn_amount, exchange_rate):
+
+    async def load_orders_from_db(self, conn):
         async with self.lock:
-            self.orders.append({'usdt_amount': usdt_amount, 'mxn_amount': mxn_amount, 'exchange_rate': exchange_rate})
-            logger.info(f"Order added: USDT Amount: {usdt_amount}, MXN Amount: {mxn_amount}, Exchange Rate: {exchange_rate}")
-    
+            cursor = await conn.cursor()
+            await cursor.execute("SELECT * FROM usd_price_manager")
+            rows = await cursor.fetchall()
+            self.orders = [{'id': row[0], 'trade_type': row[1], 'exchange_rate_ratio': row[2], 'mxn_amount': row[3]} for row in rows]
+            logger.debug(f"Loaded {len(self.orders)} orders from usd_price_manager.")
+
+    async def save_orders_to_db(self, conn):
+        async with self.lock:
+            await execute_and_commit(conn, "DELETE FROM usd_price_manager")  # Clear the table before saving
+            for order in self.orders:
+                insert_sql = """
+                INSERT INTO usd_price_manager (trade_type, exchange_rate_ratio, mxn_amount)
+                VALUES (?, ?, ?)
+                """
+                params = (order['trade_type'], order['exchange_rate_ratio'], order['mxn_amount'])
+                await execute_and_commit(conn, insert_sql, params)
+                logger.debug(f"Saved order to usd_price_manager: {order}")
+            logger.debug(f"Saved {len(self.orders)} orders to usd_price_manager.")
+
+    async def add_order(self, trade_type, exchange_rate_ratio, mxn_amount):
+        try:
+            async def add_order_with_lock():
+                async with self.lock:
+                    order_id = len(self.orders) + 1
+                    self.orders.append({'id': order_id, 'trade_type': trade_type, 'exchange_rate_ratio': exchange_rate_ratio, 'mxn_amount': mxn_amount})
+
+            # Use wait_for instead of timeout
+            await asyncio.wait_for(add_order_with_lock(), timeout=10.0)  # 10 seconds timeout
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout while trying to add order: Trade Type: {trade_type}, Exchange Rate Ratio: {exchange_rate_ratio}, MXN Amount: {mxn_amount}")
+        except Exception as e:
+            logger.error(f"Error while adding order: {e}")
+
     async def remove_order(self, order_id):
         async with self.lock:
             self.orders = [order for order in self.orders if order['id'] != order_id]
-            logger.info(f"Order with ID {order_id} removed.")
-    
+            logger.debug(f"Order with ID {order_id} removed.")
+
     async def get_best_exchange_rate(self, mxn_amount, target_exchange_rate):
         async with self.lock:
             logger.info(f"Calculating best exchange rate for MXN Amount: {mxn_amount} and Target Exchange Rate: {target_exchange_rate}")
-            orders_sorted = sorted(self.orders, key=lambda x: x['exchange_rate'])
+            orders_sorted = sorted(self.orders, key=lambda x: x['exchange_rate_ratio'])
             total_mxn = 0
             total_usdt = 0
             for order in orders_sorted:
@@ -49,6 +75,65 @@ class ExchangeRateManager:
             weighted_exchange_rate = total_mxn / total_usdt if total_usdt != 0 else float('inf')
             logger.info(f"Weighted Exchange Rate: {weighted_exchange_rate}")
             return min(weighted_exchange_rate, target_exchange_rate)
+
+    async def populate_usd_price_manager(self, conn):
+        logger.debug("Starting to populate usd_price_manager")
+        cursor = await conn.cursor()
+        await cursor.execute("""
+            SELECT trade_type, total_price, currency_rate, priceFloatingRatio
+            FROM orders
+            WHERE fiat_unit = 'MXN' 
+            AND priceFloatingRatio IS NOT NULL 
+            AND priceFloatingRatio != 0
+            AND order_status IN (4, 8)
+        """)
+        rows = await cursor.fetchall()
+        logger.debug(f"Populating usd_price_manager with {len(rows)} orders.")
+
+        aggregated_orders = defaultdict(float)  # Using a defaultdict to sum mxn_amount
+
+        for row in rows:
+            trade_type, total_price, currency_rate, priceFloatingRatio = row
+            exchange_rate_ratio = (currency_rate * (priceFloatingRatio / 100))
+            exchange_rate_ratio_rounded = round_up_to_nearest_05(exchange_rate_ratio)
+            aggregated_orders[(trade_type, exchange_rate_ratio_rounded)] += total_price
+
+
+        for (trade_type, exchange_rate_ratio), total_price in aggregated_orders.items():
+            try:
+                await self.add_order(trade_type, exchange_rate_ratio, total_price)
+            except Exception as e:
+                logger.error(f"Failed to add order: {e}")
+
+        logger.debug(f"usd_price_manager populated with {len(self.orders)} orders.")
+
+
+def round_up_to_nearest_05(value):
+    # Multiply by 20, take the ceiling, then divide by 20
+    return math.ceil(value * 20) / 20
+
+async def main():
+    conn = await create_connection(DB_FILE)
+    if conn is not None:
+        try:
+            manager = ExchangeRateManager()
+            await print_table_contents(conn, 'usd_price_manager')
+            await clear_table(conn, 'usd_price_manager')
+            await print_table_contents(conn, 'usd_price_manager')
+            await manager.populate_usd_price_manager(conn)
+            await manager.save_orders_to_db(conn)
+            await print_table_contents(conn, 'usd_price_manager')
+        finally:
+            await conn.close()
+    else:
+        logger.error("Error! Cannot create the database connection.")
+
+if __name__ == "__main__":
+    asyncio.run(main())
+
+
+
+
 
 async def fetch_orders(conn, target_mxn):
     logger.info("Fetching orders from the database.")
@@ -80,28 +165,3 @@ async def fetch_orders(conn, target_mxn):
 
     logger.info(f"Fetched {len(orders)} orders.")
     return orders
-
-async def main():
-    conn = await create_connection(DB_FILE)
-    if conn is not None:
-        try:
-            target_mxn = 50000  # The target MXN amount
-            orders = await fetch_orders(conn, target_mxn)
-
-            manager = ExchangeRateManager()
-            for order in orders:
-                exchange_rate = order['total_price'] / order['amount']
-                await manager.add_order(order['amount'], order['total_price'], exchange_rate)
-
-            # Example usage of the get_best_exchange_rate function
-            target_exchange_rate = 20.5
-            best_rate = await manager.get_best_exchange_rate(100000, target_exchange_rate)
-            logger.info(f"The best exchange rate is: {best_rate}")
-
-        finally:
-            await conn.close()
-    else:
-        logger.error("Error! Cannot create the database connection.")
-
-if __name__ == "__main__":
-    asyncio.run(main())
