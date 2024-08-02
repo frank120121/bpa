@@ -4,7 +4,7 @@ import websockets
 import requests
 from collections import deque
 import logging
-import TESTbitso_order_book_cache  # Ensure this is the correct import based on your file name
+import TESTbitso_order_book_cache 
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,8 +49,8 @@ class BitsoOrderBook:
                 self.sequence = int(data['payload']['sequence'])
                 self.order_book['bids'] = {bid['price']: bid for bid in data['payload']['bids']}
                 self.order_book['asks'] = {ask['price']: ask for ask in data['payload']['asks']}
-                logger.info(f"Initial order book loaded. Sequence: {self.sequence}")
-                self.log_reference_prices()
+                logger.debug(f"Initial order book loaded. Sequence: {self.sequence}")
+                await self.log_reference_prices()
             else:
                 raise ValueError(f"Failed to get initial order book: {data['error']}")
         except Exception as e:
@@ -61,10 +61,10 @@ class BitsoOrderBook:
         while self.message_queue:
             message = self.message_queue.popleft()
             if message['sequence'] > self.sequence:
-                self.apply_order_update(message)
+                await self.apply_order_update(message)  # Await the coroutine
                 self.sequence = max(self.sequence, message['sequence'])
 
-    def apply_order_update(self, update):
+    async def apply_order_update(self, update):
         try:
             price = update['r']
             amount = update.get('a', '0')
@@ -81,7 +81,7 @@ class BitsoOrderBook:
                     'amount': amount
                 }
                 logger.debug(f"Updated order: {side} {price} {amount}")
-            self.log_reference_prices()
+            await self.log_reference_prices()
         except Exception as e:
             logger.error(f"Error applying order update: {e}", exc_info=True)
             logger.error(f"Problematic update: {update}")
@@ -102,7 +102,7 @@ class BitsoOrderBook:
                     if sequence > self.sequence:
                         logger.debug(f"Processing message with sequence {sequence}")
                         for update in data['payload']:
-                            self.apply_order_update(update)
+                            await self.apply_order_update(update)  # Await the coroutine
                         self.sequence = sequence
                         logger.debug(f"Processed message. New sequence: {self.sequence}")
                     else:
@@ -115,6 +115,7 @@ class BitsoOrderBook:
                 logger.error("Failed to parse message")
             except Exception as e:
                 logger.error(f"Error processing message: {str(e)}", exc_info=True)
+
 
     async def log_order_book_periodically(self):
         while True:
@@ -156,15 +157,14 @@ class BitsoOrderBook:
         lowest_ask_wavg = self.calculate_weighted_average('asks', 50000)
         return highest_bid_wavg, lowest_ask_wavg
 
-    def log_reference_prices(self):
+    async def log_reference_prices(self):
         highest_bid_wavg, lowest_ask_wavg = self.get_reference_prices()
-        TESTbitso_order_book_cache.update_reference_prices(highest_bid_wavg, lowest_ask_wavg)
-        logger.info(f"Weighted Average Highest Bid for 50k MXN: {highest_bid_wavg}")
-        logger.info(f"Weighted Average Lowest Ask for 50k MXN: {lowest_ask_wavg}")
-
-async def main():
+        await TESTbitso_order_book_cache.update_reference_prices(highest_bid_wavg, lowest_ask_wavg)
+        logger.debug(f"Weighted Average Highest Bid for 50k MXN: {highest_bid_wavg}")
+        logger.debug(f"Weighted Average Lowest Ask for 50k MXN: {lowest_ask_wavg}")
+async def start_bitso_order_book():
     order_book = BitsoOrderBook("usdt_mxn")
     await order_book.start()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(start_bitso_order_book())

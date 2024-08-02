@@ -39,32 +39,43 @@ async def print_table_contents(conn, table_name):
             await cursor.execute(f"PRAGMA table_info({table_name})")
             columns_info = await cursor.fetchall()
             column_names = [column[1] for column in columns_info]
+            
             await cursor.execute(f"SELECT * FROM {table_name}")
             rows = await cursor.fetchall()
-            table = PrettyTable()
-            table.field_names = column_names
+            
+            # Prepare the header
+            table = "| " + " | ".join(column_names) + " |\n"
+            table += "| " + " | ".join(["-" * len(name) for name in column_names]) + " |\n"
+            
+            # Prepare the rows
             for row in rows:
-                table.add_row(row)
-            print(f"\nContents of {table_name}:")
+                table += "| " + " | ".join(str(cell) for cell in row) + " |\n"
+            
+            print(f"\nContents of {table_name}:\n")
             print(table)
         except Exception as e:
-            print(f"Error reading from table {table_name}: {e}")\
+            print(f"Error reading from table {table_name}: {e}")
             
 async def print_table_schema(conn, table_name):
     async with conn.cursor() as cursor:
         try:
             await cursor.execute(f"PRAGMA table_info({table_name})")
             columns_info = await cursor.fetchall()
-            schema_table = PrettyTable()
-            schema_table.field_names = ["Column ID", "Name", "Type", "Not Null", "Default Value", "Primary Key"]
-
+            
+            schema_table = "| Column ID | Name | Type | Not Null | Default Value | Primary Key |\n"
+            schema_table += "|-----------|------|------|----------|---------------|-------------|\n"
+            
             for column in columns_info:
-                schema_table.add_row(column)
-
-            print(f"\nSchema of {table_name}:")
+                column_id, name, col_type, not_null, default_value, primary_key = column
+                not_null = 'YES' if not_null else 'NO'
+                primary_key = 'YES' if primary_key else 'NO'
+                schema_table += f"| {column_id} | {name} | {col_type} | {not_null} | {default_value} | {primary_key} |\n"
+            
+            print(f"\nSchema of {table_name}:\n")
             print(schema_table)
         except Exception as e:
             print(f"Error reading schema from table {table_name}: {e}")
+
 
 async def add_column_if_not_exists(conn, table_name, column_name, data_type, default_value):
     query = f"PRAGMA table_info({table_name})"

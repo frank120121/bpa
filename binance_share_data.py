@@ -3,6 +3,7 @@ import aiohttp
 import asyncio
 import logging
 from async_safe_dict import AsyncSafeDict
+from ads_database import update_ad_in_database
 
 logger = logging.getLogger(__name__)
 
@@ -18,17 +19,22 @@ class SharedData:
     @classmethod
     async def get_ad(cls, advNo):
         async with cls._lock:
-            return await cls._ad_details_dict.get(advNo)
+            ad_details = await cls._ad_details_dict.get(advNo)
+            if ad_details:
+                logger.debug(f"Ad {advNo} retrieved from SharedData with ad_details: {ad_details}")
+            else:
+                logger.warning(f"Ad {advNo} not found in SharedData.")
+            return ad_details
 
     @classmethod
     async def set_ad(cls, advNo, ad_details):
-        logger.info(f"Attempting to set ad {advNo} in SharedData.")
+        logger.debug(f"Attempting to set ad {advNo} in SharedData.")
         try:
             async def set_ad_with_lock():
                 async with cls._lock:
-                    logger.info(f"Acquired lock to set ad {advNo}.")
+                    logger.debug(f"Acquired lock to set ad {advNo}.")
                     await cls._ad_details_dict.put(advNo, ad_details)
-                    logger.info(f"Ad {advNo} set in SharedData.")
+                    logger.debug(f"Ad {advNo} set in SharedData with ad_details: {ad_details}.")
 
             await asyncio.wait_for(set_ad_with_lock(), timeout=5.0)
         except asyncio.TimeoutError:
@@ -38,11 +44,6 @@ class SharedData:
             logger.error(f"Error setting ad {advNo} in SharedData: {e}")
             return False  # Indicate failure
         return True  # Indicate success
-
-    @classmethod
-    async def get_all_ads(cls):
-        async with cls._lock:
-            return await cls._ad_details_dict.items()
 
     @classmethod
     async def len(cls):
@@ -58,7 +59,7 @@ class SharedData:
                     if key in ad_details:
                         ad_details[key] = value
                 await cls._ad_details_dict.put(advNo, ad_details)
-                logger.info(f"Updated ad {advNo} with {kwargs}")
+                logger.debug(f"Updated ad {advNo} with {kwargs}")
             else:
                 logger.warning(f"Ad {advNo} not found in shared data.")
     @classmethod
@@ -66,16 +67,37 @@ class SharedData:
         try:
             async with cls._lock:
                 ads = await cls._ad_details_dict.items()
-                logger.info(f"Total ads in SharedData: {len(ads)}")
+                logger.debug(f"Total ads in SharedData: {len(ads)}")
                 if trade_type:
                     filtered_ads = [
                         ad for advNo, ad in ads if ad.get('trade_type') == trade_type
                     ]
-                    logger.info(f"Filtered ads for trade_type {trade_type}: {len(filtered_ads)}")
+                    logger.debug(f"Filtered ads for trade_type {trade_type}: {len(filtered_ads)}")
                     return filtered_ads
                 return [ad for advNo, ad in ads]
         except Exception as e:
             logger.error(f"Error fetching ads from SharedData: {e}")
+            raise
+    @classmethod
+    async def save_all_ads_to_database(cls, trade_type=None):
+        try:
+            ads = await cls.fetch_all_ads(trade_type=trade_type)
+            for ad in ads:
+                await update_ad_in_database(
+                    target_spot=ad.get('target_spot'),
+                    advNo=ad.get('advNo'),
+                    asset_type=ad.get('asset_type'),
+                    floating_ratio=ad.get('floating_ratio'),
+                    price=ad.get('price'),
+                    surplusAmount=ad.get('surplused_amount'),
+                    account=ad.get('account'),
+                    fiat=ad.get('fiat'),
+                    transAmount=ad.get('transAmount'),
+                    minTransAmount=ad.get('minTransAmount')
+                )
+                logger.debug(f"Ad {ad.get('advNo')} saved to database.")
+        except Exception as e:
+            logger.error(f"Error saving ads to database: {e}")
             raise
             
 class SharedSession:
@@ -87,7 +109,7 @@ class SharedSession:
         async with cls._lock:
             if cls._session is None:
                 cls._session = aiohttp.ClientSession()
-                logger.info("Created new shared aiohttp session.")
+                logger.debug("Created new shared aiohttp session.")
             return cls._session
 
     @classmethod
@@ -96,4 +118,4 @@ class SharedSession:
             if cls._session is not None:
                 await cls._session.close()
                 cls._session = None
-                logger.info("Closed shared aiohttp session.")
+                logger.debug("Closed shared aiohttp session.")

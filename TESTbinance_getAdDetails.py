@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 async def main():
-    account='account_1'
+    account='account_2'
     api_key = credentials_dict[account]['KEY']
     api_secret = credentials_dict[account]['SECRET']
     try:

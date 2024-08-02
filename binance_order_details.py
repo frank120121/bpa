@@ -57,13 +57,13 @@ async def main():
 
     # Retrieve credentials
     credentials_dict = {
-        'account_2': {
-            'KEY': os.environ.get('API_KEY_MGL'),
-            'SECRET': os.environ.get('API_SECRET_MGL')
+        'account_1': {
+            'KEY': os.environ.get('API_KEY_MFMP'),
+            'SECRET': os.environ.get('API_SECRET_MFMP')
         }
     }
 
-    account = 'account_2'
+    account = 'account_1'
     if account in credentials_dict:
         KEY = credentials_dict[account]['KEY']
         SECRET = credentials_dict[account]['SECRET']
@@ -72,7 +72,7 @@ async def main():
         return
 
     # Fetch order details
-    adOrderNo = "22651355109194235904"
+    adOrderNo = "22652500280305926144"
     result = await fetch_order_details(KEY, SECRET, adOrderNo)
     print(result)
 

@@ -1,8 +1,13 @@
-
+#binance_db.py
 import asyncio
-from common_vars import DB_FILE
-from common_utils_db import create_connection, execute_and_commit, print_table_contents, print_table_schema
 import logging
+
+
+from common_vars import DB_FILE
+from common_utils_db import create_connection, execute_and_commit, print_table_contents, print_table_schema, add_column_if_not_exists
+from binance_share_data import SharedData
+
+
 logger = logging.getLogger(__name__)
 
 async def order_exists(conn, order_no):
@@ -34,7 +39,7 @@ async def insert_or_update_order(conn, order_details):
         logger.debug("Order Details Received in db:")
         data = order_details.get('data', {})
 
-       # Extracting order details
+        # Extracting order details
         seller_name = data.get('sellerName') or data.get('sellerNickname', '')
         buyer_name = data.get('buyerName', '')
         order_no = data.get('orderNumber', '')
@@ -44,41 +49,48 @@ async def insert_or_update_order(conn, order_details):
         fiat_unit = data.get('fiatUnit', '')
         asset = data.get('asset', '')
         amount = float(data.get('amount', 0))
-        currency_rate = float(data.get('currencyRate', 0))
+        currency_rate = float(data.get('currencyRate', '0'))
+        advNo = data.get('advOrderNumber', None)
 
         if None in (seller_name, buyer_name, order_no, trade_type, order_status, total_price, fiat_unit):
             logger.error("One or more required fields are None. Aborting operation.")
             return
+        
+        # Fetch priceFloatingRatio from SharedData using advNo
+        ad_details = await SharedData.get_ad(advNo)
+        if ad_details:
+            price_floating_ratio = float(ad_details.get('floating_ratio', '0.0'))
+        else:
+            logger.error(f"Ad details for advNo {advNo} not found in SharedData.")
+            price_floating_ratio = 0.0
 
+        logger.debug(f"Extracted values: seller_name={seller_name}, buyer_name={buyer_name}, order_no={order_no}, trade_type={trade_type}, order_status={order_status}, total_price={total_price}, fiat_unit={fiat_unit}, asset={asset}, amount={amount}, currency_rate={currency_rate}, advNo={advNo}, price_floating_ratio={price_floating_ratio}")
         # Check if order exists and update or insert accordingly
         if await order_exists(conn, order_no):
             logger.debug("Updating existing order...")
-            # Here we update all provided fields, ensuring that any changes are applied
             sql = """
                 UPDATE orders
-                SET order_status = ?, seller_name = ?, buyer_name = ?, trade_type = ?, total_price = ?, fiat_unit = ?, asset = ?, amount = ?, currency_rate = ?
+                SET order_status = ?, seller_name = ?, buyer_name = ?, trade_type = ?, total_price = ?, fiat_unit = ?, asset = ?, amount = ?, currency_rate = ?, advNo = ?
                 WHERE order_no = ?
             """
-            params = (order_status, seller_name, buyer_name, trade_type, total_price, fiat_unit, asset, amount, currency_rate, order_no)
+            params = (order_status, seller_name, buyer_name, trade_type, total_price, fiat_unit, asset, amount, currency_rate, advNo, order_no)
             await execute_and_commit(conn, sql, params)
         else:
             logger.debug("Inserting new order...")
-            # Before inserting a new order, ensure the buyer exists or is inserted into the database
+            logger.debug(f'Price Floating Ratio: {price_floating_ratio}')
             await find_or_insert_buyer(conn, buyer_name)
-            # Now insert the new order
             sql = """
-                INSERT INTO orders (order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount, currency_rate)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount, currency_rate, advNo, priceFloatingRatio)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """
-            params = (order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount, currency_rate)
+            params = (order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount, currency_rate, advNo, price_floating_ratio)
             await execute_and_commit(conn, sql, params)
 
         # Extract and insert bank identifiers for the order
         pay_methods = data.get('payMethods', [])
         for method in pay_methods:
             bank_identifier = method.get('identifier')
-            # Ensure there's an identifier to insert
-            if bank_identifier:  
+            if bank_identifier:
                 sql = """
                     INSERT INTO order_bank_identifiers (order_no, bank_identifier)
                     VALUES (?, ?)
@@ -163,7 +175,9 @@ async def main():
                             buyer_bank TEXT, 
                             seller_bank_account TEXT,
                             merchant_id INTEGER REFERENCES merchants(id),
-                            currency_rate REAL  
+                            currency_rate REAL,
+                            priceFloatingRatio REAL DEFAULT 0.0,
+                            advNo TEXT NULL 
                             );"""
     sql_create_order_bank_identifiers_table = """CREATE TABLE IF NOT EXISTS order_bank_identifiers (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,25 +189,19 @@ async def main():
 
     conn = await create_connection(DB_FILE)
     if conn is not None:
-        # await create_table(conn, sql_create_merchants_table)
-        # await create_table(conn, sql_create_users_table)
-        # await create_table(conn, sql_create_transactions_table)
-        # await create_table(conn, sql_create_orders_table)
-        # await create_table(conn, sql_create_order_bank_identifiers_table)
 
-        # Print table contents for verification
-        # await remove(conn, '20624872107382546432')
-        # await remove_user(conn, 'LOPEZ GUERRERO FRANCISCO JAVIER')
-        # await add_column_if_not_exists(conn, 'users', 'user_bank', 'TEXT', 'NULL')
         #log orders with a given order status
-        order_status = 8
-        orders = await log_orders_by_status(conn, order_status)
-        for order in orders:
-            print(order)
+        # order_status = 8
+        # orders = await log_orders_by_status(conn, order_status)
+        # for order in orders:
+        #     print(order)
         # total_price = 10921.00  # Example total price to search for
         # orders = await get_orders_by_total_price(conn, total_price)
         # for order in orders:
         #     print(order)
+        
+        # await remove(conn, '22652510077736411136')
+        await print_table_contents(conn, 'orders')
         await conn.close()
     else:
         logger.error("Error! Cannot create the database connection.")
