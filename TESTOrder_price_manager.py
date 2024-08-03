@@ -53,28 +53,50 @@ class ExchangeRateManager:
             self.orders = [order for order in self.orders if order['id'] != order_id]
             logger.debug(f"Order with ID {order_id} removed.")
 
-    async def get_best_exchange_rate(self, mxn_amount, target_exchange_rate):
+    async def get_best_exchange_rate(self, trade_type, mxn_amount, exchange_rate_1, exchange_rate_2):
         async with self.lock:
-            logger.info(f"Calculating best exchange rate for MXN Amount: {mxn_amount} and Target Exchange Rate: {target_exchange_rate}")
-            orders_sorted = sorted(self.orders, key=lambda x: x['exchange_rate_ratio'])
+            logger.info(f"Calculating best exchange rate for MXN Amount: {mxn_amount}")
+            orders_sorted = sorted(self.orders, key=lambda x: x['exchange_rate_ratio'], reverse=True)
+            #the orders with trade_type given
+            orders_sorted = [order for order in orders_sorted if order['trade_type'] == trade_type]
+            # sum the orders with exchange_rate_ratio above exchange_rate_2
+            if trade_type == 'SELL':
+                fee_1 = 0.9986
+                fee_2 = 0.987
+            else:
+                fee_1 = 1.0014
+                fee_2 = 1.013
+            rate = 0
+            logger.info(f"Orders sorted: {orders_sorted}")
             total_mxn = 0
-            total_usdt = 0
             for order in orders_sorted:
-                if total_mxn + order['mxn_amount'] <= mxn_amount:
+                if ((order['exchange_rate_ratio'] > exchange_rate_2) if trade_type == 'SELL' else (order['exchange_rate_ratio'] < exchange_rate_2)):
                     total_mxn += order['mxn_amount']
-                    total_usdt += order['usdt_amount']
-                    logger.info(f"Including full order: {order}")
+                    if total_mxn >= mxn_amount:
+                        break
+            if total_mxn >= mxn_amount:
+                rate = exchange_rate_1 * fee_1
+                logger.info(f"Have enough orders to cover: {total_mxn}")
+                logger.info(f"Best exchange rate: {rate}")
+                return rate
+            else:
+                total_mxn = 0
+                rate = 0
+                for order in orders_sorted:
+                    if ((order['exchange_rate_ratio'] < exchange_rate_2) if trade_type == 'SELL' else (order['exchange_rate_ratio'] > exchange_rate_2)):
+                        total_mxn += order['mxn_amount']
+                        rate = order['exchange_rate_ratio']
+                        logger.info(f"Total MXN: {total_mxn}, Best exchange rate so far: {rate}")
+                        if total_mxn >= mxn_amount:
+                            break
+                if total_mxn >= mxn_amount:
+                    rate *= fee_2
+                    logger.info(f"Not enough orders sold above {exchange_rate_2} to cover {mxn_amount}. But we can do: {rate}")
+                    return rate
                 else:
-                    remaining_mxn = mxn_amount - total_mxn
-                    usdt_fraction = (remaining_mxn / order['mxn_amount']) * order['usdt_amount']
-                    total_mxn += remaining_mxn
-                    total_usdt += usdt_fraction
-                    logger.info(f"Including partial order: {order}, Remaining MXN: {remaining_mxn}, USDT Fraction: {usdt_fraction}")
-                    break
-
-            weighted_exchange_rate = total_mxn / total_usdt if total_usdt != 0 else float('inf')
-            logger.info(f"Weighted Exchange Rate: {weighted_exchange_rate}")
-            return min(weighted_exchange_rate, target_exchange_rate)
+                    rate = exchange_rate_1 * fee_2
+                    logger.info(f"Not enough orders sold. Best we can do: {(rate)}")
+                    return rate        
 
     async def populate_usd_price_manager(self, conn):
         logger.debug("Starting to populate usd_price_manager")
@@ -121,6 +143,8 @@ async def main():
             await clear_table(conn, 'usd_price_manager')
             await print_table_contents(conn, 'usd_price_manager')
             await manager.populate_usd_price_manager(conn)
+            ratio = await manager.get_best_exchange_rate('BUY', 10000, 19.16, 18.91)
+            print(ratio)
             await manager.save_orders_to_db(conn)
             await print_table_contents(conn, 'usd_price_manager')
         finally:

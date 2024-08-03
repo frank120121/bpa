@@ -184,7 +184,7 @@ class BinanceAPI:
             'adsNo': ads_no
         }
         headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
-        return await self._handle_cache(BinanceAPI.get_ad_detail_cache, get_ad_detail_cache_key, self._make_request, 60, 'POST', endpoint, params, headers)
+        return await self._handle_cache(BinanceAPI.get_ad_detail_cache, get_ad_detail_cache_key, self._make_request, 0.001, 'POST', endpoint, params, headers)
 
     async def fetch_ads_search(self, trade_type, asset, fiat, trans_amount, pay_types, page, x_gray_env=None, x_trace_id=None, x_user_id=None):
         cache_key = (page, trade_type, asset, fiat, trans_amount, tuple(sorted(pay_types)) if pay_types else None)

@@ -52,6 +52,7 @@ class SharedData:
 
     @classmethod
     async def update_ad(cls, advNo, **kwargs):
+        logger.debug(f"Attempting to update ad {advNo} with {kwargs}.")
         async with cls._lock:
             ad_details = await cls._ad_details_dict.get(advNo)
             if ad_details is not None:
