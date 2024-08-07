@@ -3,11 +3,13 @@ import asyncio
 import json
 import logging
 import websockets
+
 from binance_singleton_api import SingletonBinanceAPI
 from binance_merchant_handler import MerchantAccount
 from common_utils import get_server_timestamp
 from common_utils_db import create_connection
 from credentials import credentials_dict
+from binance_share_data import SharedSession
 
 RETRY_DELAY = 0.1
 MAX_RETRY_DELAY = 1 
@@ -49,6 +51,9 @@ class ConnectionManager:
         self.secret_key = secret_key
         self.ws = None
         self.is_connected = False
+
+    async def get_session(self):
+        return await SharedSession.get_session()
 
     async def send_text_message(self, text, order_no):
         message = {

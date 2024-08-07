@@ -128,8 +128,9 @@ if __name__ == "__main__":
         secret_key = credentials_dict['account_1']['SECRET']
 
         # Retrieve Binance messages
-        order_no = '22643438016233922560'
+        order_no = '22654353019541454848'
         data = await retrieve_binance_messages(api_key, secret_key, order_no)
+        print(data)
 
         # Extract the clave de rastreo from a payment capture image
         if data['success']:
@@ -149,8 +150,8 @@ if __name__ == "__main__":
                     fecha = date.today()
                     emisor = '40012'  # BBVA MEXICO
                     receptor = '90710'  # Nvio
-                    cuenta = '710969000016348705'
-                    monto = 6000.00
+                    cuenta = '710969000015306104'
+                    monto = 2400.00
 
                     validation_successful = await validate_transfer(fecha, clave_de_rastreo, emisor, receptor, cuenta, monto)
                     if validation_successful:

@@ -143,7 +143,7 @@ async def main():
             await clear_table(conn, 'usd_price_manager')
             await print_table_contents(conn, 'usd_price_manager')
             await manager.populate_usd_price_manager(conn)
-            ratio = await manager.get_best_exchange_rate('BUY', 10000, 19.16, 18.91)
+            ratio = await manager.get_best_exchange_rate('SELL', 10000, 19.16, 18.91)
             print(ratio)
             await manager.save_orders_to_db(conn)
             await print_table_contents(conn, 'usd_price_manager')

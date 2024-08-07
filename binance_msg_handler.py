@@ -1,3 +1,8 @@
+import logging
+from cep import Transferencia
+from datetime import datetime, date
+import time
+
 from lang_utils import get_message_by_language, determine_language, get_default_reply, payment_warning, invalid_country, verified_customer_greeting
 from binance_db_get import get_account_number, is_menu_presented, get_kyc_status, get_anti_fraud_stage, get_buyer_bank, has_specific_bank_identifiers
 from binance_db_set import update_total_spent, update_buyer_bank
@@ -9,18 +14,19 @@ from binance_anti_fraud import handle_anti_fraud
 from binance_blacklist import add_to_blacklist
 from verify_client_ip import fetch_ip
 from common_vars import prohibited_countries
-import logging
+from TEST_binance_cep import extract_clave_de_rastreo, validate_transfer
+from binance_share_data import SharedSession
+
 logger = logging.getLogger(__name__)
 
-accepted_countries_for_oxxo = ['MX']
-
+accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE', 'BE', 'EC', 'RU', 'TH', 'IN', 'UA', 'DE', 'JP', 'US', 'RU', 'FR']
 async def check_order_details(order_details):
     if order_details is None:
         logger.warning("order_details is None.")
         return False
     return True
 
-async def check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
+async def check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount):
     country = await fetch_ip(order_no[-4:], seller_name)
     if fiat == 'USD':
         if country in prohibited_countries:
@@ -29,9 +35,9 @@ async def check_and_handle_country_restrictions(connection_manager, conn, order_
             await add_to_blacklist(conn, buyer_name, order_no, country)
             return
 
-    # if oxxo_used and country not in ['NG', 'KH', 'TJ', 'GH']:
+    # if oxxo_used and country in accepted_countries_for_oxxo and amount < 5000:
     #     await get_payment_details(conn, order_no, buyer_name, oxxo_used)
-    #     return False  # Accept orders from specified countries for OXXO payment type
+    #     return False 
   
     if country and country != "MX":
         logger.debug(f"Transaction denied. Seller not from Mexico. Buyer: {buyer_name} added to blacklist.")
@@ -56,6 +62,7 @@ async def handle_order_status_4(connection_manager, conn, order_no, order_detail
 
 async def handle_order_status_1(connection_manager, conn, order_no, order_details):
     seller_name, buyer_name, fiat = order_details.get('seller_name'), order_details.get('buyer_name'), order_details.get('fiat_unit')
+    amount = order_details.get('total_price')
     kyc_status = await get_kyc_status(conn, buyer_name)
     oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
     if oxxo_used:
@@ -66,12 +73,12 @@ async def handle_order_status_1(connection_manager, conn, order_no, order_detail
             anti_fraud_stage = 0
         await generic_reply(connection_manager, order_no, order_details, 1)
         await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, "", order_no, connection_manager)
-        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
+        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount):
             return
     else:
         greeting = await verified_customer_greeting(buyer_name)
         await connection_manager.send_text_message(greeting, order_no)
-        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used):
+        if await check_and_handle_country_restrictions(connection_manager, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount):
             return
         payment_details = await get_payment_details(conn, order_no, buyer_name)
         buyer_bank = await get_buyer_bank(conn, buyer_name)
@@ -129,9 +136,68 @@ async def handle_text_message(connection_manager, content, order_no, order_detai
         if content.isdigit():
             await handle_menu_response(connection_manager, int(content), order_details, order_no, conn)
 
-async def handle_image_message(connection_manager, order_no, order_details):
+async def handle_image_message(connection_manager, msg_json, order_no, order_details):
+    logger.info(f"Image content: {msg_json}")
+    logger.info(f"Order details: {order_details}")
+    amount = order_details.get('total_price')
+    cuenta_bancaria = order_details.get('account_number')
+    image_URL = msg_json.get('imageUrl')
+    logger.info(f"Image URL: {image_URL}")
+    if image_URL:
+        session = await SharedSession.get_session()
+        clave_rastreo = await extract_clave_de_rastreo(session, image_URL, 'BBVA')
+        if clave_rastreo:
+            logger.info(f"Extracted Clave de Rastreo: {clave_rastreo}")
+            fecha = date.today()
+            emisor = '40012'  # BBVA MEXICO
+            receptor = '90710'  # NVIO
+            cuenta = cuenta_bancaria
+            monto = amount
+            validation_successful = await validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, monto)
+            if validation_successful:
+                logger.info("Transfer validation and PDF download successful.")
+            else:
+                logger.info("Transfer validation failed.")
+        else:
+            logger.info("No Clave de Rastreo found.")
+    else:
+        logger.info("No image message found.")
+
     if not await check_order_details(order_details):
         return
-    logger.debug("Handling IMAGE")
+    
     order_status = 100
     await generic_reply(connection_manager, order_no, order_details, order_status)
+
+
+
+# async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, monto):
+#     if isinstance(fecha, str):
+#         fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
+    
+#     print(f"Validating transfer for Clave: {clave_rastreo}")  # Debug
+#     try:
+#         tr = await asyncio.to_thread(Transferencia.validar,
+#             fecha=fecha,
+#             clave_rastreo=clave_rastreo,
+#             emisor=emisor,
+#             receptor=receptor,
+#             cuenta=cuenta,
+#             monto=monto,
+#         )
+#         if tr is not None:
+#             print("Validation successful, downloading PDF...")
+#             pdf = await asyncio.to_thread(tr.descargar)
+            
+#             file_path = rf"C:\Users\p7016\Downloads\{clave_rastreo}.pdf"
+            
+#             async with aiofiles.open(file_path, 'wb') as f:
+#                 await f.write(pdf)
+#             print(f"PDF saved successfully at {file_path}.")
+#             return True
+#         else:
+#             print("Validation failed, unable to download PDF.")
+#             return False
+#     except Exception as e:
+#         print(f"Transfer validation failed with error: {e}")
+#         return False

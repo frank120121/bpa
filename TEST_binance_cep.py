@@ -11,6 +11,14 @@ import pytesseract
 import re
 from cep import Transferencia
 from datetime import datetime
+import logging
+
+from binance_share_data import SharedSession
+from credentials import credentials_dict
+from binance_api import BinanceAPI
+
+logger = logging.getLogger(__name__)
+
 
 def correct_ocr_errors(text, bank):
     # Correct specific OCR errors for different banks
@@ -24,11 +32,11 @@ def correct_ocr_errors(text, bank):
 def extract_clave_de_rastreo_from_text(text, bank):
     def clean_and_verify_clave(clave):
         cleaned_clave = re.sub(r'\W+', '', clave)
-        print(f"Cleaned Clave: {cleaned_clave}")  # Debug
+        logger.debug(f"Cleaned Clave: {cleaned_clave}")  # Debug
         return cleaned_clave
 
     corrected_text = correct_ocr_errors(text, bank)
-    print(f"Corrected Text: {corrected_text}")  # Debug
+    logger.debug(f"Corrected Text: {corrected_text}")  # Debug
 
     if bank == "BBVA":
         matches = re.findall(r'MBAN[A-Za-z0-9]{20}', corrected_text)
@@ -39,13 +47,13 @@ def extract_clave_de_rastreo_from_text(text, bank):
     else:
         matches = re.findall(r'\b[A-Za-z0-9]{23,30}\b', corrected_text)
     
-    print(f"Matches found: {matches}")  # Debug
+    logger.debug(f"Matches found: {matches}")  # Debug
 
     for potential_clave in matches:
-        print(f"Potential Clave (Before): {potential_clave}")
+        logger.debug(f"Potential Clave (Before): {potential_clave}")
         potential_clave = potential_clave.strip()
-        print(f"Potential Clave (After): {potential_clave}") 
-        print(f"Length of Potential Clave: {len(potential_clave)}")
+        logger.debug(f"Potential Clave (After): {potential_clave}") 
+        logger.debug(f"Length of Potential Clave: {len(potential_clave)}")
 
         clave_de_rastreo = clean_and_verify_clave(potential_clave)
         if clave_de_rastreo:
@@ -53,24 +61,42 @@ def extract_clave_de_rastreo_from_text(text, bank):
 
     return None
 
-async def download_image(session, url):
-    async with session.get(url) as response:
-        response.raise_for_status()
-        img_data = await response.read()
-        return Image.open(BytesIO(img_data))
+async def download_image(session, url, retries=3, initial_delay=1):
+    delay = initial_delay
+    for attempt in range(retries):
+        try:
+            logger.info(f"Attempt {attempt + 1} - Requesting URL: {url}")
+            async with session.get(url) as response:
+                logger.info(f"Attempt {attempt + 1} - Response Status: {response.status}")
+                logger.info(f"Attempt {attempt + 1} - Response Headers: {response.headers}")
+                response.raise_for_status()
+                img_data = await response.read()
+                return Image.open(BytesIO(img_data))
+        except aiohttp.ClientResponseError as e:
+            logger.error(f"Attempt {attempt + 1} - Failed to download image: {e}")
+            if e.status == 403:
+                logger.error("Access denied. Check permissions or credentials.")
+                break
+            if attempt < retries - 1:
+                await asyncio.sleep(delay)
+                delay *= 2
+    logger.error(f"Failed to download image after {retries} attempts: {url}")
+    return None
 
-async def extract_clave_de_rastreo(image_url, bank):
-    async with aiohttp.ClientSession() as session:
+async def extract_clave_de_rastreo(session, image_url, bank):
         img = await download_image(session, image_url)
-        text = pytesseract.image_to_string(img)
-        print(f"Extracted Text: {text}")  # Debug
-        return extract_clave_de_rastreo_from_text(text, bank)
+        if img:
+            text = pytesseract.image_to_string(img)
+            logger.debug(f"Extracted Text: {text}")
+            return extract_clave_de_rastreo_from_text(text, bank)
+        else:
+            return None
 
 async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, monto):
     if isinstance(fecha, str):
         fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
     
-    print(f"Validating transfer for Clave: {clave_rastreo}")  # Debug
+    print(f"Validating transfer for Clave: {clave_rastreo}")
     try:
         tr = await asyncio.to_thread(Transferencia.validar,
             fecha=fecha,
@@ -172,7 +198,8 @@ if __name__ == "__main__":
                         break
 
                 if image_url:
-                    clave_de_rastreo = await extract_clave_de_rastreo(image_url, details['bank'])
+                    session = await SharedSession.get_session()
+                    clave_de_rastreo = await extract_clave_de_rastreo(session, image_url, details['bank'])
                     if clave_de_rastreo:
                         print(f"Extracted Clave de Rastreo: {clave_de_rastreo}")
 
@@ -194,5 +221,7 @@ if __name__ == "__main__":
                     print("No image message found.")
             else:
                 print(f"Error: {data['msg']}")
+
+        await SharedSession.close_session()
 
     asyncio.run(main())

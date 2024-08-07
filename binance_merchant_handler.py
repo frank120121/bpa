@@ -67,10 +67,11 @@ class MerchantAccount:
         if fiat_unit == 'USD':
             return
         if msg_type == 'text':
+
             content =  msg_json.get('content', '').lower()
             await handle_text_message(connection_manager, content, order_no, order_details, conn)
         elif msg_type == 'image':
-            await handle_image_message(connection_manager, order_no, order_details)
+            await handle_image_message(connection_manager, msg_json, order_no, order_details)
     async def _fetch_and_update_order_details(self, KEY, SECRET, conn, order_no):
         try:
             order_details = await get_order_details(conn, order_no)

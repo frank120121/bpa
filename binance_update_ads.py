@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 # Constants
 SELL_PRICE_THRESHOLD = 0.9945
 SELL_PRICE_ADJUSTMENT = 0
-PRICE_THRESHOLD_2 = 1.0197
+PRICE_THRESHOLD_2 = 1.0243
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
 RATIO_ADJUSTMENT = 0.05
@@ -144,7 +144,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             if not await is_ad_online(api_instance, advNo):
                 logger.debug(f"Ad number {advNo} is not online. Skipping...")
                 return
-            logger.info(f"Ad {advNo} not found in ads_data. Fetching ad details.")
+            logger.debug(f"Ad {advNo} not found in ads_data. Fetching ad details.")
             logger.debug(f"Ads data: {ads_data}")
             ads_data
             our_ad_detail = await api_instance.get_ad_detail(advNo)
@@ -152,7 +152,7 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
                 our_ad_data = our_ad_detail['data']
                 if our_ad_data['advNo'] == advNo:
                     our_current_price = float(our_ad_data['price'])
-                    logger.info(f"Ad {advNo} current price: {our_current_price}")
+                    logger.debug(f"Ad {advNo} current price: {our_current_price}")
                 else:
                     logger.error(f"No matching ad data found for ad number {advNo}.")
                     return
@@ -173,8 +173,8 @@ async def analyze_and_update_ads(ad, api_instance, ads_data, all_ads, is_buy=Tru
             previous_sell_price_threshold = SELL_PRICE_THRESHOLD
             previous_buy_price_threshold = BUY_PRICE_THRESHOLD
             min_diff = 0.0005
-            new_sell_price_threshold = round(((bid * 0.987) / base_price), 4)
-            new_buy_price_threshold = round(((ask * 1.013) / base_price), 4)
+            new_sell_price_threshold = round(((base_price * 0.9989) / base_price), 4)
+            new_buy_price_threshold = round(((ask * 1.017) / base_price), 4)
             current_diff = 0
 
             if is_buy:
@@ -278,10 +278,10 @@ async def process_ads(ads_group, api_instances, all_ads, is_buy=True):
         current_ads_data = ads_data['data']
         
         if not isinstance(current_ads_data, list):
-            logger.info(f'Current ads data is not a list: {current_ads_data}. Instance: {api_instance}. API response: {ads_data}')
+            logger.error(f'Current ads data is not a list: {current_ads_data}. Instance: {api_instance}. API response: {ads_data}')
             continue
         if not current_ads_data:
-            logger.info(f'Current ads data is an empty list: {current_ads_data}. Instance: {api_instance}. API response: {ads_data}')
+            logger.error(f'Current ads data is an empty list: {current_ads_data}. Instance: {api_instance}. API response: {ads_data}')
             logger.info(f"Parameters used: trade_type={'BUY' if is_buy else 'SELL'}, asset_type={ad['asset_type']}, fiat={ad['fiat']}, transAmount={ad['transAmount']}, payTypes_list={payTypes_list}, page={page}")
             continue
         
