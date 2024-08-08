@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 def correct_ocr_errors(text, bank):
-    # Correct specific OCR errors for different banks
     if bank == "BBVA":
         return text.replace('O', '0')
     elif bank == "NU":
@@ -61,17 +60,19 @@ def extract_clave_de_rastreo_from_text(text, bank):
 
     return None
 
-async def download_image(session, url, retries=3, initial_delay=1):
+async def download_image(url, retries=3, initial_delay=1):
+    await asyncio.sleep(1)
     delay = initial_delay
     for attempt in range(retries):
         try:
-            logger.info(f"Attempt {attempt + 1} - Requesting URL: {url}")
-            async with session.get(url) as response:
-                logger.info(f"Attempt {attempt + 1} - Response Status: {response.status}")
-                logger.info(f"Attempt {attempt + 1} - Response Headers: {response.headers}")
-                response.raise_for_status()
-                img_data = await response.read()
-                return Image.open(BytesIO(img_data))
+            async with aiohttp.ClientSession() as session:
+                logger.info(f"Attempt {attempt + 1} - Requesting URL: {url}")
+                async with session.get(url) as response:
+                    logger.info(f"Attempt {attempt + 1} - Response Status: {response.status}")
+                    logger.info(f"Attempt {attempt + 1} - Response Headers: {response.headers}")
+                    response.raise_for_status()
+                    img_data = await response.read()
+                    return Image.open(BytesIO(img_data))
         except aiohttp.ClientResponseError as e:
             logger.error(f"Attempt {attempt + 1} - Failed to download image: {e}")
             if e.status == 403:
@@ -83,8 +84,8 @@ async def download_image(session, url, retries=3, initial_delay=1):
     logger.error(f"Failed to download image after {retries} attempts: {url}")
     return None
 
-async def extract_clave_de_rastreo(session, image_url, bank):
-        img = await download_image(session, image_url)
+async def extract_clave_de_rastreo(image_url, bank):
+        img = await download_image(image_url)
         if img:
             text = pytesseract.image_to_string(img)
             logger.debug(f"Extracted Text: {text}")
@@ -96,7 +97,7 @@ async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, mont
     if isinstance(fecha, str):
         fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
     
-    print(f"Validating transfer for Clave: {clave_rastreo}")
+    logger.debug(f"Validating transfer for Clave: {clave_rastreo}")
     try:
         tr = await asyncio.to_thread(Transferencia.validar,
             fecha=fecha,
@@ -107,20 +108,20 @@ async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, mont
             monto=monto,
         )
         if tr is not None:
-            print("Validation successful, downloading PDF...")
+            logger.debug("Validation successful, downloading PDF...")
             pdf = await asyncio.to_thread(tr.descargar)
             
             file_path = rf"C:\Users\p7016\Downloads\{clave_rastreo}.pdf"
             
             async with aiofiles.open(file_path, 'wb') as f:
                 await f.write(pdf)
-            print(f"PDF saved successfully at {file_path}.")
+            logger.debug(f"PDF saved successfully at {file_path}.")
             return True
         else:
-            print("Validation failed, unable to download PDF.")
+            logger.debug("Validation failed, unable to download PDF.")
             return False
     except Exception as e:
-        print(f"Transfer validation failed with error: {e}")
+        logger.debug(f"Transfer validation failed with error: {e}")
         return False
 
 async def retrieve_binance_messages(api_key, secret_key, order_no):
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         try:
             from credentials import credentials_dict
         except ModuleNotFoundError:
-            print("Failed to import credentials. Please check the path and ensure credentials.py is in the specified directory.")
+            logger.debug("Failed to import credentials. Please check the path and ensure credentials.py is in the specified directory.")
             sys.exit(1)
 
         api_key = credentials_dict['account_1']['KEY']
@@ -199,9 +200,9 @@ if __name__ == "__main__":
 
                 if image_url:
                     session = await SharedSession.get_session()
-                    clave_de_rastreo = await extract_clave_de_rastreo(session, image_url, details['bank'])
+                    clave_de_rastreo = await extract_clave_de_rastreo(image_url, details['bank'])
                     if clave_de_rastreo:
-                        print(f"Extracted Clave de Rastreo: {clave_de_rastreo}")
+                        logger.debug(f"Extracted Clave de Rastreo: {clave_de_rastreo}")
 
                         validation_successful = await validate_transfer(
                             fecha=details['fecha'],
@@ -212,15 +213,15 @@ if __name__ == "__main__":
                             monto=details['monto']
                         )
                         if validation_successful:
-                            print("Transfer validation and PDF download successful.")
+                            logger.debug("Transfer validation and PDF download successful.")
                         else:
-                            print("Transfer validation failed.")
+                            logger.debug("Transfer validation failed.")
                     else:
-                        print("No Clave de Rastreo found.")
+                        logger.debug("No Clave de Rastreo found.")
                 else:
-                    print("No image message found.")
+                    logger.debug("No image message found.")
             else:
-                print(f"Error: {data['msg']}")
+                logger.debug(f"Error: {data['msg']}")
 
         await SharedSession.close_session()
 

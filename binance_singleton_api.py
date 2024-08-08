@@ -14,9 +14,7 @@ class SingletonBinanceAPI:
         async with cls._lock:
             if account not in cls._instances:
                 cls._instances[account] = BinanceAPI(api_key, api_secret, client_type)
-                logger.info(f"Created new BinanceAPI instance for account: {account}. Number of instances: {len(cls._instances)}")
-            else:
-                logger.debug(f"Using existing BinanceAPI instance for account: {account}. Number of instances: {len(cls._instances)}")
+            
             return cls._instances[account]
 
     @classmethod

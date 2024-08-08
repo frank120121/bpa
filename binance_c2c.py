@@ -22,15 +22,12 @@ async def on_message(connection_manager, message, KEY, SECRET):
         msg_json = json.loads(message)
         is_self = msg_json.get('self', False)
         if is_self:
-            logger.debug("Message was from self")
             return
         msg_type = msg_json.get('type', '')
         if msg_type == 'auto_reply':
-            logger.debug("Ignoring auto-reply message")
             return
         conn = await create_connection("C:/Users/p7016/Documents/bpa/orders_data.db")
         if conn:
-            logger.debug(message)
             try:
                 await merchant_account.handle_message_by_type(connection_manager, KEY, SECRET, msg_json, msg_type, conn)
                 await conn.commit()               
@@ -84,41 +81,27 @@ async def run_websocket(account, api_key, api_secret, connection_status):
     retry_delay = RETRY_DELAY
     while True:
         try:
-            # Get the API instance and retrieve credentials
             api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
-            logger.debug(f"Fetching chat credentials for account: {account}...")
             response = await api_instance.retrieve_chat_credential()
-            logger.debug(f"Received response for account {account}: {response}")
 
             if response and 'data' in response:
                 data = response['data']
                 if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
                     wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
-                    logger.debug(f"WebSocket URL constructed for account {account}: {wss_url}")
                 else:
                     raise ValueError(f"Missing expected keys in 'data' for account {account}. Full response: {response}")
             else:
                 raise ValueError(f"Unexpected structure in API response for account {account}. Full response: {response}")
 
-            # Establish WebSocket connection
             connection_manager = ConnectionManager(wss_url, api_key, api_secret)
-            logger.debug(f"Attempting to connect to WebSocket with URL for account {account}: {wss_url}")
             async with websockets.connect(wss_url) as ws:
                 connection_manager.ws = ws
                 connection_manager.is_connected = True
                 connection_status[account] = True
-                logger.info(f"Updated connection status for {account}: {connection_status[account]}")
-                
-                # Log the current status for debugging
-                logger.debug(f"Updated connection_status after connection for {account}: {connection_status}")
-                
-                # Listen for messages
-                logger.info(f"Entering WebSocket message loop for account {account}")
+
                 async for message in ws:
-                    logger.debug(f"Received message for account {account}: {message}")
                     await on_message(connection_manager, message, api_key, api_secret)
                 
-                # Reset retry delay after a successful connection
                 retry_delay = RETRY_DELAY
 
         except Exception as e:
@@ -127,7 +110,6 @@ async def run_websocket(account, api_key, api_secret, connection_status):
             logger.info(f"Updated connection status for {account}: {connection_status[account]}")
             connection_manager.is_connected = False
 
-            # Incremental backoff with a maximum limit
             retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)
             logger.info(f"Retrying connection for account {account} in {retry_delay} seconds.")
             await asyncio.sleep(retry_delay)
@@ -135,33 +117,23 @@ async def run_websocket(account, api_key, api_secret, connection_status):
 
 async def check_connections(connection_status):
     while True:
-        logger.debug(f"Current connection status: {connection_status}")
         failed_accounts = [account for account, status in connection_status.items() if not status]
-        logger.debug(f"Failed accounts: {failed_accounts}")
         if failed_accounts:
             logger.warning(f"Detected {len(failed_accounts)} failed connections: {failed_accounts}")
-            # Here you could implement additional logic to handle failed connections
-        else:
-            logger.debug("All WebSocket connections are currently established.")
-        await asyncio.sleep(30)  # Check every 30 seconds
+        await asyncio.sleep(30)
 
 async def main_binance_c2c():
-    logger.debug("Starting main_binance_c2c function")
     connection_status = {}
     tasks = []
 
-    # Initial connection attempt for all accounts
     for account, cred in credentials_dict.items():
         connection_status[account] = False
-        logger.debug(f"Updated connection status for {account}: {connection_status[account]}")
         task = asyncio.create_task(
             run_websocket(account, cred['KEY'], cred['SECRET'], connection_status)
         )
         tasks.append(task)
 
-    # Add the connection checker task
     checker_task = asyncio.create_task(check_connections(connection_status))
     tasks.append(checker_task)
 
-    # Keep all tasks running
     await asyncio.gather(*tasks)

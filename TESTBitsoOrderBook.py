@@ -1,5 +1,6 @@
 import asyncio
 import json
+import aiohttp
 import websockets
 import requests
 from collections import deque
@@ -26,10 +27,41 @@ class BitsoOrderBook:
             self.handle_real_time_messages(),
             self.log_order_book_periodically()
         )
+        
+    async def check_server_health(self):
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.get(self.rest_url, timeout=5) as response:
+                    if response.status == 200:
+                        return True
+                    else:
+                        logger.warning(f"Server health check failed. Status: {response.status}")
+                        return False
+            except aiohttp.ClientError as e:
+                logger.error(f"Error during server health check: {str(e)}")
+                return False
 
     async def connect_websocket(self):
-        self.websocket = await websockets.connect(self.websocket_url)
-        await self.subscribe_to_diff_orders()
+        if await self.check_server_health():
+            max_retries = 5
+            retry_delay = 1
+            for attempt in range(max_retries):
+                try:
+                    self.websocket = await asyncio.wait_for(
+                        websockets.connect(self.websocket_url),
+                        timeout=10  # 10 seconds timeout
+                    )
+                    await self.subscribe_to_diff_orders()
+                    return  # Successfully connected
+                except (TimeoutError, websockets.exceptions.WebSocketException) as e:
+                    if attempt == max_retries - 1:
+                        logger.error(f"Failed to connect after {max_retries} attempts: {str(e)}")
+                        raise
+                    logger.warning(f"Connection attempt {attempt + 1} failed. Retrying in {retry_delay} seconds...")
+                    await asyncio.sleep(retry_delay)
+                    retry_delay *= 2
+        else:
+            raise Exception("Server is not healthy. Aborting WebSocket connection.")
 
     async def subscribe_to_diff_orders(self):
         subscribe_message = {
@@ -160,8 +192,7 @@ class BitsoOrderBook:
     async def log_reference_prices(self):
         highest_bid_wavg, lowest_ask_wavg = self.get_reference_prices()
         await TESTbitso_order_book_cache.update_reference_prices(highest_bid_wavg, lowest_ask_wavg)
-        logger.debug(f"Weighted Average Highest Bid for 50k MXN: {highest_bid_wavg}")
-        logger.debug(f"Weighted Average Lowest Ask for 50k MXN: {lowest_ask_wavg}")
+
 async def start_bitso_order_book():
     order_book = BitsoOrderBook("usdt_mxn")
     await order_book.start()

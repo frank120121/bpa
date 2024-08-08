@@ -145,7 +145,7 @@ async def handle_image_message(connection_manager, msg_json, order_no, order_det
     logger.info(f"Image URL: {image_URL}")
     if image_URL:
         session = await SharedSession.get_session()
-        clave_rastreo = await extract_clave_de_rastreo(session, image_URL, 'BBVA')
+        clave_rastreo = await extract_clave_de_rastreo(image_URL, 'BBVA')
         if clave_rastreo:
             logger.info(f"Extracted Clave de Rastreo: {clave_rastreo}")
             fecha = date.today()

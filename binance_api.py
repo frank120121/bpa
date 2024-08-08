@@ -62,78 +62,48 @@ class BinanceAPI:
         return headers
 
     async def _make_request(self, method, endpoint, params=None, headers=None, body=None, retries=5, backoff_factor=2, timeout=30):
-        await self._init_session()  # Ensure session is initialized
+        await self._init_session() 
+        if params is None:
+            params = {}
 
         for attempt in range(retries):
             try:
-                async with BinanceAPI.request_lock:
-                    # Implement global rate limiting for specific endpoints
-                    if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
-                        logger.debug(f"Instance {self.instance_id}: Rate limiting for endpoint: {endpoint}")
-                        if endpoint == '/sapi/v1/c2c/ads/update':
-                            logger.debug(f"Instance {self.instance_id}: Rate limiting for ad update endpoint")
-                            BinanceAPI.rate_limit_delay = 0.6
-                        else:
-                            BinanceAPI.rate_limit_delay = 0.1
-
-                        current_time = time.time()
-                        time_since_last_request = current_time - BinanceAPI.last_request_time
-                        if time_since_last_request < BinanceAPI.rate_limit_delay:
-                            wait_time = BinanceAPI.rate_limit_delay - time_since_last_request
-                            logger.debug(f"Instance {self.instance_id}: Rate limiting: waiting for {wait_time:.2f} seconds before next request.")
-                            await asyncio.sleep(wait_time)
-                        BinanceAPI.last_request_time = time.time()  # Update last request time after waiting
-
-                if params is None:
-                    params = {}
+                await self._apply_rate_limit(endpoint)
 
                 params['timestamp'] = await get_server_timestamp()
                 query_string = urlencode(params)
                 signature = self._generate_signature(query_string)
                 query_string += f"&signature={signature}"
-                
                 url = f"{self.BASE_URL}{endpoint}?{query_string}"
-                logger.debug(f"Instance {self.instance_id}: Request: method={method}, url={url}, headers={headers}, body={body}")
 
                 async with self.session.request(method, url, headers=headers, json=body, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
                     content_type = response.headers.get('Content-Type', '')
                     try:
                         resp_json = await response.json()
-                        logger.debug(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {resp_json}")
                     except aiohttp.ContentTypeError:
                         text_response = await response.text()
-                        logger.debug(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
                         try:
                             resp_json = json.loads(text_response)
                         except json.JSONDecodeError:
                             logger.error(f"Instance {self.instance_id}: Unexpected content type: {content_type} for URL: {url}")
-                            logger.info(f"Instance {self.instance_id}: Response status: {response.status}, Response body: {text_response}")
                             return text_response
 
                     if response.status == 200:
-                        logger.debug(f"Instance {self.instance_id}: Request success")
                         return resp_json
                     else:
-                        error_code = resp_json.get('code')
-                        if error_code == -1021:
-                            await get_server_timestamp(resync=True)
-                            continue
-                        elif error_code in [83628, -1003]:
-                            retry_after = 1
-                            await asyncio.sleep(retry_after)
-                            BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
-                            continue
-                        elif error_code == 83015:
-                            continue
-                        else:
+                        if await self._handle_error(resp_json):
                             logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
-                            return resp_json
+                            continue
+                        return resp_json
 
             except aiohttp.ClientConnectorError as e:
                 logger.error(f"Instance {self.instance_id}: Connection error (attempt {attempt + 1}/{retries}): {e}")
-                wait_time = backoff_factor ** attempt * 2  # Longer wait for connection errors
+                wait_time = backoff_factor ** attempt * 2 
             except asyncio.TimeoutError:
                 logger.error(f"Instance {self.instance_id}: Request timed out (attempt {attempt + 1}/{retries})")
+                wait_time = backoff_factor ** attempt
+            except aiohttp.ClientOSError as e:
+                logger.error(f"Instance {self.instance_id}: OS error during request: {e}")
                 wait_time = backoff_factor ** attempt
             except aiohttp.ClientError as e:
                 logger.error(f"Instance {self.instance_id}: Client error during request: {e}\n{format_exc()}")
@@ -148,6 +118,34 @@ class BinanceAPI:
         logger.error(f"Instance {self.instance_id}: Exceeded max retries for URL: {url}")
         return None
     
+    async def _apply_rate_limit(self, endpoint):
+        async with BinanceAPI.request_lock:
+            if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
+                BinanceAPI.rate_limit_delay = 0.6 if endpoint == '/sapi/v1/c2c/ads/update' else 0.1
+
+                current_time = time.time()
+                time_since_last_request = current_time - BinanceAPI.last_request_time
+                if time_since_last_request < BinanceAPI.rate_limit_delay:
+                    wait_time = BinanceAPI.rate_limit_delay - time_since_last_request
+                    await asyncio.sleep(wait_time)
+
+                BinanceAPI.last_request_time = time.time()
+
+    async def _handle_error(self, resp_json):
+        error_code = resp_json.get('code')
+        if error_code == -1021:
+            await get_server_timestamp(resync=True)
+            return True
+        elif error_code in [83628, -1003]:
+            retry_after = 1
+            await asyncio.sleep(retry_after)
+            BinanceAPI.rate_limit_delay = max(BinanceAPI.rate_limit_delay, retry_after)
+            return True
+        elif error_code == 83015:
+            return True
+        else:
+            return False
+
     async def _handle_cache(self, cache_dict, cache_key, func, ttl, *args, **kwargs):
         current_time = datetime.now()
 
