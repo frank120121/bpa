@@ -41,83 +41,135 @@ async def on_message(connection_manager, merchant_account, account, message, KEY
     except Exception as e:
         logger.exception("An exception occurred: %s", e)
 class ConnectionManager:
-    def __init__(self, payment_manager):
+    def __init__(self, payment_manager, credentials_dict):
         self.connections = {}
         self.payment_manager = payment_manager
-
+        self.credentials_dict = credentials_dict
+        
     async def create_connection(self, account, api_key, api_secret):
-        api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
-        response = await api_instance.retrieve_chat_credential()
+        try:
+            api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
+            response = await api_instance.retrieve_chat_credential()
 
-        if response and 'data' in response:
-            data = response['data']
-            if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
-                wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
+            if response and 'data' in response:
+                data = response['data']
+                if 'chatWssUrl' in data and 'listenKey' in data and 'listenToken' in data:
+                    wss_url = f"{data['chatWssUrl']}/{data['listenKey']}?token={data['listenToken']}&clientType=web"
+                else:
+                    raise ValueError(f"Missing expected keys in 'data' for account {account}.")
             else:
-                raise ValueError(f"Missing expected keys in 'data' for account {account}.")
-        else:
-            raise ValueError(f"Unexpected structure in API response for account {account}.")
+                raise ValueError(f"Unexpected structure in API response for account {account}.")
 
-        ws = await websockets.connect(wss_url)
-        self.connections[account] = {
-            'ws': ws,
-            'api_key': api_key,
-            'api_secret': api_secret,
-            'is_connected': True
-        }
+            ws = await websockets.connect(wss_url)
+            self.connections[account] = {
+                'ws': ws,
+                'api_key': api_key,
+                'api_secret': api_secret,
+                'is_connected': True
+            }
+            logger.info(f"Connection established for account {account}")
+        except Exception as e:
+            logger.error(f"Failed to create connection for account {account}: {e}")
+            self.connections[account] = {
+                'ws': None,
+                'api_key': api_key,
+                'api_secret': api_secret,
+                'is_connected': False
+            }
+
+    async def ensure_connection(self, account):
+        if account not in self.connections or not self.connections[account]['is_connected']:
+            logger.info(f"Establishing/Re-establishing connection for account {account}")
+            try:
+                # Check if we have the credentials for this account
+                if account not in self.connections:
+                    # If we don't have the credentials, we need to get them from somewhere
+                    # This could be from a config file, database, or passed in when initializing the ConnectionManager
+                    api_key, api_secret = self.get_account_credentials(account)
+                else:
+                    api_key = self.connections[account]['api_key']
+                    api_secret = self.connections[account]['api_secret']
+
+                await self.create_connection(account, api_key, api_secret)
+            except Exception as e:
+                logger.error(f"Failed to establish/re-establish connection for account {account}: {e}")
+                self.connections[account] = {
+                    'ws': None,
+                    'api_key': api_key,
+                    'api_secret': api_secret,
+                    'is_connected': False
+                }
+        return self.connections[account]['is_connected']
+    
+    def get_account_credentials(self, account):
+        # This method should return the API key and secret for the given account
+        # You'll need to implement this based on how you're storing your credentials
+        # For example:
+        if account in credentials_dict:
+            return credentials_dict[account]['KEY'], credentials_dict[account]['SECRET']
+        else:
+            raise ValueError(f"No credentials found for account {account}")
 
     async def close_connection(self, account):
         if account in self.connections:
-            await self.connections[account]['ws'].close()
-            del self.connections[account]
+            if self.connections[account]['ws']:
+                await self.connections[account]['ws'].close()
+            self.connections[account]['is_connected'] = False
+            logger.info(f"Connection closed for account {account}")
 
     async def send_text_message(self, account, text, order_no):
-        if account not in self.connections or not self.connections[account]['is_connected']:
-            logger.error(f"No active connection for account {account}")
-            return
+        max_retries = 3
+        for attempt in range(max_retries):
+            await self.ensure_connection(account)
+            if self.connections[account]['is_connected']:
+                message = {
+                    'type': 'text',
+                    'uuid': f"self_{await get_server_timestamp()}",
+                    'orderNo': order_no,
+                    'content': text,
+                    'self': False,
+                    'clientType': 'web',
+                    'createTime': await get_server_timestamp(),
+                    'sendStatus': 4
+                }
+                message_json = json.dumps(message)
 
-        message = {
-            'type': 'text',
-            'uuid': f"self_{await get_server_timestamp()}",
-            'orderNo': order_no,
-            'content': text,
-            'self': False,
-            'clientType': 'web',
-            'createTime': await get_server_timestamp(),
-            'sendStatus': 4
-        }
-        message_json = json.dumps(message)
+                try:
+                    await self.connections[account]['ws'].send(message_json)
+                    logger.debug(f"Message sent for account {account}")
+                    return  # Successfully sent the message, exit the method
+                except Exception as e:
+                    logger.error(f"Attempt {attempt + 1}: Message sending failed for account {account}: {e}")
+                    self.connections[account]['is_connected'] = False
+                    # Connection failed, we'll retry in the next iteration
+            else:
+                logger.error(f"Attempt {attempt + 1}: Failed to establish connection for account {account}")
 
-        try:
-            await self.connections[account]['ws'].send(message_json)
-            logger.debug(f"Message sent for account {account}")
-        except Exception as e:
-            logger.error(f"Message sending failed for account {account}: {e}.")
-            self.connections[account]['is_connected'] = False
+            if attempt < max_retries - 1:
+                await asyncio.sleep(1)  # Short delay before retrying
+
+        logger.error(f"Failed to send message after {max_retries} attempts: No active connection for account {account}")
 
     async def get_session(self):
         return await SharedSession.get_session()
 
 async def run_websocket(account, api_key, api_secret, connection_manager, merchant_account):
-    retry_delay = RETRY_DELAY
     while True:
         try:
-            await connection_manager.create_connection(account, api_key, api_secret)
+            await connection_manager.ensure_connection(account)
             
-            while True:
+            while connection_manager.connections[account]['is_connected']:
                 message = await connection_manager.connections[account]['ws'].recv()
                 await on_message(connection_manager, merchant_account, account, message, api_key, api_secret)
             
         except websockets.exceptions.ConnectionClosed:
-            logger.info(f"WebSocket connection closed for account {account}. Retrying...")
+            logger.info(f"WebSocket connection closed for account {account}. Reconnecting...")
         except Exception as e:
             logger.exception(f"An unexpected error occurred for account {account}: {e}")
         finally:
             await connection_manager.close_connection(account)
 
-        retry_delay = min(retry_delay * 2, MAX_RETRY_DELAY)
-        logger.info(f"Retrying connection for account {account} in {retry_delay} seconds.")
-        await asyncio.sleep(retry_delay)
+        logger.info(f"Attempting to re-establish connection for account {account}")
 
 
 async def check_connections(connection_manager):
@@ -125,10 +177,19 @@ async def check_connections(connection_manager):
         failed_accounts = [account for account, conn in connection_manager.connections.items() if not conn['is_connected']]
         if failed_accounts:
             logger.warning(f"Detected {len(failed_accounts)} failed connections: {failed_accounts}")
-        await asyncio.sleep(30)
+            for account in failed_accounts:
+                logger.info(f"Attempting to reconnect account: {account}")
+                await connection_manager.ensure_connection(account)
+        
+        # Check if all connections are now established
+        all_connected = all(conn['is_connected'] for conn in connection_manager.connections.values())
+        if all_connected:
+            logger.info("All connections are now established.")
+        
+        await asyncio.sleep(300) 
 
 async def main_binance_c2c(payment_manager):
-    connection_manager = ConnectionManager(payment_manager)
+    connection_manager = ConnectionManager(payment_manager, credentials_dict)
     merchant_account = MerchantAccount(payment_manager)
     tasks = []
 

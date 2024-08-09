@@ -209,7 +209,8 @@ async def main():
         #     print(order)
         
         # await remove(conn, '22652510077736411136')
-        await print_table_schema(conn, 'transactions')
+        await print_table_contents(conn, 'users')
+        await print_table_schema(conn, 'users')
         await conn.close()
     else:
         logger.error("Error! Cannot create the database connection.")

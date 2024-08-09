@@ -150,8 +150,9 @@ async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
         try:
-            order_no = "22651372537565437952"
-            result = await get_order_details(conn, order_no)
+            buyer_name = 'MIRANDA SUAREZ JOSE ANTONIO'
+
+            result = await get_buyer_bank(conn, buyer_name)
             print(result)
         finally:
             await conn.close()

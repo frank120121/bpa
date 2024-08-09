@@ -59,7 +59,7 @@ async def handle_order_status_1(connection_manager, account, conn, order_no, ord
     kyc_status = await get_kyc_status(conn, buyer_name)
     oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
     if oxxo_used:
-        await update_buyer_bank(conn, buyer_name, 'OXXO')
+        await update_buyer_bank(conn, buyer_name, 'oxxo')
 
     if kyc_status == 0 or kyc_status is None:
         anti_fraud_stage = await get_anti_fraud_stage(conn, buyer_name)
@@ -139,7 +139,7 @@ async def handle_image_message(connection_manager, account, msg_json, order_no, 
 
     order_status = order_details.get('order_status')
     if order_status == 1:
-        messages_to_send = 'Por favor marcar la orden como pagada si ya envio el pago.'
+        messages_to_send = (f'Por favor marcar la orden como pagada si ya envio el pago.')
         await send_messages(connection_manager, account, order_no, messages_to_send)
 
     image_URL = msg_json.get('imageUrl')

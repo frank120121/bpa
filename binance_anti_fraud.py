@@ -88,7 +88,7 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
             anti_fraud_stage = 4
             await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
             await update_buyer_bank(conn, buyer_name, 'oxxo')
-            await connection_manager.send_text_message(questions_OXXO[0], order_no)
+            await connection_manager.send_text_message(account, questions_OXXO[0], order_no)
             return
 
             

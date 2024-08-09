@@ -14,7 +14,9 @@ logger = logging.getLogger(__name__)
 MONTHLY_LIMIT = 71000.00
 NVIO_BANK = 'nvio'
 OXXO_BANK = 'oxxo'
-BANREGIO_BANK = 'banregio'
+SANTANDER_BANK = 'santander'
+
+SUPPORTED_BANKS = [NVIO_BANK, OXXO_BANK, SANTANDER_BANK]
 
 class PaymentManager:
     _instance: Optional['PaymentManager'] = None
@@ -23,11 +25,7 @@ class PaymentManager:
     def __init__(self):
         if self.__class__._instance is not None:
             raise RuntimeError("This class is a singleton. Use get_instance() instead.")
-        self.bank_accounts: Dict[str, list] = {
-            NVIO_BANK: [],
-            OXXO_BANK: [],
-            'santander': [],
-        }
+        self.bank_accounts: Dict[str, list] = {bank: [] for bank in SUPPORTED_BANKS}
         self.bank_accounts_lock = asyncio.Lock()
 
     @classmethod
@@ -49,13 +47,15 @@ class PaymentManager:
                 return await self._get_account_details(conn, assigned_account_number, buyer_name, order_no)
 
             buyer_bank = await get_buyer_bank(conn, buyer_name)
-            buyer_bank = buyer_bank if buyer_bank in self.bank_accounts else NVIO_BANK
+            logger.info(f"Buyer bank: {buyer_bank}")
+            if buyer_bank.lower() not in SUPPORTED_BANKS:
+                buyer_bank = NVIO_BANK
 
             account_details = await self._assign_account(conn, buyer_bank, order_no, buyer_name)
             if account_details:
                 return account_details
 
-            if not oxxo_used and buyer_bank not in [OXXO_BANK, BANREGIO_BANK]:
+            if not oxxo_used and buyer_bank not in [OXXO_BANK]:
                 return await self._fallback_to_nvio(conn, order_no, buyer_name)
 
             logger.warning("No suitable account found or all accounts exceed the limit.")
@@ -66,9 +66,10 @@ class PaymentManager:
         result = await cursor.fetchone()
         return result[0] if result else None
 
-    async def _assign_account(self, conn, bank: str, order_no: str, buyer_name: str) -> Optional[Dict[str, Any]]:
+    async def _assign_account(self, conn, buyer_bank: str, order_no: str, buyer_name: str) -> Optional[Dict[str, Any]]:
+        logger.info(f"Buyer bank: {buyer_bank}")
         amount_to_deposit = await get_order_amount(conn, order_no)
-        accounts_copy = sorted(self.bank_accounts[bank], key=lambda x: x['balance'])
+        accounts_copy = sorted(self.bank_accounts[buyer_bank], key=lambda x: x['balance'])
         
         for account in accounts_copy:
             if await self._check_deposit_limit(conn, account['account_number'], order_no, buyer_name):
@@ -76,9 +77,9 @@ class PaymentManager:
                 await update_order_details(conn, order_no, assigned_account_number)
                 await update_last_used_timestamp(conn, assigned_account_number)
 
-                self._update_account_balance(bank, assigned_account_number, amount_to_deposit)
+                self._update_account_balance(buyer_bank, assigned_account_number, amount_to_deposit)
 
-                return await self._get_account_details(conn, assigned_account_number, buyer_name, order_no, bank)
+                return await self._get_account_details(conn, assigned_account_number, buyer_name, order_no, buyer_bank)
             else:
                 logger.info(f"Account {account['account_number']} exceeded the deposit limit for this month.")
 
@@ -145,6 +146,9 @@ class PaymentManager:
             raise
 
     async def _get_account_details(self, conn, account_number: str, buyer_name: str, order_no: str, buyer_bank: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        if not buyer_bank:
+            buyer_bank = await get_buyer_bank(conn, buyer_name)
+        logger.info(f"Buyer bank: {buyer_bank}")
         try:
             query = '''
                 SELECT account_bank_name, account_beneficiary, account_number
@@ -163,7 +167,7 @@ class PaymentManager:
             raise
 
     def _format_account_details(self, account_details: tuple, buyer_bank: str, order_no: str) -> str:
-        if buyer_bank.lower() in [OXXO_BANK, BANREGIO_BANK]:
+        if buyer_bank.lower() in [OXXO_BANK]:
             return (
                 f"Muestra el numero de tarjeta de debito junto con el efectivo que vas a depositar:\n\n"
                 f"Recuerda que solo se acepta deposito en efectivo.\n\n"
