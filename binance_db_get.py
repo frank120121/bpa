@@ -91,17 +91,6 @@ async def is_menu_presented(conn, order_no):
         raise ValueError(f"No order found with order_no {order_no}")
 
 async def execute_and_fetchone(conn, sql, params=None):
-    """
-    Execute a SQL query and fetch one result.
-
-    Parameters:
-    - conn: a database connection object
-    - sql: a string containing a SQL query
-    - params: a tuple with parameters to substitute into the SQL query
-
-    Returns:
-    - A single query result
-    """
     try:
         async with conn.cursor() as cursor:
             await cursor.execute(sql, params)

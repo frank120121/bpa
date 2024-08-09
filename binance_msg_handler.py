@@ -1,7 +1,5 @@
 import logging
-from cep import Transferencia
-from datetime import datetime, date
-import time
+from datetime import date
 
 from lang_utils import get_message_by_language, determine_language, get_default_reply, payment_warning, invalid_country, verified_customer_greeting
 from binance_db_get import get_account_number, is_menu_presented, get_kyc_status, get_anti_fraud_stage, get_buyer_bank, has_specific_bank_identifiers
@@ -30,17 +28,15 @@ async def check_and_handle_country_restrictions(connection_manager, conn, order_
     country = await fetch_ip(order_no[-4:], seller_name)
     if fiat == 'USD':
         if country in prohibited_countries:
-            logger.debug(f"Transaction denied. Seller from prohibited country {country}. Buyer: {buyer_name} added to blacklist.")
             await connection_manager.send_text_message(invalid_country, order_no)
             await add_to_blacklist(conn, buyer_name, order_no, country)
             return
 
-    # if oxxo_used and country in accepted_countries_for_oxxo and amount < 5000:
-    #     await get_payment_details(conn, order_no, buyer_name, oxxo_used)
-    #     return False 
+    if oxxo_used and country in accepted_countries_for_oxxo and amount < 5000:
+        await get_payment_details(conn, order_no, buyer_name, oxxo_used)
+        return False 
   
     if country and country != "MX":
-        logger.debug(f"Transaction denied. Seller not from Mexico. Buyer: {buyer_name} added to blacklist.")
         await connection_manager.send_text_message(invalid_country, order_no)
         await add_to_blacklist(conn, buyer_name, order_no, country)
         return True  
@@ -50,14 +46,12 @@ async def check_and_handle_country_restrictions(connection_manager, conn, order_
 async def handle_order_status_4(connection_manager, conn, order_no, order_details):
     await generic_reply(connection_manager, order_no, order_details, 4)
     asset_type = order_details.get('asset')
-    logger.debug(asset_type)
     if asset_type in ['BTC', 'ETH']:
         await binance_buy_order(asset_type)
     await update_total_spent(conn, order_no)
     amount_deposited = order_details.get('total_price')
     bank_account_number = await get_account_number(conn, order_no)
     buyer_name = order_details.get('buyer_name')
-    logger.debug(f"Logging deposit for {buyer_name} with bank account {bank_account_number} for {amount_deposited}")
     await log_deposit(conn, buyer_name, bank_account_number, amount_deposited)
 
 async def handle_order_status_1(connection_manager, conn, order_no, order_details):
@@ -66,7 +60,8 @@ async def handle_order_status_1(connection_manager, conn, order_no, order_detail
     kyc_status = await get_kyc_status(conn, buyer_name)
     oxxo_used = await has_specific_bank_identifiers(conn, order_no, ['OXXO'])
     if oxxo_used:
-        await update_buyer_bank(conn, buyer_name, 'banregio')
+        await update_buyer_bank(conn, buyer_name, 'OXXO')
+
     if kyc_status == 0 or kyc_status is None:
         anti_fraud_stage = await get_anti_fraud_stage(conn, buyer_name)
         if anti_fraud_stage is None:
@@ -111,12 +106,10 @@ async def handle_system_notifications(connection_manager, order_no, order_detail
 
 async def handle_text_message(connection_manager, content, order_no, order_details, conn):
     if not await check_order_details(order_details):
-        print("check_order_details returned False. Exiting function.")
         return
 
     order_status = order_details.get('order_status')
     if order_status not in [1, 2]:
-        logger.debug("Order not in 1 or 2")
         return
 
     seller_name, buyer_name = order_details.get('seller_name'), order_details.get('buyer_name')

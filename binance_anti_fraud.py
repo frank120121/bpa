@@ -34,35 +34,29 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
     normalized_response = normalize_string(response.strip().lower())
     if anti_fraud_stage == 0 and normalized_response == "":
         await connection_manager.send_text_message(questions[anti_fraud_stage], order_no)
-        return  # Exit early to prevent further processing
+        return 
     if anti_fraud_stage >= len(questions):
-        return  # No more questions
+        return 
 
     if anti_fraud_stage == 3:
-        # Direct match for not accepted banks
         if normalized_response in [bank.lower() for bank in NOT_ACCEPTED_BANKS]:
             await connection_manager.send_text_message(anti_fraud_stage3, order_no)
             await add_to_blacklist(conn, buyer_name, order_no, None, normalized_response, anti_fraud_stage)
             return
 
-        # Fuzzy matching for accepted banks
         closest_match, similarity = process.extractOne(normalized_response, [bank.lower() for bank in ACCEPTED_BANKS])
-        if similarity >= 95:  # Threshold of 95%
+        if similarity >= 95:
             if closest_match in BBVA_BANKS:
-                closest_match = 'bbva'  # Normalize to 'bbva' for consistency
+                closest_match = 'bbva'  
                 await update_buyer_bank(conn, buyer_name, closest_match)  
-
-            elif closest_match == 'santander':
-                await update_buyer_bank(conn, buyer_name, closest_match)
             else:
-                closest_match = 'nvio'
-                await update_buyer_bank(conn, buyer_name, closest_match)  # Use the closest match
+                await update_buyer_bank(conn, buyer_name, closest_match)
         else:
             accepted_banks_list = ', '.join(ACCEPTED_BANKS)
             await connection_manager.send_text_message(f"No pudimos verificar el banco proporcionado. Por favor, asegúrese de elegir uno de los siguientes bancos aceptados: {accepted_banks_list}", order_no)
             await asyncio.sleep(2)
 
-            await connection_manager.send_text_message(questions[3], order_no)  # Ask the bank question again
+            await connection_manager.send_text_message(questions[3], order_no)
             return
         
     if anti_fraud_stage in [0, 1, 2, 4] and normalized_response not in ['si', 'no']:
@@ -90,19 +84,14 @@ async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, res
         await add_to_blacklist(conn, buyer_name, order_no, None, normalized_response, anti_fraud_stage)
         return
 
-    anti_fraud_stage += 1  # Proceed to the next stage
+    anti_fraud_stage += 1 
     await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
     if anti_fraud_stage == 3:
-        logger.debug(f"Buyer {buyer_name} passed anti-fraud stage {anti_fraud_stage}")
         if oxxo_used:
-            logger.debug(f"OXXO payment method detected for {buyer_name}, updating to stage {anti_fraud_stage + 1}")
             anti_fraud_stage = 4
             await update_anti_fraud_stage(conn, buyer_name, anti_fraud_stage)
-            await update_buyer_bank(conn, buyer_name, 'banregio')
             await connection_manager.send_text_message(questions_OXXO[0], order_no)
             return
-        else:
-            logger.debug(f"No OXXO payment detected for {buyer_name} at stage {anti_fraud_stage}")
             
 
     if anti_fraud_stage == len(questions):
