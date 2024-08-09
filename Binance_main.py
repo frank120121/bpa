@@ -14,7 +14,6 @@ from binance_singleton_api import SingletonBinanceAPI
 from binance_share_data import SharedData, SharedSession
 from TESTBitsoOrderBook import start_bitso_order_book
 
-# Setup logging configuration
 setup_logging(log_filename='Binance_c2c_logger.log')
 logger = logging.getLogger(__name__)
 asyncio.get_event_loop().set_debug(True)
@@ -24,14 +23,11 @@ async def main():
     try:
         tasks.append(asyncio.create_task(start_bitso_order_book()))
         
-        # Wait a bit for the order book to populate
         await asyncio.sleep(5)
 
-        # Start other main tasks
         tasks.append(asyncio.create_task(main_binance_c2c()))
         tasks.append(asyncio.create_task(update_ads_main()))
         
-        # Wait for all tasks to complete
         await asyncio.gather(*tasks)
     except Exception as e:
         tb_str = ''.join(traceback.format_exception(type(e), e, e.__traceback__))

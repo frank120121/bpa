@@ -4,7 +4,7 @@ import logging
 
 
 from common_vars import DB_FILE
-from common_utils_db import create_connection, execute_and_commit, print_table_contents, print_table_schema, add_column_if_not_exists
+from common_utils_db import create_connection, execute_and_commit, print_table_contents, print_table_schema, add_column_if_not_exists, remove_from_table
 from binance_share_data import SharedData
 
 
@@ -177,7 +177,9 @@ async def main():
                             merchant_id INTEGER REFERENCES merchants(id),
                             currency_rate REAL,
                             priceFloatingRatio REAL DEFAULT 0.0,
-                            advNo TEXT NULL 
+                            advNo TEXT NULL,
+                            payment_screenshoot BOOLEAN DEFAULT FALSE,
+                            payment_image_url TEXT NULL 
                             );"""
     sql_create_order_bank_identifiers_table = """CREATE TABLE IF NOT EXISTS order_bank_identifiers (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -207,7 +209,7 @@ async def main():
         #     print(order)
         
         # await remove(conn, '22652510077736411136')
-        await print_table_contents(conn, 'orders')
+        await print_table_schema(conn, 'transactions')
         await conn.close()
     else:
         logger.error("Error! Cannot create the database connection.")

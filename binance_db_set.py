@@ -1,46 +1,10 @@
-from common_utils_db import execute_and_commit, handle_error
+import aiosqlite
+from typing import Any, Dict, Union
 import logging
+
+from common_utils_db import execute_and_commit
+
 logger = logging.getLogger(__name__)
-
-async def update_order_details(conn, order_no, account_number):
-        # Prepare the SQL statement for updating the order
-    sql = '''
-        UPDATE orders
-        SET account_number = ?
-        WHERE order_no = ?
-    '''
-
-    # Execute the SQL statement with the provided account number and order number
-    await conn.execute(sql, (account_number, order_no))
-
-    # Commit the changes to the database
-    await conn.commit()
-
-async def update_buyer_bank(conn, buyer_name, new_buyer_bank):
-    """
-    Update the user_bank field in the orders table for a given order_no.
-
-    Args:
-    - conn (aiosqlite.Connection): The database connection.
-    - buyer_name (str): The name to update.
-    - new_buyer_bank (str): The new name of the buyer's bank.
-
-    Returns:
-    - None
-    """
-    update_query = "UPDATE users SET user_bank = ? WHERE name = ?"
-    params = (new_buyer_bank, buyer_name)
-
-    try:
-        await execute_and_commit(conn, update_query, params)
-        logger.debug(f"Updated user_bank for user {buyer_name} to {new_buyer_bank}")
-    except Exception as e:
-        handle_error(e, f"Failed to update user_bank for user {buyer_name}")
-
-async def update_order_status(conn, order_no, order_status):
-    sql = "UPDATE orders SET order_status = ? WHERE order_no = ?"
-    params = (order_status, order_no)
-    await execute_and_commit(conn, sql, params)
 
 async def register_merchant(conn, sellerName):
     if not sellerName: 
@@ -92,35 +56,184 @@ async def insert_transaction(conn, buyer_name, seller_name, total_price, order_d
     
 async def update_kyc_status(conn, name, new_kyc_status):
     try:
-        sql = "UPDATE users SET kyc_status = ? WHERE name = ?"
-        params = (new_kyc_status, name)
-        await execute_and_commit(conn, sql, params)
-        logger.debug(f"Updated KYC status for user {name} to {new_kyc_status}")
+        await update_table_column(conn, "users", "kyc_status", new_kyc_status, "name", name)
     except Exception as e:
         logger.error(f"Error updating KYC status for user {name}: {e}")
 
 async def update_anti_fraud_stage(conn, buyer_name, new_stage):
-    async with conn.cursor() as cursor:
-        await cursor.execute("UPDATE users SET anti_fraud_stage = ? WHERE name = ?", (new_stage, buyer_name))
-        await conn.commit()
-        logger.debug(f"Updated anti_fraud_stage for user {buyer_name} to {new_stage}")
+    try:
+        await update_table_column(conn, "users", "anti_fraud_stage", new_stage, "name", buyer_name)
+    except Exception as e:
+        logger.error(f"Error updating anti-fraud stage for user {buyer_name}: {e}")
 
 async def set_menu_presented(conn, order_no, value):
-    """
-    Set the menu_presented field in the orders table to either True or False.
-
-    Parameters:
-    - conn: a database connection object
-    - order_no: the order number
-    - value: boolean indicating if the menu was presented
-
-    Returns:
-    - None
-    """
     try:
-        sql = "UPDATE orders SET menu_presented = ? WHERE order_no = ?"
-        params = (1 if value else 0, order_no)  # Convert to SQLite's BOOLEAN representation
-        await execute_and_commit(conn, sql, params)
+        await update_table_column(conn, "orders", "menu_presented", value, "order_no", order_no)
     except Exception as e:
         logger.error(f"Error setting menu_presented for order_no {order_no}: {e}")
 
+async def update_order_status(conn, order_no, order_status):
+    try:
+        await update_table_column(conn, "orders", "order_status", order_status, "order_no", order_no)
+    except Exception as e:
+        logger.error(f"Error updating order status for order_no {order_no}: {e}")
+
+async def update_order_details(conn, order_no, account_number):
+    try:
+        await update_table_column(conn, "orders", "account_number", account_number, "order_no", order_no)
+    except Exception as e:
+        logger.error(f"Error updating order details for order_no {order_no}: {e}")
+
+async def update_buyer_bank(conn, buyer_name, new_buyer_bank):
+    try:
+        await update_table_column(conn, "users", "user_bank", new_buyer_bank, "name", buyer_name)
+    except Exception as e:
+        logger.error(f"Error updating user_bank for user {buyer_name}: {e}")
+
+
+ALLOWED_TABLES: Dict[str, Dict[str, Union[type, tuple]]] = {
+    "orders": {
+        "order_no": str,
+        "buyer_name": str,
+        "seller_name": str,
+        "trade_type": str,
+        "order_status": int,
+        "total_price": float,
+        "fiat_unit": str,
+        "asset": str,
+        "amount": float,
+        "menu_presented": bool,
+        "ignore_count": int,
+        "account_number": str,
+        "buyer_bank": str,
+        "seller_bank_account": str,
+        "merchant_id": int,
+        "currency_rate": float,
+        "priceFloatingRatio": float,
+        "advNo": str,
+        "payment_screenshoot": bool,
+        "payment_image_url": str,
+        "paid": bool,
+        "clave_de_rastreo": str
+    },
+    "users": {
+        "name": str,
+        "kyc_status": int,
+        "total_crypto_sold_lifetime": float,
+        "anti_fraud_stage": int,
+        "rfc": str,
+        "codigo_postal": str,
+        "user_bank": str
+    },
+    "merchants": {
+        "sellerName": str,
+        "api_key": str,
+        "api_secret": str,
+        "email": str,
+        "password_hash": str,
+        "phone_num": str,
+        "user_bank": str
+    },
+    "transactions": {
+        "buyer_name": str,
+        "seller_name": str,
+        "total_price": float,
+        "order_date": str,
+        "merchant_id": int
+    },
+    "order_bank_identifiers": {
+        "order_no": str,
+        "bank_identifier": str
+    },
+    "usd_price_manager": {
+        "trade_type": str,
+        "exchange_rate_ratio": float,
+        "mxn_amount": float
+    },
+    "deposits": {
+        "timestamp": str,
+        "bank_account_id": int,
+        "amount_deposited": float
+    },
+    "bank_accounts": {
+        "account_bank_name": str,
+        "account_beneficiary": str,
+        "account_number": str,
+        "account_limit": float,
+        "account_balance": float
+    },
+    "blacklist": {
+        "name": str,
+        "order_no": str,
+        "country": str
+    },
+    "mxn_deposits": {
+        "timestamp": str,
+        "account_number": str,
+        "amount_deposited": float,
+        "deposit_from": str,
+        "year": int,
+        "month": int,
+        "merchant_id": int
+    },
+    "P2PBlacklist": {
+        "name": str,
+        "order_no": str,
+        "country": str,
+        "response": str,
+        "anti_fraud_stage": int,
+        "merchant_id": int
+    },
+    "mxn_bank_accounts": {
+        "account_bank_name": str,
+        "account_beneficiary": str,
+        "account_number": str,
+        "account_daily_limit": float,
+        "account_monthly_limit": float,
+        "account_balance": float,
+        "last_used_timestamp": str,
+        "merchant_id": int
+    },
+    "oxxo_debit_cards": {
+        "account_bank_name": str,
+        "account_beneficiary": str,
+        "card_number": str,
+        "account_daily_limit": float,
+        "account_monthly_limit": float,
+        "account_balance": float,
+        "last_used_timestamp": str,
+        "merchant_id": int
+    }
+}
+
+async def update_table_column(
+    conn: aiosqlite.Connection,
+    table: str,
+    column: str,
+    value: Any,
+    condition_column: str,
+    condition_value: Any
+) -> None:
+    if table not in ALLOWED_TABLES:
+        raise ValueError(f"Invalid table: {table}")
+    
+    if column not in ALLOWED_TABLES[table]:
+        raise ValueError(f"Invalid column: {column} for table: {table}")
+    
+    if condition_column not in ALLOWED_TABLES[table]:
+        raise ValueError(f"Invalid condition column: {condition_column} for table: {table}")
+
+    expected_type = ALLOWED_TABLES[table][column]
+    if not isinstance(value, expected_type):
+        raise TypeError(f"Expected {expected_type} for {column}, got {type(value)}")
+
+    if expected_type == bool:
+        value = 1 if value else 0
+
+    try:
+        sql = f"UPDATE {table} SET {column} = ? WHERE {condition_column} = ?"
+        params = (value, condition_value)
+        await execute_and_commit(conn, sql, params)
+    except Exception as e:
+        logger.error(f"Error updating {column} in {table} where {condition_column} = {condition_value}: {e}")
+        raise

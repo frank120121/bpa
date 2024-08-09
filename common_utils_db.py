@@ -27,9 +27,9 @@ def handle_error(e, message_prefix):
         logger.error(f"{message_prefix}: {e}")
 async def execute_and_commit(conn, sql, params=None):
     try:
-        cursor = await conn.execute(sql, params)
+        async with conn.cursor() as cursor:
+            await cursor.execute(sql, params)
         await conn.commit()
-        await cursor.close()
     except Exception as e:
         handle_error(e, "Exception in execute_and_commit")
 

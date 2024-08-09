@@ -137,31 +137,6 @@ async def handle_text_message(connection_manager, content, order_no, order_detai
             await handle_menu_response(connection_manager, int(content), order_details, order_no, conn)
 
 async def handle_image_message(connection_manager, msg_json, order_no, order_details):
-    logger.info(f"Image content: {msg_json}")
-    logger.info(f"Order details: {order_details}")
-    amount = order_details.get('total_price')
-    cuenta_bancaria = order_details.get('account_number')
-    image_URL = msg_json.get('imageUrl')
-    logger.info(f"Image URL: {image_URL}")
-    if image_URL:
-        session = await SharedSession.get_session()
-        clave_rastreo = await extract_clave_de_rastreo(image_URL, 'BBVA')
-        if clave_rastreo:
-            logger.info(f"Extracted Clave de Rastreo: {clave_rastreo}")
-            fecha = date.today()
-            emisor = '40012'  # BBVA MEXICO
-            receptor = '90710'  # NVIO
-            cuenta = cuenta_bancaria
-            monto = amount
-            validation_successful = await validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, monto)
-            if validation_successful:
-                logger.info("Transfer validation and PDF download successful.")
-            else:
-                logger.info("Transfer validation failed.")
-        else:
-            logger.info("No Clave de Rastreo found.")
-    else:
-        logger.info("No image message found.")
 
     if not await check_order_details(order_details):
         return
@@ -169,35 +144,29 @@ async def handle_image_message(connection_manager, msg_json, order_no, order_det
     order_status = 100
     await generic_reply(connection_manager, order_no, order_details, order_status)
 
+    order_status = order_details.get('order_status')
+    if order_status == 1:
+        messages_to_send = 'Por favor marcar la orden como pagada si ya envio el pago.'
+        await send_messages(connection_manager, order_no, messages_to_send)
 
+    image_URL = msg_json.get('imageUrl')
+    if image_URL is None:
+        logger.info(f"No url found. URL: {image_URL}")
+        return
 
-# async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, monto):
-#     if isinstance(fecha, str):
-#         fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
+    clave_rastreo = await extract_clave_de_rastreo(image_URL, 'BBVA')
+    if clave_rastreo is None:
+        logger.info("No Clave de Rastreo found.")
+        return
     
-#     print(f"Validating transfer for Clave: {clave_rastreo}")  # Debug
-#     try:
-#         tr = await asyncio.to_thread(Transferencia.validar,
-#             fecha=fecha,
-#             clave_rastreo=clave_rastreo,
-#             emisor=emisor,
-#             receptor=receptor,
-#             cuenta=cuenta,
-#             monto=monto,
-#         )
-#         if tr is not None:
-#             print("Validation successful, downloading PDF...")
-#             pdf = await asyncio.to_thread(tr.descargar)
-            
-#             file_path = rf"C:\Users\p7016\Downloads\{clave_rastreo}.pdf"
-            
-#             async with aiofiles.open(file_path, 'wb') as f:
-#                 await f.write(pdf)
-#             print(f"PDF saved successfully at {file_path}.")
-#             return True
-#         else:
-#             print("Validation failed, unable to download PDF.")
-#             return False
-#     except Exception as e:
-#         print(f"Transfer validation failed with error: {e}")
-#         return False
+    amount = order_details.get('total_price')
+    cuenta_bancaria = order_details.get('account_number')
+    fecha = date.today()
+    emisor = '40012'  # BBVA MEXICO
+    receptor = '90710'  # NVIO
+
+    validation_successful = await validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta_bancaria, amount)
+    if validation_successful:
+        logger.info("Transfer validation and PDF download successful.")
+    else:
+        logger.info("Transfer validation failed.")
