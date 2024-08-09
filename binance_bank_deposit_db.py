@@ -48,7 +48,6 @@ async def initialize_database(conn):
         )
     ''')
     for account in bank_accounts:
-        # Check if the account number already exists
         cursor = await conn.execute("SELECT 1 FROM mxn_bank_accounts WHERE account_number = ?", (account['account_number'],))
         if not await cursor.fetchone():
             await conn.execute(
@@ -57,7 +56,6 @@ async def initialize_database(conn):
         else:
             logger.debug(f"Account number {account['account_number']} already exists. Skipping insertion.")
     await conn.commit()
-    # Insert OXXO debit card data into the database
     for card in OXXO_DEBIT_CARDS:
         cursor = await conn.execute("SELECT 1 FROM oxxo_debit_cards WHERE card_number = ?", (card['card_no'],))
         if not await cursor.fetchone():

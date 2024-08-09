@@ -1,17 +1,22 @@
+import json
+import logging
+import traceback
 from binance_msg_handler import handle_text_message, handle_system_notifications, handle_image_message
 from binance_db_set import update_order_status
 from binance_db_get import get_order_details, has_specific_bank_identifiers
 from binance_order_details import fetch_order_details
 from binance_db import insert_or_update_order
-import json
 from common_vars import status_map
 from binance_blacklist import is_blacklisted
 from lang_utils import transaction_denied
-import traceback
-import logging
+
 logger = logging.getLogger(__name__)
+
 class MerchantAccount:
-    async def handle_message_by_type(self, connection_manager, KEY, SECRET, msg_json, msg_type, conn):
+    def __init__(self, payment_manager):
+        self.payment_manager = payment_manager
+
+    async def handle_message_by_type(self, connection_manager, account, KEY, SECRET, msg_json, msg_type, conn):
         order_no = msg_json.get('orderNo', '')
         order_details = await self._fetch_and_update_order_details(KEY, SECRET, conn, order_no)
         if not order_details:
@@ -27,10 +32,11 @@ class MerchantAccount:
         buyer_name = order_details.get('buyer_name')
 
         if msg_type == 'system':
-            await self._handle_system_type(connection_manager, msg_json, conn, order_no, order_details, buyer_name)
+            await self._handle_system_type(connection_manager, account, msg_json, conn, order_no, order_details, buyer_name)
         else:
-            await self._handle_other_types(connection_manager, msg_json, msg_type, conn, order_no, order_details, buyer_name)
-    async def _handle_system_type(self, connection_manager, msg_json, conn, order_no, order_details, buyer_name):
+            await self._handle_other_types(connection_manager, account, msg_json, msg_type, conn, order_no, order_details, buyer_name)
+
+    async def _handle_system_type(self, connection_manager, account, msg_json, conn, order_no, order_details, buyer_name):
         try:
             content = msg_json.get('content', '').lower()
             content_dict = json.loads(content)
@@ -43,12 +49,13 @@ class MerchantAccount:
             logger.error(f"Failed to decode JSON from content: {content}")
             return
         if await is_blacklisted(conn, buyer_name):
-            await connection_manager.send_text_message(transaction_denied, order_no)
+            await connection_manager.send_text_message(account, transaction_denied, order_no)
             return
         await update_order_status(conn, order_no, order_status)
         order_details = await get_order_details(conn, order_no)
-        await handle_system_notifications(connection_manager, order_no, order_details, conn, order_status)
-    async def _handle_other_types(self, connection_manager, msg_json, msg_type, conn, order_no, order_details, buyer_name):
+        await handle_system_notifications(connection_manager, account, order_no, order_details, conn, order_status, self.payment_manager)
+
+    async def _handle_other_types(self, connection_manager, account, msg_json, msg_type, conn, order_no, order_details, buyer_name):
         msg_status = msg_json.get('status')
         if msg_status == 'read':
             return
@@ -67,11 +74,11 @@ class MerchantAccount:
         if fiat_unit == 'USD':
             return
         if msg_type == 'text':
-
-            content =  msg_json.get('content', '').lower()
-            await handle_text_message(connection_manager, content, order_no, order_details, conn)
+            content = msg_json.get('content', '').lower()
+            await handle_text_message(connection_manager, account, content, order_no, order_details, conn, self.payment_manager)
         elif msg_type == 'image':
-            await handle_image_message(connection_manager, msg_json, order_no, order_details)
+            await handle_image_message(connection_manager, account, msg_json, order_no, order_details)
+
     async def _fetch_and_update_order_details(self, KEY, SECRET, conn, order_no):
         try:
             order_details = await get_order_details(conn, order_no)

@@ -271,7 +271,7 @@ bank_accounts = [
     #     "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     # },
     {
-        "bank_name": "BANREGIO",
+        "bank_name": "OXXO",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
         "account_number": "4347984837112696",
         "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
@@ -279,7 +279,7 @@ bank_accounts = [
         "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "BANREGIO",
+        "bank_name": "OXXO",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
         "account_number": "4347984868505966",
         "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
@@ -287,7 +287,7 @@ bank_accounts = [
         "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "BANREGIO",
+        "bank_name": "OXXO",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
         "account_number": "4347984866288631",
         "account_daily_limit": BANREGIO_OXXO_DAILY_LIMIT,
@@ -295,7 +295,7 @@ bank_accounts = [
         "oxxo_daily_limit": BANREGIO_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "BANREGIO",
+        "bank_name": "OXXO",
         "beneficiary": "MARTHA GUERRERO LOPEZ",
         "account_number": "2242170760065560",
         "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,
@@ -303,7 +303,7 @@ bank_accounts = [
         "oxxo_daily_limit": SPIN_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "BANREGIO",
+        "bank_name": "OXXO",
         "beneficiary": "MARIA FERNANDA MUNOZ PEREA",
         "account_number": "2242170760324680",
         "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,
@@ -311,7 +311,7 @@ bank_accounts = [
         "oxxo_daily_limit": SPIN_OXXO_DAILY_LIMIT
     },
     {
-        "bank_name": "BANREGIO",
+        "bank_name": "OXXO",
         "beneficiary": "FRANCISCO JAVIER LOPEZ GUERRERO",
         "account_number": "2242170760314240",
         "account_daily_limit": SPIN_OXXO_DAILY_LIMIT,

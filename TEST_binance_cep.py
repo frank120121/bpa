@@ -14,8 +14,6 @@ from datetime import datetime
 import logging
 
 from binance_share_data import SharedSession
-from credentials import credentials_dict
-from binance_api import BinanceAPI
 
 logger = logging.getLogger(__name__)
 
@@ -31,11 +29,9 @@ def correct_ocr_errors(text, bank):
 def extract_clave_de_rastreo_from_text(text, bank):
     def clean_and_verify_clave(clave):
         cleaned_clave = re.sub(r'\W+', '', clave)
-        logger.debug(f"Cleaned Clave: {cleaned_clave}")  # Debug
         return cleaned_clave
 
     corrected_text = correct_ocr_errors(text, bank)
-    logger.debug(f"Corrected Text: {corrected_text}")  # Debug
 
     if bank == "BBVA":
         matches = re.findall(r'MBAN[A-Za-z0-9]{20}', corrected_text)
@@ -46,18 +42,11 @@ def extract_clave_de_rastreo_from_text(text, bank):
     else:
         matches = re.findall(r'\b[A-Za-z0-9]{23,30}\b', corrected_text)
     
-    logger.debug(f"Matches found: {matches}")  # Debug
-
     for potential_clave in matches:
-        logger.debug(f"Potential Clave (Before): {potential_clave}")
         potential_clave = potential_clave.strip()
-        logger.debug(f"Potential Clave (After): {potential_clave}") 
-        logger.debug(f"Length of Potential Clave: {len(potential_clave)}")
-
         clave_de_rastreo = clean_and_verify_clave(potential_clave)
         if clave_de_rastreo:
             return clave_de_rastreo
-
     return None
 
 async def download_image(url, retries=3, initial_delay=1):
@@ -66,10 +55,7 @@ async def download_image(url, retries=3, initial_delay=1):
     for attempt in range(retries):
         try:
             async with aiohttp.ClientSession() as session:
-                logger.info(f"Attempt {attempt + 1} - Requesting URL: {url}")
                 async with session.get(url) as response:
-                    logger.info(f"Attempt {attempt + 1} - Response Status: {response.status}")
-                    logger.info(f"Attempt {attempt + 1} - Response Headers: {response.headers}")
                     response.raise_for_status()
                     img_data = await response.read()
                     return Image.open(BytesIO(img_data))
@@ -88,7 +74,6 @@ async def extract_clave_de_rastreo(image_url, bank):
         img = await download_image(image_url)
         if img:
             text = pytesseract.image_to_string(img)
-            logger.debug(f"Extracted Text: {text}")
             return extract_clave_de_rastreo_from_text(text, bank)
         else:
             return None
@@ -97,7 +82,6 @@ async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, mont
     if isinstance(fecha, str):
         fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
     
-    logger.debug(f"Validating transfer for Clave: {clave_rastreo}")
     try:
         tr = await asyncio.to_thread(Transferencia.validar,
             fecha=fecha,
@@ -108,20 +92,16 @@ async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, mont
             monto=monto,
         )
         if tr is not None:
-            logger.debug("Validation successful, downloading PDF...")
             pdf = await asyncio.to_thread(tr.descargar)
             
             file_path = rf"C:\Users\p7016\Downloads\{clave_rastreo}.pdf"
             
             async with aiofiles.open(file_path, 'wb') as f:
                 await f.write(pdf)
-            logger.debug(f"PDF saved successfully at {file_path}.")
             return True
         else:
-            logger.debug("Validation failed, unable to download PDF.")
             return False
     except Exception as e:
-        logger.debug(f"Transfer validation failed with error: {e}")
         return False
 
 async def retrieve_binance_messages(api_key, secret_key, order_no):
@@ -131,7 +111,6 @@ async def retrieve_binance_messages(api_key, secret_key, order_no):
         'orderNo': order_no,
         'timestamp': int(time.time() * 1000)
     }
-
     query_string = '&'.join([f"{key}={value}" for key, value in params.items()])
     signature = hmac.new(secret_key.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
     params['signature'] = signature
@@ -140,7 +119,6 @@ async def retrieve_binance_messages(api_key, secret_key, order_no):
         'X-MBX-APIKEY': api_key,
         'clientType': 'your_client_type',
     }
-
     async with aiohttp.ClientSession() as session:
         async with session.get('https://api.binance.com/sapi/v1/c2c/chat/retrieveChatMessagesWithPagination', headers=headers, params=params) as response:
             response.raise_for_status()
