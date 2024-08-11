@@ -87,6 +87,7 @@ class ConnectionManager:
                 message_json = json.dumps(message)
 
                 try:
+                    await asyncio.sleep(3)
                     await self.connections[account]['ws'].send(message_json)
                     return
                 except Exception as e:

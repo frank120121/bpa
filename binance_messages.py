@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 async def send_messages(connection_manager, account, order_no, messages):
     for msg in messages:
         await connection_manager.send_text_message(account, msg, order_no)
-        await asyncio.sleep(3)
 
 async def present_menu_based_on_status(connection_manager, account, order_details, order_no, conn):
 
@@ -16,7 +15,7 @@ async def present_menu_based_on_status(connection_manager, account, order_detail
     await connection_manager.send_text_message(account, msg, order_no)
     await set_menu_presented(conn, order_no, True)
 
-async def handle_menu_response(connection_manager, account, choice, order_details, order_no, conn, payment_manager):
+async def handle_menu_response(connection_manager, account, choice, order_details, order_no, conn, payment_manager, binance_api):
     language = determine_language(order_details)
     order_status = order_details.get('order_status')
     buyer_name = order_details.get('buyer_name')
