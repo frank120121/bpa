@@ -1,4 +1,3 @@
-# binance_main.py
 import asyncio
 import logging
 import traceback
@@ -10,7 +9,7 @@ from populate_database import populate_ads_with_details
 from common_utils_db import create_connection
 from common_vars import DB_FILE
 from binance_bank_deposit import PaymentManager
-from binance_singleton_api import SingletonBinanceAPI
+from binance_api import BinanceAPI
 from binance_share_data import SharedData, SharedSession
 from TESTBitsoOrderBook import start_bitso_order_book
 
@@ -18,15 +17,15 @@ setup_logging(log_filename='Binance_c2c_logger.log')
 logger = logging.getLogger(__name__)
 asyncio.get_event_loop().set_debug(True)
 
-async def main(payment_manager):
+async def main(payment_manager, binance_api):
     tasks = []
     try:
         tasks.append(asyncio.create_task(start_bitso_order_book()))
         
         await asyncio.sleep(5)
 
-        tasks.append(asyncio.create_task(main_binance_c2c(payment_manager)))
-        tasks.append(asyncio.create_task(update_ads_main()))
+        tasks.append(asyncio.create_task(main_binance_c2c(payment_manager, binance_api)))
+        tasks.append(asyncio.create_task(update_ads_main(binance_api)))
         
         await asyncio.gather(*tasks)
     except Exception as e:
@@ -41,17 +40,18 @@ async def run():
     conn = None
     try:
         conn = await create_connection(DB_FILE)
-        payment_manager = PaymentManager()
+        binance_api = await BinanceAPI.get_instance()
+        payment_manager = await PaymentManager.get_instance()
         await payment_manager.initialize_bank_account_cache(conn)
-        await populate_ads_with_details()
-        await main(payment_manager)
+        await populate_ads_with_details(binance_api)
+        await main(payment_manager, binance_api)
     except Exception as e:
         logger.error(f"An error occurred during initialization: {e}")
     finally:
         if conn:
             await conn.close()
         await SharedData.save_all_ads_to_database()
-        await SingletonBinanceAPI.close_all()
+        await binance_api.close_session() 
         await SharedSession.close_session()
 
 if __name__ == "__main__":

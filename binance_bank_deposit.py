@@ -147,6 +147,7 @@ class PaymentManager:
 
     async def _get_account_details(self, conn, account_number: str, buyer_name: str, order_no: str, buyer_bank: Optional[str] = None) -> Optional[Dict[str, Any]]:
         if not buyer_bank:
+            logger.info("Buyer bank not provided. Attempting to retrieve from database.")
             buyer_bank = await get_buyer_bank(conn, buyer_name)
         logger.info(f"Buyer bank: {buyer_bank}")
         try:

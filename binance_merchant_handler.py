@@ -4,7 +4,6 @@ import traceback
 from binance_msg_handler import handle_text_message, handle_system_notifications, handle_image_message
 from binance_db_set import update_order_status
 from binance_db_get import get_order_details, has_specific_bank_identifiers
-from binance_order_details import fetch_order_details
 from binance_db import insert_or_update_order
 from common_vars import status_map
 from binance_blacklist import is_blacklisted
@@ -13,8 +12,9 @@ from lang_utils import transaction_denied
 logger = logging.getLogger(__name__)
 
 class MerchantAccount:
-    def __init__(self, payment_manager):
+    def __init__(self, payment_manager, binance_api):
         self.payment_manager = payment_manager
+        self.binance_api = binance_api
 
     async def handle_message_by_type(self, connection_manager, account, KEY, SECRET, msg_json, msg_type, conn):
         order_no = msg_json.get('orderNo', '')
@@ -22,13 +22,12 @@ class MerchantAccount:
         if not order_details:
             logger.warning("Failed to fetch order details from the external source.")
             return
-        # Check for specific bank identifiers
         if await has_specific_bank_identifiers(conn, order_no, ['SkrillMoneybookers']):
             logger.info(f"Order {order_no} uses payment method (Skrill).")
-            return  # Skip further processing for now
+            return 
         fiat = order_details.get('fiat_unit')
         if fiat == 'USD':
-            return # Skip further processing for now
+            return
         buyer_name = order_details.get('buyer_name')
 
         if msg_type == 'system':
@@ -53,7 +52,7 @@ class MerchantAccount:
             return
         await update_order_status(conn, order_no, order_status)
         order_details = await get_order_details(conn, order_no)
-        await handle_system_notifications(connection_manager, account, order_no, order_details, conn, order_status, self.payment_manager)
+        await handle_system_notifications(connection_manager, account, order_no, order_details, conn, order_status, self.payment_manager, self.binance_api)
 
     async def _handle_other_types(self, connection_manager, account, msg_json, msg_type, conn, order_no, order_details, buyer_name):
         msg_status = msg_json.get('status')
@@ -75,15 +74,15 @@ class MerchantAccount:
             return
         if msg_type == 'text':
             content = msg_json.get('content', '').lower()
-            await handle_text_message(connection_manager, account, content, order_no, order_details, conn, self.payment_manager)
+            await handle_text_message(connection_manager, account, content, order_no, order_details, conn, self.payment_manager, self.binance_api)
         elif msg_type == 'image':
-            await handle_image_message(connection_manager, account, msg_json, order_no, order_details)
+            await handle_image_message(connection_manager, account, msg_json, order_no, order_details, self.binance_api)
 
     async def _fetch_and_update_order_details(self, KEY, SECRET, conn, order_no):
         try:
             order_details = await get_order_details(conn, order_no)
             if not order_details:
-                order_details = await fetch_order_details(KEY, SECRET, order_no)
+                order_details = await self.binance_api.fetch_order_details(KEY, SECRET, order_no)
                 if order_details:
                     await insert_or_update_order(conn, order_details)
                     order_details = await get_order_details(conn, order_no)

@@ -22,17 +22,15 @@ async def check_order_details(order_details):
         return False
     return True
 
-async def check_and_handle_country_restrictions(connection_manager, account, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount, payment_manager):
+async def check_and_handle_country_restrictions(connection_manager, account, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount, payment_manager, binance_api):
     country = await fetch_ip(order_no[-4:], seller_name)
     if fiat == 'USD':
         if country in prohibited_countries:
             await connection_manager.send_text_message(account, invalid_country, order_no)
             await add_to_blacklist(conn, buyer_name, order_no, country)
-            return
+            return True
 
     if oxxo_used and country in accepted_countries_for_oxxo and amount < 5000:
-        payment_details = await payment_manager.get_payment_details(conn, order_no, buyer_name, oxxo_used)
-        await send_messages(connection_manager, account, order_no, [payment_details])
         return False 
   
     if country and country != "MX":
@@ -53,7 +51,7 @@ async def handle_order_status_4(connection_manager, account, conn, order_no, ord
     buyer_name = order_details.get('buyer_name')
     await log_deposit(conn, buyer_name, bank_account_number, amount_deposited)
 
-async def handle_order_status_1(connection_manager, account, conn, order_no, order_details, payment_manager):
+async def handle_order_status_1(connection_manager, account, conn, order_no, order_details, payment_manager, binance_api):
     seller_name, buyer_name, fiat = order_details.get('seller_name'), order_details.get('buyer_name'), order_details.get('fiat_unit')
     amount = order_details.get('total_price')
     kyc_status = await get_kyc_status(conn, buyer_name)
@@ -66,13 +64,13 @@ async def handle_order_status_1(connection_manager, account, conn, order_no, ord
         if anti_fraud_stage is None:
             anti_fraud_stage = 0
         await generic_reply(connection_manager, account, order_no, order_details, 1)
-        await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, "", order_no, connection_manager, account, payment_manager)
-        if await check_and_handle_country_restrictions(connection_manager, account, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount, payment_manager):
+        await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, "", order_no, connection_manager, account, payment_manager, binance_api)
+        if await check_and_handle_country_restrictions(connection_manager, account, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount, payment_manager, binance_api):
             return
     else:
         greeting = await verified_customer_greeting(buyer_name)
         await connection_manager.send_text_message(account, greeting, order_no)
-        if await check_and_handle_country_restrictions(connection_manager, account, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount, payment_manager):
+        if await check_and_handle_country_restrictions(connection_manager, account, conn, order_no, seller_name, buyer_name, fiat, oxxo_used, amount, payment_manager, binance_api):
             return
         payment_details = await payment_manager.get_payment_details(conn, order_no, buyer_name)
         buyer_bank = await get_buyer_bank(conn, buyer_name)
@@ -91,20 +89,20 @@ async def generic_reply(connection_manager, account, order_no, order_details, st
     await send_messages(connection_manager, account, order_no, messages_to_send)
 
 
-async def handle_system_notifications(connection_manager, account, order_no, order_details, conn, order_status, payment_manager):
+async def handle_system_notifications(connection_manager, account, order_no, order_details, conn, order_status, payment_manager, binance_api):
     if not await check_order_details(order_details):
         return
     logger.debug(f'Order status: {order_status}')
     if order_status == 4:
         await handle_order_status_4(connection_manager, account, conn, order_no, order_details)
     elif order_status == 1:
-        await handle_order_status_1(connection_manager, account, conn, order_no, order_details, payment_manager)
+        await handle_order_status_1(connection_manager, account, conn, order_no, order_details, payment_manager, binance_api)
     else:
         await generic_reply(connection_manager, account, order_no, order_details, order_status)
         response = await get_default_reply(order_details)
         await connection_manager.send_text_message(account, response, order_no)
 
-async def handle_text_message(connection_manager, account, content, order_no, order_details, conn, payment_manager):
+async def handle_text_message(connection_manager, account, content, order_no, order_details, conn, payment_manager, binance_api):
     if not await check_order_details(order_details):
         return
 
@@ -119,7 +117,7 @@ async def handle_text_message(connection_manager, account, content, order_no, or
         anti_fraud_stage = 0
 
     if kyc_status == 0 or anti_fraud_stage < 5:
-        await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, content, order_no, connection_manager, account, payment_manager)
+        await handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, content, order_no, connection_manager, account, payment_manager, binance_api)
     else:
         logger.debug(f"Handling TEXT: {content}")
 
@@ -127,9 +125,9 @@ async def handle_text_message(connection_manager, account, content, order_no, or
             await present_menu_based_on_status(connection_manager, account, order_details, order_no, conn)
 
         if content.isdigit():
-            await handle_menu_response(connection_manager, account, int(content), order_details, order_no, conn, payment_manager)
+            await handle_menu_response(connection_manager, account, int(content), order_details, order_no, conn, payment_manager, binance_api)
 
-async def handle_image_message(connection_manager, account, msg_json, order_no, order_details):
+async def handle_image_message(connection_manager, account, msg_json, order_no, order_details, binance_api):
 
     if not await check_order_details(order_details):
         return
@@ -139,8 +137,8 @@ async def handle_image_message(connection_manager, account, msg_json, order_no, 
 
     order_status = order_details.get('order_status')
     if order_status == 1:
-        messages_to_send = (f'Por favor marcar la orden como pagada si ya envio el pago.')
-        await send_messages(connection_manager, account, order_no, messages_to_send)
+        message = ("Por favor marcar la orden como pagada si ya envio el pago.")
+        await connection_manager.send_text_message(account, message, order_no)
 
     image_URL = msg_json.get('imageUrl')
     if image_URL is None:

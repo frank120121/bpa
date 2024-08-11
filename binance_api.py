@@ -1,4 +1,3 @@
-# binance_api.py
 import json
 import aiohttp
 import asyncio
@@ -17,107 +16,45 @@ logger = logging.getLogger(__name__)
 
 class BinanceAPI:
     BASE_URL = "https://api.binance.com"
-    instance_count = 0  # Class-level variable to count instances
-    last_request_time = 0  # Timestamp of the last request made
-    rate_limit_delay = 0  # Default minimum delay between requests in seconds
-    request_lock = Lock()  # Lock to ensure rate limiting is respected globally
+    last_request_time = 0
+    rate_limit_delay = 0
+    request_lock = Lock()
     cache = {}
     ads_list_cache = {}
     get_ad_detail_cache = {}
+    
+    _instance = None 
+    _lock = Lock() 
 
-    def __init__(self, api_key, api_secret, client_type='WEB'):
-        self.api_key = api_key
-        self.api_secret = api_secret
+    def __init__(self, client_type='WEB'):
         self.client_type = client_type
         self.session = None
-        BinanceAPI.instance_count += 1  # Increment instance count
-        self.instance_id = BinanceAPI.instance_count  # Assign an instance ID
-        logger.debug(f"Instance {self.instance_id} created. Number of BinanceAPI instances: {BinanceAPI.instance_count}")
+
+    @classmethod
+    async def get_instance(cls) -> 'BinanceAPI':
+        if cls._instance is None:
+            async with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
 
     async def _init_session(self):
         if self.session is None:
             self.session = await SharedSession.get_session()
 
-    def _generate_signature(self, query_string):
+    def _generate_signature(self, query_string, api_secret):
         return hmac.new(
-            self.api_secret.encode('utf-8'),
+            api_secret.encode('utf-8'),
             query_string.encode('utf-8'),
             hashlib.sha256
         ).hexdigest()
 
-    def _add_optional_headers(self, headers, x_gray_env, x_trace_id, x_user_id):
-        if x_gray_env:
-            headers['x-gray-env'] = x_gray_env
-        if x_trace_id:
-            headers['x-trace-id'] = x_trace_id
-        if x_user_id:
-            headers['x-user-id'] = x_user_id
-
-    def _prepare_headers(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
-        headers = {
+    def _prepare_headers(self, api_key):
+        return {
             'clientType': self.client_type,
-            'X-MBX-APIKEY': self.api_key
+            'X-MBX-APIKEY': api_key
         }
-        self._add_optional_headers(headers, x_gray_env, x_trace_id, x_user_id)
-        return headers
 
-    async def _make_request(self, method, endpoint, params=None, headers=None, body=None, retries=5, backoff_factor=2, timeout=30):
-        await self._init_session() 
-        if params is None:
-            params = {}
-
-        for attempt in range(retries):
-            try:
-                await self._apply_rate_limit(endpoint)
-
-                params['timestamp'] = await get_server_timestamp()
-                query_string = urlencode(params)
-                signature = self._generate_signature(query_string)
-                query_string += f"&signature={signature}"
-                url = f"{self.BASE_URL}{endpoint}?{query_string}"
-
-                async with self.session.request(method, url, headers=headers, json=body, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
-                    content_type = response.headers.get('Content-Type', '')
-                    try:
-                        resp_json = await response.json()
-                    except aiohttp.ContentTypeError:
-                        text_response = await response.text()
-                        try:
-                            resp_json = json.loads(text_response)
-                        except json.JSONDecodeError:
-                            logger.error(f"Instance {self.instance_id}: Unexpected content type: {content_type} for URL: {url}")
-                            return text_response
-
-                    if response.status == 200:
-                        return resp_json
-                    else:
-                        if await self._handle_error(resp_json):
-                            logger.error(f"Instance {self.instance_id}: Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
-                            continue
-                        return resp_json
-
-            except aiohttp.ClientConnectorError as e:
-                logger.error(f"Instance {self.instance_id}: Connection error (attempt {attempt + 1}/{retries}): {e}")
-                wait_time = backoff_factor ** attempt * 2 
-            except asyncio.TimeoutError:
-                logger.error(f"Instance {self.instance_id}: Request timed out (attempt {attempt + 1}/{retries})")
-                wait_time = backoff_factor ** attempt
-            except aiohttp.ClientOSError as e:
-                logger.error(f"Instance {self.instance_id}: OS error during request: {e}")
-                wait_time = backoff_factor ** attempt
-            except aiohttp.ClientError as e:
-                logger.error(f"Instance {self.instance_id}: Client error during request: {e}\n{format_exc()}")
-                wait_time = backoff_factor ** attempt
-            except Exception as e:
-                logger.error(f"Instance {self.instance_id}: Unexpected error during request: {e}\n{format_exc()}")
-                wait_time = backoff_factor ** attempt
-
-            logger.info(f"Instance {self.instance_id}: Retrying in {wait_time:.2f} seconds...")
-            await asyncio.sleep(wait_time)
-
-        logger.error(f"Instance {self.instance_id}: Exceeded max retries for URL: {url}")
-        return None
-    
     async def _apply_rate_limit(self, endpoint):
         async with BinanceAPI.request_lock:
             if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
@@ -130,6 +67,65 @@ class BinanceAPI:
                     await asyncio.sleep(wait_time)
 
                 BinanceAPI.last_request_time = time.time()
+
+    async def _make_request(self, method, endpoint, api_key, api_secret, params=None, headers=None, body=None, retries=5, backoff_factor=2, timeout=30):
+        await self._init_session()
+        if params is None:
+            params = {}
+
+        for attempt in range(retries):
+            try:
+                await self._apply_rate_limit(endpoint)
+
+                params['timestamp'] = await get_server_timestamp()
+                query_string = urlencode(params)
+                signature = self._generate_signature(query_string, api_secret)
+                query_string += f"&signature={signature}"
+                url = f"{self.BASE_URL}{endpoint}?{query_string}"
+
+                headers = self._prepare_headers(api_key)
+
+                async with self.session.request(method, url, headers=headers, json=body, timeout=aiohttp.ClientTimeout(total=timeout)) as response:
+                    content_type = response.headers.get('Content-Type', '')
+                    try:
+                        resp_json = await response.json()
+                    except aiohttp.ContentTypeError:
+                        text_response = await response.text()
+                        try:
+                            resp_json = json.loads(text_response)
+                        except json.JSONDecodeError:
+                            logger.error(f"Unexpected content type: {content_type} for URL: {url}")
+                            return text_response
+
+                    if response.status == 200:
+                        return resp_json
+                    else:
+                        if await self._handle_error(resp_json):
+                            logger.error(f"Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
+                            continue
+                        return resp_json
+
+            except aiohttp.ClientConnectorError as e:
+                logger.error(f"Connection error (attempt {attempt + 1}/{retries}): {e}")
+                wait_time = backoff_factor ** attempt * 2 
+            except asyncio.TimeoutError:
+                logger.error(f"Request timed out (attempt {attempt + 1}/{retries})")
+                wait_time = backoff_factor ** attempt
+            except aiohttp.ClientOSError as e:
+                logger.error(f"OS error during request: {e}")
+                wait_time = backoff_factor ** attempt
+            except aiohttp.ClientError as e:
+                logger.error(f"Client error during request: {e}\n{format_exc()}")
+                wait_time = backoff_factor ** attempt
+            except Exception as e:
+                logger.error(f"Unexpected error during request: {e}\n{format_exc()}")
+                wait_time = backoff_factor ** attempt
+
+            logger.info(f"Retrying in {wait_time:.2f} seconds...")
+            await asyncio.sleep(wait_time)
+
+        logger.error(f"Exceeded max retries for URL: {url}")
+        return None
 
     async def _handle_error(self, resp_json):
         error_code = resp_json.get('code')
@@ -151,43 +147,33 @@ class BinanceAPI:
 
         if cache_key in cache_dict:
             cached_result, timestamp = cache_dict[cache_key]
-            logger.debug(f"Instance {self.instance_id}: Cached timestamp {timestamp}, Current time {current_time}")
-
             if current_time - timestamp < timedelta(seconds=ttl):
-                logger.debug(f"Instance {self.instance_id}: Returning cached result for key {cache_key}")
                 return cached_result
-            else:
-                logger.debug(f"Instance {self.instance_id}: Cache expired for key {cache_key}, fetching new data")
-        else:
-            logger.debug(f"Instance {self.instance_id}: No cache found for key {cache_key}, fetching new data")
 
         response_data = await func(*args, **kwargs)
         cache_dict[cache_key] = (response_data, current_time)
         return response_data
 
-    async def ads_list(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
-        ads_cache_key = (self.instance_id, x_gray_env, x_trace_id, x_user_id)
+    async def ads_list(self, api_key, api_secret):
+        ads_cache_key = (api_key, "ads_list")
         endpoint = "/sapi/v1/c2c/ads/listWithPagination"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
         body = {
             "page": 1,
             "rows": 20
         }
-        return await self._handle_cache(BinanceAPI.ads_list_cache, ads_cache_key, self._make_request, 60, 'POST', endpoint, headers=headers, body=body)
+        return await self._handle_cache(BinanceAPI.ads_list_cache, ads_cache_key, self._make_request, 60, 'POST', endpoint, api_key=api_key, api_secret=api_secret, body=body)
 
-    async def get_ad_detail(self, ads_no, x_gray_env=None, x_trace_id=None, x_user_id=None):
-        get_ad_detail_cache_key = (ads_no)
+    async def get_ad_detail(self, api_key, api_secret, ads_no):
+        get_ad_detail_cache_key = (api_key, ads_no)
         endpoint = "/sapi/v1/c2c/ads/getDetailByNo"
         params = {
             'adsNo': ads_no
         }
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
-        return await self._handle_cache(BinanceAPI.get_ad_detail_cache, get_ad_detail_cache_key, self._make_request, 0.001, 'POST', endpoint, params, headers)
+        return await self._handle_cache(BinanceAPI.get_ad_detail_cache, get_ad_detail_cache_key, self._make_request, 0.001, 'POST', endpoint, api_key, api_secret, params)
 
-    async def fetch_ads_search(self, trade_type, asset, fiat, trans_amount, pay_types, page, x_gray_env=None, x_trace_id=None, x_user_id=None):
-        cache_key = (page, trade_type, asset, fiat, trans_amount, tuple(sorted(pay_types)) if pay_types else None)
+    async def fetch_ads_search(self, api_key, api_secret, trade_type, asset, fiat, trans_amount, pay_types, page):
+        cache_key = (api_key, page, trade_type, asset, fiat, trans_amount, tuple(sorted(pay_types)) if pay_types else None)
         endpoint = "/sapi/v1/c2c/ads/search"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
         body = {
             "asset": asset,
             "fiat": fiat,
@@ -199,24 +185,27 @@ class BinanceAPI:
         }
         if pay_types:
             body['payTypes'] = pay_types
-        return await self._handle_cache(BinanceAPI.cache, cache_key, self._make_request, 0.20, 'POST', endpoint, headers=headers, body=body)
-
+        return await self._handle_cache(BinanceAPI.cache, cache_key, self._make_request, 0.20, 'POST', endpoint, api_key, api_secret, body=body)
     
-    async def update_ad(self, advNo, priceFloatingRatio, x_gray_env=None, x_trace_id=None, x_user_id=None):
+    async def fetch_order_detail(self, api_key, api_secret, order_no):
+        endpoint = "/sapi/v1/c2c/orderMatch/getUserOrderDetail"
+        body = {
+            "adOrderNo": order_no
+        }
+        return await self._make_request('POST', endpoint, api_key, api_secret, body=body)
+
+    async def update_ad(self, api_key, api_secret, advNo, priceFloatingRatio):
         if advNo in ['12590489123493851136', '12590488417885061120']:
-            logger.debug(f"Instance {self.instance_id}: Ad: {advNo} is in the skip list")
             return
         endpoint = "/sapi/v1/c2c/ads/update"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
         body = {
             "advNo": advNo,
             "priceFloatingRatio": priceFloatingRatio
         }
-        return await self._make_request('POST', endpoint, headers=headers, body=body)
+        return await self._make_request('POST', endpoint, api_key, api_secret, body=body)
 
-    async def list_orders(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
+    async def list_orders(self,  api_key, api_secret):
         endpoint = "/sapi/v1/c2c/orderMatch/listOrders"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
         body = {
             "orderStatusList": [
                 1,
@@ -226,38 +215,27 @@ class BinanceAPI:
             "page": 1,
             "rows": 20
         }
-        return await self._make_request('POST', endpoint, headers=headers, body=body)
+        return await self._make_request('POST', endpoint, api_key, api_secret, body=body)
     
-    async def retrieve_chat_credential(self, x_gray_env=None, x_trace_id=None, x_user_id=None):
+    async def retrieve_chat_credential(self, api_key, api_secret):
         endpoint = "/sapi/v1/c2c/chat/retrieveChatCredential"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        return await self._make_request('GET', endpoint, api_key, api_secret)
 
-        return await self._make_request('GET', endpoint, headers=headers)
-
-
-    async def get_counterparty_order_statistics(self, order_number, x_gray_env=None, x_trace_id=None, x_user_id=None):
+    async def get_counterparty_order_statistics(self, api_key, api_secret, order_number):
         logger.debug(f"Instance {self.instance_id}: calling get_counterparty_order_statistics")
         endpoint = "/sapi/v1/c2c/orderMatch/queryCounterPartyOrderStatistic"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
         body = {
             "orderNumber": order_number
         }
-        return await self._make_request('POST', endpoint, headers=headers, body=body)
+        return await self._make_request('POST', endpoint, api_key, api_secret, body=body)
     
-    async def get_user_order_detail(self, ad_order_no_req, x_gray_env=None, x_trace_id=None, x_user_id=None):
+    async def get_user_order_detail(self, api_key, api_secret, ad_order_no_req):
         endpoint = "/sapi/v1/c2c/orderMatch/getUserOrderDetail"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
+        return await self._make_request('POST', endpoint, api_key, api_secret, body=ad_order_no_req)
 
-        return await self._make_request('POST', endpoint, headers=headers, body=ad_order_no_req)
-
-    async def check_if_can_release_coin(self, confirm_order_paid_req, x_gray_env=None, x_trace_id=None, x_user_id=None):
+    async def check_if_can_release_coin(self, api_key, api_secret, confirm_order_paid_req):
         endpoint = "/sapi/v1/c2c/orderMatch/checkIfCanReleaseCoin"
-        headers = self._prepare_headers(x_gray_env, x_trace_id, x_user_id)
-
-        return await self._make_request('POST', endpoint, headers=headers, body=confirm_order_paid_req)
-
+        return await self._make_request('POST', endpoint,  api_key, api_secret, body=confirm_order_paid_req)
 
     async def close_session(self):
         await SharedSession.close_session()
-        BinanceAPI.instance_count -= 1  # Decrement instance count
-        logger.info(f"Instance {self.instance_id}: BinanceAPI instance closed. Number of instances remaining: {BinanceAPI.instance_count}")
