@@ -58,7 +58,7 @@ class BinanceAPI:
     async def _apply_rate_limit(self, endpoint):
         async with BinanceAPI.request_lock:
             if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
-                BinanceAPI.rate_limit_delay = 0.6 if endpoint == '/sapi/v1/c2c/ads/update' else 0.1
+                BinanceAPI.rate_limit_delay = 0.3 if endpoint == '/sapi/v1/c2c/ads/update' else 0.1
 
                 current_time = time.time()
                 time_since_last_request = current_time - BinanceAPI.last_request_time
@@ -187,7 +187,7 @@ class BinanceAPI:
             body['payTypes'] = pay_types
         return await self._handle_cache(BinanceAPI.cache, cache_key, self._make_request, 0.20, 'POST', endpoint, api_key, api_secret, body=body)
     
-    async def fetch_order_detail(self, api_key, api_secret, order_no):
+    async def fetch_order_details(self, api_key, api_secret, order_no):
         endpoint = "/sapi/v1/c2c/orderMatch/getUserOrderDetail"
         body = {
             "adOrderNo": order_no
@@ -238,4 +238,5 @@ class BinanceAPI:
         return await self._make_request('POST', endpoint,  api_key, api_secret, body=confirm_order_paid_req)
 
     async def close_session(self):
-        await SharedSession.close_session()
+        if self.session:
+            await self.session.close()

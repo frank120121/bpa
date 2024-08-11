@@ -1,7 +1,7 @@
 #TESTbinance_getAdDetails.py
 import asyncio
 from credentials import credentials_dict
-from binance_singleton_api import SingletonBinanceAPI
+from binance_api import BinanceAPI
 from binance_share_data import SharedSession
 import logging
 import sys
@@ -17,11 +17,12 @@ async def main():
     api_key = credentials_dict[account]['KEY']
     api_secret = credentials_dict[account]['SECRET']
     try:
-        api_instance = await SingletonBinanceAPI.get_instance(account, api_key, api_secret)
-        response = await api_instance.ads_list()
+        binance_api = await BinanceAPI.get_instance()
+        ad = '12622083293687042048'
+        response = await binance_api.get_ad_detail(api_key, api_secret, ad)
         print(response)
     finally:
-        await SingletonBinanceAPI.close_all()
+        await binance_api.close_session()
         await SharedSession.close_session()
 
 if __name__ == "__main__":

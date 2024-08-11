@@ -90,7 +90,7 @@ async def main():
         binance_api = await BinanceAPI.get_instance()
         await populate_ads_with_details(binance_api)
     finally:
-        await BinanceAPI.close_session()
+        await binance_api.close_session()
         await SharedSession.close_session()
 
 if __name__ == "__main__":

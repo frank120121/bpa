@@ -25,7 +25,7 @@ BASE = 0.005
 
 balance_lock = asyncio.Lock()
 latest_usd_balance = 0
-BUY_PRICE_THRESHOLD = 1.0065  # Default threshold
+BUY_PRICE_THRESHOLD = 1.0065  
 
 def adjust_sell_price_threshold(usd_balance):
     max_threshold_balance = 30000
@@ -33,18 +33,12 @@ def adjust_sell_price_threshold(usd_balance):
     min_balance = 20000
     
     global SELL_PRICE_ADJUSTMENT
-    # Below 30000
     if usd_balance <= min_balance:
         SELL_PRICE_ADJUSTMENT = BASE - 0.01
-    # Between 30000 and 40000
     elif min_balance < usd_balance < neutral_balance:
-        # Linear interpolation between BASE - 0.01 and 0
         SELL_PRICE_ADJUSTMENT = (usd_balance - min_balance) / (neutral_balance - min_balance) * (0 - (BASE - 0.01)) + (BASE - 0.01)
-    # Between 40000 and 49500
     elif neutral_balance <= usd_balance <= max_threshold_balance:
-        # Linear interpolation between 0 and BASE + 0.0105
         SELL_PRICE_ADJUSTMENT = (usd_balance - neutral_balance) / (max_threshold_balance - neutral_balance) * ((BASE + 0.0075) - 0)
-    # Above 49500
     else:
         SELL_PRICE_ADJUSTMENT = BASE + 0.0105
     
@@ -95,7 +89,7 @@ async def retry_fetch_ads(binance_api, KEY, SECRET, ad, is_buy, page_start=1, pa
     advNo = ad.get('advNo')
     logger.debug(f"Retrying to fetch ads for ad number {advNo}..")
     for page in range(page_start, page_end):
-        ads_data = await binance_api.fetch_ads_search(KEY, SECRET,'BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], ad['payTypes'], page)
+        ads_data = await binance_api.fetch_ads_search(KEY, SECRET, 'BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], ad['payTypes'], page)
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
             logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {ad['payTypes']} on page {page}.")
             continue
@@ -105,35 +99,37 @@ async def retry_fetch_ads(binance_api, KEY, SECRET, ad, is_buy, page_start=1, pa
         if our_ad_data:
             logger.debug(f"Successfully fetched ads for ad number {advNo} on page {page}.")
             return current_ads_data
-    logger.error(f"Failed to fetch ads for ad number {advNo} after {page_end} pages.")
 
+    logger.error(f"Failed to fetch ads for ad number {advNo} after checking {page_end - page_start} pages.")
     return []
-async def is_ad_online( binance_api, KEY, SECRET, advNo):
+
+async def is_ad_online(binance_api, KEY, SECRET, advNo):
     try:
         response = await binance_api.get_ad_detail(KEY, SECRET, advNo)
-        if response['code'] == '000000' and 'data' in response:
-            ad_status = response['data']['advStatus']
+        if response and response.get('code') == '000000' and 'data' in response:
+            ad_status = response['data'].get('advStatus')
             return ad_status == 1  # Return True if ad is online
         else:
             logger.error(f"Failed to get ad details for advNo {advNo}: {response}")
+            logger.info(f"KEY: {KEY}, SECRET: {SECRET}")
             return False
     except Exception as e:
         logger.error(f"An error occurred while checking ad status for advNo {advNo}: {e}")
         return False
-    
-async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads, is_buy=True):
-    if ad:
-        advNo = ad.get('advNo')
-        target_spot = ad.get('target_spot')
-        asset_type = ad.get('asset_type')
-        current_priceFloatingRatio = float(ad['floating_ratio'])
-        surplusAmount = ad.get('surplused_amount')
-        fiat = ad.get('fiat')
-        transAmount = ad.get('transAmount')
-        minTransAmount = ad.get('minTransAmount')
-    else:
-        logger.error(f"Ad data is missing. Skipping...")
 
+async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads, is_buy=True):
+    if not ad:
+        logger.error("Ad data is missing. Skipping...")
+        return
+
+    advNo = ad.get('advNo')
+    target_spot = ad.get('target_spot')
+    asset_type = ad.get('asset_type')
+    current_priceFloatingRatio = float(ad['floating_ratio'])
+    surplusAmount = ad.get('surplused_amount')
+    fiat = ad.get('fiat')
+    transAmount = ad.get('transAmount')
+    minTransAmount = ad.get('minTransAmount')
 
     try:
         our_ad_data = next((item for item in ads_data if item['adv']['advNo'] == advNo), None)
@@ -142,26 +138,24 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
         else:
             if not await is_ad_online(binance_api, KEY, SECRET, advNo):
                 return
-            ads_data
             our_ad_detail = await binance_api.get_ad_detail(KEY, SECRET, advNo)
-            if our_ad_detail['code'] == '000000' and 'data' in our_ad_detail:
+            if our_ad_detail.get('code') == '000000' and 'data' in our_ad_detail:
                 our_ad_data = our_ad_detail['data']
                 if our_ad_data['advNo'] == advNo:
                     our_current_price = float(our_ad_data['price'])
                 else:
                     logger.error(f"No matching ad data found for ad number {advNo}.")
                     return
-        
-        base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
 
+        base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
 
         ask = reference_prices.get("lowest_ask")
         bid = reference_prices.get("highest_bid")
-        
+
         if ask is not None and bid is not None and asset_type == 'USDT':
             global BUY_PRICE_THRESHOLD
             global SELL_PRICE_THRESHOLD
-            
+
             previous_sell_price_threshold = SELL_PRICE_THRESHOLD
             previous_buy_price_threshold = BUY_PRICE_THRESHOLD
             min_diff = 0.0005
@@ -178,19 +172,17 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
                 if current_diff > min_diff:
                     SELL_PRICE_THRESHOLD = new_sell_price_threshold
 
-
         custom_price_threshold = round(determine_price_threshold(ad['payTypes'], is_buy), 4)
-
 
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
         if not filtered_ads:
-            ads_data = await retry_fetch_ads( binance_api, KEY, SECRET, ad, is_buy)
+            ads_data = await retry_fetch_ads(binance_api, KEY, SECRET, ad, is_buy)
             if not ads_data:
                 return
             filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
             if not filtered_ads:
                 return
-            
+
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
         competitor_ad = filtered_ads[adjusted_target_spot - 1]
         competitor_price = float(competitor_ad['adv']['price'])
@@ -208,10 +200,10 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
         new_ratio = max(MIN_RATIO, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
         new_diff = abs(new_ratio - current_priceFloatingRatio)
         if new_ratio == current_priceFloatingRatio and new_diff < 0.001:
-            logger.debug(f"Ratio unchanged")
+            logger.debug("Ratio unchanged")
             return
         else:
-            logger.debug(f"Updating with ad with new ratio: {new_ratio}. old ratio: {current_priceFloatingRatio}.")
+            logger.debug(f"Updating ad with new ratio: {new_ratio}. Old ratio: {current_priceFloatingRatio}.")
             await binance_api.update_ad(KEY, SECRET, advNo, new_ratio)
             await update_ad_in_database(
                 target_spot=target_spot,
@@ -239,17 +231,38 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
             )
 
     except Exception as e:
+        logger.error(f"An error occurred while analyzing and updating ad {advNo}: {e}")
         traceback.print_exc()
 
-async def process_ads(ads_group, binance_api, KEY, SECRET, all_ads, is_buy=True):
-    page = 1
+async def main_loop(binance_api, is_buy=True):
+    all_ads = await SharedData.fetch_all_ads('BUY' if is_buy else 'SELL')
+
+    grouped_ads = {}
+    for ad in all_ads:
+        group_key = ad['Group']
+        grouped_ads.setdefault(group_key, []).append(ad)
+
+    tasks = []
+    for group_key, ads_group in grouped_ads.items():
+        tasks.append(asyncio.create_task(process_ads(ads_group, binance_api, all_ads, is_buy)))
+    await asyncio.gather(*tasks)
+
+async def process_ads(ads_group, binance_api, all_ads, is_buy=True):
     if not ads_group:
         return
+    
     for ad in ads_group:
+        account = ad['account']
+        KEY = credentials_dict[account]['KEY']
+        SECRET = credentials_dict[account]['SECRET']
         payTypes_list = ad['payTypes'] if ad['payTypes'] is not None else []
-        
 
-        ads_data = await binance_api.fetch_ads_search(KEY, SECRET, 'BUY' if is_buy else 'SELL', ad['asset_type'], ad['fiat'], ad['transAmount'], payTypes_list, page)
+        ads_data = await binance_api.fetch_ads_search(
+            KEY, SECRET,
+            'BUY' if is_buy else 'SELL',
+            ad['asset_type'], ad['fiat'],
+            ad['transAmount'], payTypes_list, page=1
+        )
         
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
             logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}. API response: {ads_data}")
@@ -262,49 +275,30 @@ async def process_ads(ads_group, binance_api, KEY, SECRET, all_ads, is_buy=True)
             continue
         if not current_ads_data:
             logger.error(f'Current ads data is an empty list: {current_ads_data}. API response: {ads_data}')
-            logger.info(f"Parameters used: trade_type={'BUY' if is_buy else 'SELL'}, asset_type={ad['asset_type']}, fiat={ad['fiat']}, transAmount={ad['transAmount']}, payTypes_list={payTypes_list}, page={page}")
+            logger.info(f"Parameters used: trade_type={'BUY' if is_buy else 'SELL'}, asset_type={ad['asset_type']}, fiat={ad['fiat']}, transAmount={ad['transAmount']}, payTypes_list={payTypes_list}, page=1")
             continue
         
         await analyze_and_update_ads(ad, binance_api, KEY, SECRET, current_ads_data, all_ads, is_buy)
-
-
-
-async def main_loop(binance_api, KEY, SECRET, is_buy=True):
-    all_ads = await SharedData.fetch_all_ads('BUY' if is_buy else 'SELL')
-
-
-    grouped_ads = {}
-    for ad in all_ads:
-        group_key = ad['Group']
-        grouped_ads.setdefault(group_key, []).append(ad)
-
-    tasks = []
-    for group_key, ads_group in grouped_ads.items():
-        tasks.append(asyncio.create_task(process_ads(ads_group, binance_api, KEY, SECRET, all_ads, is_buy)))
-    await asyncio.gather(*tasks)
 
 async def start_update_ads(binance_api, is_buy=True):
     try:
         all_ads = await SharedData.fetch_all_ads()
         if not all_ads:
             return
-        accounts = set(ad['account'] for ad in all_ads)
-
-        for account in accounts:
-            KEY = credentials_dict[account]['KEY']
-            SECRET = credentials_dict[account]['SECRET']
 
         while True:
             async with balance_lock:
                 usd_balance = latest_usd_balance
                 logger.debug(f"Latest USD balance: {usd_balance}")
-            await main_loop(binance_api, KEY, SECRET, is_buy)
+
+            await main_loop(binance_api, is_buy)
+            await asyncio.sleep(5)  # Adjust the interval as needed
     finally:
         logger.debug(f"Finished updating ads for {'BUY' if is_buy else 'SELL'}.")
 
 async def update_ads_main(binance_api):
     fetch_balances_task = asyncio.create_task(fetch_and_calculate_total_balance())
-    await asyncio.sleep(5)  
+    await asyncio.sleep(5) 
     buy_task = asyncio.create_task(start_update_ads(binance_api, is_buy=True))
     sell_task = asyncio.create_task(start_update_ads(binance_api, is_buy=False))
     await asyncio.gather(fetch_balances_task, buy_task, sell_task)
