@@ -28,40 +28,41 @@ class BitsoOrderBook:
             self.log_order_book_periodically()
         )
         
-    async def check_server_health(self):
-        async with aiohttp.ClientSession() as session:
-            try:
-                async with session.get(self.rest_url, timeout=5) as response:
-                    if response.status == 200:
-                        return True
-                    else:
-                        logger.warning(f"Server health check failed. Status: {response.status}")
-                        return False
-            except aiohttp.ClientError as e:
-                logger.error(f"Error during server health check: {str(e)}")
-                return False
-
     async def connect_websocket(self):
-        if await self.check_server_health():
-            max_retries = 5
-            retry_delay = 1
-            for attempt in range(max_retries):
-                try:
-                    self.websocket = await asyncio.wait_for(
-                        websockets.connect(self.websocket_url),
-                        timeout=10  # 10 seconds timeout
-                    )
-                    await self.subscribe_to_diff_orders()
-                    return  # Successfully connected
-                except (TimeoutError, websockets.exceptions.WebSocketException) as e:
-                    if attempt == max_retries - 1:
-                        logger.error(f"Failed to connect after {max_retries} attempts: {str(e)}")
-                        raise
-                    logger.warning(f"Connection attempt {attempt + 1} failed. Retrying in {retry_delay} seconds...")
-                    await asyncio.sleep(retry_delay)
-                    retry_delay *= 2
-        else:
-            raise Exception("Server is not healthy. Aborting WebSocket connection.")
+        retry_delays = [
+            (1, 900),  
+            (5, 900),  
+            (10, 900),
+            (20, 900), 
+        ]
+        delay_index = 0
+
+        while True:
+            try:
+                if delay_index >= len(retry_delays):
+                    delay, duration = 900, float('inf')
+                else:
+                    delay, duration = retry_delays[delay_index]
+                    delay_index += 1
+
+                start_time = asyncio.get_event_loop().time()
+
+                while asyncio.get_event_loop().time() - start_time < duration:
+                    try:
+                        self.websocket = await asyncio.wait_for(
+                            websockets.connect(self.websocket_url),
+                            timeout=30  # Increase timeout to 30 seconds
+                        )
+                        await self.subscribe_to_diff_orders()
+                        logger.info("WebSocket connection established")
+                        return  # Successfully connected
+                    except (TimeoutError, websockets.exceptions.WebSocketException) as e:
+                        logger.warning(f"WebSocket connection attempt failed. Retrying in {delay} seconds...")
+                        await asyncio.sleep(delay)
+
+            except Exception as e:
+                logger.error(f"Unhandled exception in connection logic: {str(e)}")
+                await asyncio.sleep(delay)
 
     async def subscribe_to_diff_orders(self):
         subscribe_message = {
@@ -71,7 +72,6 @@ class BitsoOrderBook:
         }
         await self.websocket.send(json.dumps(subscribe_message))
         response = await self.websocket.recv()
-        logger.debug(f"Subscription response: {response}")
 
     async def get_initial_order_book(self):
         try:
@@ -105,7 +105,6 @@ class BitsoOrderBook:
 
             if status == 'cancelled' or float(amount) == 0:
                 self.order_book[side].pop(price, None)
-                logger.debug(f"Removed order: {side} {price}")
             else:
                 self.order_book[side][price] = {
                     'book': self.book,
@@ -123,10 +122,8 @@ class BitsoOrderBook:
             try:
                 message = await self.websocket.recv()
                 data = json.loads(message)
-                logger.debug(f"Received message: {data}")
                 
                 if data['type'] == 'ka':
-                    logger.debug("Received keep-alive message")
                     continue
                 
                 if data['type'] == 'diff-orders':
@@ -136,10 +133,7 @@ class BitsoOrderBook:
                         for update in data['payload']:
                             await self.apply_order_update(update)  # Await the coroutine
                         self.sequence = sequence
-                        logger.debug(f"Processed message. New sequence: {self.sequence}")
-                    else:
-                        logger.debug(f"Skipping message with old sequence {sequence}")
-                
+
             except websockets.exceptions.ConnectionClosed:
                 logger.warning("WebSocket connection closed. Reconnecting...")
                 await self.connect_websocket()
@@ -155,11 +149,8 @@ class BitsoOrderBook:
             self.log_order_book()
 
     def log_order_book(self):
-        logger.debug("Current Order Book:")
-        logger.debug("Bids:")
         for price, order in sorted(self.order_book['bids'].items(), reverse=True)[:5]:
             logger.debug(f"  Price: {price}, Amount: {order.get('amount', 'N/A')}")
-        logger.debug("Asks:")
         for price, order in sorted(self.order_book['asks'].items())[:5]:
             logger.debug(f"  Price: {price}, Amount: {order.get('amount', 'N/A')}")
 

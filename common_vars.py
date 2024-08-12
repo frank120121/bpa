@@ -398,3 +398,5 @@ prohibited_countries = [
 prohibited_countries_v2 = [
     "AF", "BY", "BI", "TD", "CD", "KP", "CU", "ER", "IQ", "IR", "LY", "MM", "CF", "SS", "RU", "SY", "SO", "SD", "YE", "VE", "UA"
 ]
+
+ACCEPTED_COUNTRIES_FOR_OXXO = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE', 'BE', 'EC', 'RU', 'TH', 'IN', 'UA', 'DE', 'JP', 'US', 'RU', 'FR']

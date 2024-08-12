@@ -218,7 +218,6 @@ async def process_ads(ads_group, binance_api, all_ads, is_buy=True):
         )
         
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
-            logger.error(f"Failed to fetch ads data for asset_type {ad['asset_type']}, fiat {ad['fiat']}, transAmount {ad['transAmount']}, and payTypes {payTypes_list}. API response: {ads_data}")
             continue
         
         current_ads_data = ads_data['data']
@@ -227,8 +226,6 @@ async def process_ads(ads_group, binance_api, all_ads, is_buy=True):
             logger.error(f'Current ads data is not a list: {current_ads_data}. API response: {ads_data}')
             continue
         if not current_ads_data:
-            logger.error(f'Current ads data is an empty list: {current_ads_data}. API response: {ads_data}')
-            logger.info(f"Parameters used: trade_type={'BUY' if is_buy else 'SELL'}, asset_type={ad['asset_type']}, fiat={ad['fiat']}, transAmount={ad['transAmount']}, payTypes_list={payTypes_list}, page=1")
             continue
         
         await analyze_and_update_ads(ad, binance_api, KEY, SECRET, current_ads_data, all_ads, is_buy)

@@ -86,7 +86,6 @@ class BinanceAPI:
                         return resp_json
                     else:
                         if await self._handle_error(resp_json):
-                            logger.error(f"Status: {response.status} Response: {resp_json} Body: {body} Params: {params} Headers: {headers} Endpoint: {endpoint}")
                             continue
                         return resp_json
 
@@ -125,6 +124,7 @@ class BinanceAPI:
         elif error_code == 83015:
             return True
         else:
+            logger.error(f"Error response: {resp_json}")
             return False
 
     async def _handle_cache(self, cache_dict, cache_key, func, ttl, *args, **kwargs):

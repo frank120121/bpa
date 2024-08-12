@@ -8,7 +8,7 @@ class BinancePriceListener:
         self.symbol = symbol.upper()
         self.last_price = None
         self.ws_url = f"wss://stream.binance.com:9443/ws/{self.symbol.lower()}@aggTrade"
-        self.reconnect_interval = 5  # Retry connection after 5 seconds if it fails
+        self.reconnect_interval = 5 
 
     async def start(self):
         await self.run_forever()

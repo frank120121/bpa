@@ -17,8 +17,8 @@ async def get_menu_for_order(fiat_unit, order_status):
     return get_menu_by_language(language, order_status)
 
 # Async function to get default reply
-async def get_default_reply(order_details):
-    language = determine_language(order_details)
+async def get_default_reply(fiat_unit):
+    language = determine_language(fiat_unit)
     return (
         "Si tiene alguna duda o necesita ayuda, solo escriba 'ayuda' en el chat y le presentaré un menú de opciones."
         if language == 'es' else

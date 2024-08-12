@@ -15,7 +15,7 @@ from binance_orders import binance_buy_order
 from binance_anti_fraud import handle_anti_fraud
 from binance_blacklist import add_to_blacklist, is_blacklisted
 from verify_client_ip import fetch_ip
-from common_vars import prohibited_countries, status_map
+from common_vars import prohibited_countries, status_map, ACCEPTED_COUNTRIES_FOR_OXXO
 from TEST_binance_cep import extract_clave_de_rastreo, validate_transfer
 from lang_utils import get_response_for_menu_choice, is_valid_choice, get_invalid_choice_reply, determine_language, get_menu_for_order
 from binance_db_set import set_menu_presented
@@ -126,7 +126,7 @@ class MerchantAccount:
             await self._handle_order_status_1(connection_manager, account, conn, order_data)
         else:
             await self._generic_reply(connection_manager, account, order_data, order_status)
-            response = await get_default_reply(order_data)
+            response = await get_default_reply(order_data.fiat_unit)
             await connection_manager.send_text_message(account, response, order_data.order_no)
 
     async def handle_text_message(self, connection_manager, account, content, order_data: OrderData, conn):
@@ -140,7 +140,7 @@ class MerchantAccount:
             anti_fraud_stage = 0
 
         if kyc_status == 0 or anti_fraud_stage < 5:
-            await handle_anti_fraud(order_data.buyer_name, order_data.seller_name, conn, anti_fraud_stage, "", order_data.order_no, connection_manager, account, self.payment_manager)
+            await handle_anti_fraud(order_data.buyer_name, order_data.seller_name, conn, anti_fraud_stage, content, order_data.order_no, connection_manager, account, self.payment_manager)
         else:
             if not await is_menu_presented(conn, order_data.order_no) and content in ['ayuda', 'help']:
                 await self.present_menu_based_on_status(connection_manager, account, order_data, conn)
@@ -226,8 +226,7 @@ class MerchantAccount:
                 await connection_manager.send_text_message(account, invalid_country, order_data.order_no)
                 await add_to_blacklist(conn, order_data.buyer_name, order_data.order_no, country)
                 return True
-        accepted_countries_for_oxxo = ['MX', 'CO', 'VE', 'AR', 'ES', 'CL', 'CA', 'HK', 'PE', 'BE', 'EC', 'RU', 'TH', 'IN', 'UA', 'DE', 'JP', 'US', 'RU', 'FR']
-        if oxxo_used and country in accepted_countries_for_oxxo and order_data.total_price < 5000:
+        if oxxo_used and country in ACCEPTED_COUNTRIES_FOR_OXXO and order_data.total_price < 5000:
             return False 
         if country and country != "MX":
             await connection_manager.send_text_message(account, invalid_country, order_data.order_no)

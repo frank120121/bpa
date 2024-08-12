@@ -53,8 +53,7 @@ async def initialize_database(conn):
             await conn.execute(
                 'INSERT INTO mxn_bank_accounts (account_bank_name, account_beneficiary, account_number, account_daily_limit, account_monthly_limit, account_balance) VALUES (?, ?, ?, ?, ?, ?)',
                 (account['bank_name'], account['beneficiary'], account['account_number'], account['account_daily_limit'], account['account_monthly_limit'], 0))
-        else:
-            logger.debug(f"Account number {account['account_number']} already exists. Skipping insertion.")
+
     await conn.commit()
     for card in OXXO_DEBIT_CARDS:
         cursor = await conn.execute("SELECT 1 FROM oxxo_debit_cards WHERE card_number = ?", (card['card_no'],))
@@ -62,8 +61,6 @@ async def initialize_database(conn):
             await conn.execute(
                 'INSERT INTO oxxo_debit_cards (account_bank_name, account_beneficiary, card_number, account_daily_limit, account_monthly_limit) VALUES (?, ?, ?, ?, ?)',
                 (card['bank_name'], card['beneficiary'], card['card_no'], card['daily_limit'], card['monthly_limit']))
-        else:
-            logger.debug(f"Card number {card['card_no']} already exists. Skipping insertion.")
 
     await conn.commit()
 
@@ -73,7 +70,6 @@ async def add_bank_account(conn, bank_name, beneficiary, account_number, account
             'INSERT INTO mxn_bank_accounts (account_bank_name, account_beneficiary, account_number, account_daily_limit, account_monthly_limit, account_balance) VALUES (?, ?, ?, ?, ?, ?)',
             (bank_name, beneficiary, account_number, account_daily_limit, account_monthly_limit, account_balance))
         await conn.commit()
-        logger.debug(f"Added new bank account: {account_number}")
     except Exception as e:
         logger.error(f"Error adding bank account: {e}")
         raise
@@ -82,37 +78,29 @@ async def remove_bank_account(conn, account_number):
     try:
         await conn.execute('DELETE FROM mxn_bank_accounts WHERE account_number = ?', (account_number,))
         await conn.commit()
-        logger.debug(f"Removed bank account: {account_number}")
     except Exception as e:
         logger.error(f"Error removing bank account: {e}")
         raise
 
-# Create an async function that updates the account balance
 async def update_account_balance(conn, account_number, amount):
     try:
         await conn.execute('UPDATE mxn_bank_accounts SET account_balance = ? WHERE account_number = ?', (amount, account_number))
         await conn.commit()
-        logger.debug(f"Updated account balance for account: {account_number}")
     except Exception as e:
         logger.error(f"Error updating account balance: {e}")
         raise
 
 async def update_last_used_timestamp(conn, account_number):
     try:
-        # Format the current timestamp for SQLite DATETIME
         current_timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-        # Execute the SQL command to update the last used timestamp
         await conn.execute(
             'UPDATE mxn_bank_accounts SET last_used_timestamp = ? WHERE account_number = ?',
             (current_timestamp, account_number)
         )
 
-        # Commit the changes to the database
         await conn.commit()
 
-        # Log the successful update
-        logger.debug(f"Updated last_used_timestamp for account: {account_number} to {current_timestamp}")
     except Exception as e:
         # Log the error and re-raise it to maintain the behavior of update_account_balance
         logger.error(f"Error updating last_used_timestamp for account: {account_number}: {e}")
@@ -125,18 +113,12 @@ async def log_deposit(conn, deposit_from, bank_account_number, amount_deposited)
                        (timestamp, bank_account_number, amount_deposited, deposit_from, year, month))
     await conn.execute('UPDATE mxn_bank_accounts SET account_balance = account_balance + ? WHERE account_number = ?', (amount_deposited, bank_account_number))
     await conn.commit()
-    logger.debug(f"Logged deposit of {amount_deposited} from {deposit_from} to account {bank_account_number}")
 
 
 async def sum_recent_deposits(conn, account_number):
-    # Get the current date and time in the local timezone
     current_time = datetime.datetime.now()
-    current_date = current_time.date()
-    
-    # Calculate the start of the day in the local timezone
+    current_date = current_time.date()  
     start_of_day = datetime.datetime.combine(current_date, datetime.time.min)
-
-    logger.debug(f"Calculating total deposits for account {account_number} on {current_date}... Start of day: {start_of_day}")
     
     try:
         query = '''
@@ -146,8 +128,6 @@ async def sum_recent_deposits(conn, account_number):
         async with conn.execute(query, (account_number, start_of_day,)) as cursor:
             sum_deposits = await cursor.fetchone()
             sum_deposits = sum_deposits[0] if sum_deposits[0] is not None else 0
-        
-        logger.debug(f"Total deposits for account {account_number} on {current_date}: MXN {sum_deposits}")
         return sum_deposits
         
     except Exception as e:
@@ -158,33 +138,24 @@ async def clear_accounts(conn):
     try:
         await conn.execute('DELETE FROM mxn_bank_accounts')
         await conn.commit()
-        logger.debug(f"Removed all bank accounts")
     except Exception as e:
         logger.error(f"Error removing bank accounts: {e}")
         raise
 
 async def count_transactions(DB_FILE):
-    # SQL to count transactions based on amount_deposited
     sql = """
     SELECT
         SUM(CASE WHEN amount_deposited < 2500 THEN 1 ELSE 0 END) AS under_5000,
         SUM(CASE WHEN amount_deposited > 2500 THEN 1 ELSE 0 END) AS over_5000
     FROM mxn_deposits
     """
-
-    # Connect to your SQLite database
     async with aiosqlite.connect(DB_FILE) as db:
         cursor = await db.execute(sql)
         result = await cursor.fetchone()
 
-    # Extracting the counts
     under_5000, over_5000 = result if result else (0, 0)
 
-    print(f"Transactions under 5000.00: {under_5000}")
-    print(f"Transactions over 5000.00: {over_5000}")
-
 async def sum_deposits_by_day_and_week(db_path, year, month):
-    # SQL to sum amount_deposited for each day and each week of a specified month and year
     sql = """
     SELECT
         strftime('%d', timestamp) AS day,
@@ -198,42 +169,22 @@ async def sum_deposits_by_day_and_week(db_path, year, month):
     ORDER BY week, day
     """
 
-    # Connect to your SQLite database
     async with aiosqlite.connect(db_path) as db:
         cursor = await db.execute(sql, (str(year), str(month).zfill(2)))
         results = await cursor.fetchall()
 
-    # Initializing variables to track the current week and its total deposits
     current_week = 0
     weekly_total = 0
     for day, week, total_deposited in results:
         if week != current_week:
-            # When we move to a new week, print the total for the previous week and reset the total
             if current_week > 0:
                 print(f"Week {current_week}: {weekly_total:.2f}")
-            weekly_total = 0  # Resetting weekly total for the new week
+            weekly_total = 0  
             current_week = week
-        weekly_total += total_deposited  # Accumulating weekly total
-        print(f"  Day {day}: {total_deposited:.2f}")  # Print daily total within the week
-    
-    # Don't forget to print the total for the last week
-    if current_week > 0:
-        print(f"Week {current_week}: {weekly_total:.2f}")
+        weekly_total += total_deposited 
 
 async def get_monthly_deposit_sum(conn, account_number: str, year: int, month: int) -> float:
-    """
-    Fetches the total sum of deposits for a given account number, year, and month.
-    
-    Args:
-        conn: The database connection object.
-        account_number (str): The account number to query.
-        year (int): The year for the deposits.
-        month (int): The month for the deposits.
-    
-    Returns:
-        float: The total sum of deposits.
-    """
-    # Ensure month and year are integers and within valid ranges
+
     if not 1 <= month <= 12:
         logger.error("Invalid month: %s. Month must be between 1 and 12.", month)
         return 0.0
@@ -242,7 +193,7 @@ async def get_monthly_deposit_sum(conn, account_number: str, year: int, month: i
         return 0.0
     
     try:
-        await conn.execute('PRAGMA foreign_keys = ON')  # Ensure foreign key constraints are enforced
+        await conn.execute('PRAGMA foreign_keys = ON')  
         async with conn.execute(
             'SELECT SUM(amount_deposited) FROM mxn_deposits WHERE account_number = ? AND year = ? AND month = ?',
             (account_number, year, month,)
