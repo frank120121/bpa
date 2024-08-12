@@ -15,7 +15,7 @@ def normalize_string(input_str):
     normalized_str = unicodedata.normalize('NFD', input_str)
     return ''.join([c for c in normalized_str if unicodedata.category(c) != 'Mn'])
 
-async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, response, order_no, connection_manager, account, payment_manager, binance_api):
+async def handle_anti_fraud(buyer_name, seller_name, conn, anti_fraud_stage, response, order_no, connection_manager, account, payment_manager):
     questions = [
         f"¿Esta usted comprando porque le han ofrecido empleo, inversión con altos retornos o promesas de ganancias a cambio de que usted les envie estas criptomonedas? (1/3)",
         "¿Siente presión o urgencia inusual por parte de alguien para completar este pago de inmediato? (2/3)",

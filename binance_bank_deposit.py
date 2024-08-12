@@ -47,7 +47,6 @@ class PaymentManager:
                 return await self._get_account_details(conn, assigned_account_number, buyer_name, order_no)
 
             buyer_bank = await get_buyer_bank(conn, buyer_name)
-            logger.info(f"Buyer bank: {buyer_bank}")
             if buyer_bank.lower() not in SUPPORTED_BANKS:
                 buyer_bank = NVIO_BANK
 
@@ -67,7 +66,6 @@ class PaymentManager:
         return result[0] if result else None
 
     async def _assign_account(self, conn, buyer_bank: str, order_no: str, buyer_name: str) -> Optional[Dict[str, Any]]:
-        logger.info(f"Buyer bank: {buyer_bank}")
         amount_to_deposit = await get_order_amount(conn, order_no)
         accounts_copy = sorted(self.bank_accounts[buyer_bank], key=lambda x: x['balance'])
         
@@ -149,7 +147,6 @@ class PaymentManager:
         if not buyer_bank:
             logger.info("Buyer bank not provided. Attempting to retrieve from database.")
             buyer_bank = await get_buyer_bank(conn, buyer_name)
-        logger.info(f"Buyer bank: {buyer_bank}")
         try:
             query = '''
                 SELECT account_bank_name, account_beneficiary, account_number

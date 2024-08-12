@@ -7,14 +7,14 @@ setup_logging(log_filename='Binance_c2c_logger.log')
 logger = logging.getLogger(__name__)
 
 # Language determination function
-def determine_language(order_details):
+def determine_language(fiat_unit):
     lang_mappings = {'MXN': 'es', 'USD': 'en'}
-    return lang_mappings.get(order_details.get('fiat_unit', 'en'))
+    return lang_mappings.get(fiat_unit, 'en')
 
 # Async function to get menu for an order
-async def get_menu_for_order(order_details):
-    language = determine_language(order_details)
-    return get_menu_by_language(language, order_details.get('order_status'))
+async def get_menu_for_order(fiat_unit, order_status):
+    language = determine_language(fiat_unit)
+    return get_menu_by_language(language, order_status)
 
 # Async function to get default reply
 async def get_default_reply(order_details):
@@ -43,8 +43,8 @@ async def is_valid_choice(language, status, choice):
     return choice in range(1, len(valid_choices) + 1)
 
 # Async function to get reply for invalid choice
-async def get_invalid_choice_reply(order_details):
-    language = determine_language(order_details)
+async def get_invalid_choice_reply(fiat_unit):
+    language = determine_language(fiat_unit)
     return "Opción no válida." if language == 'es' else "Invalid choice."
 
 # Global variables for status messages, menus, and menu responses
