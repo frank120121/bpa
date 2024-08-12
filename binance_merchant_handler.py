@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from binance_db import insert_or_update_order
 from binance_db_set import update_order_status, update_total_spent, update_buyer_bank
 from lang_utils import get_message_by_language, determine_language, get_default_reply, payment_warning, invalid_country, verified_customer_greeting, transaction_denied
-from binance_db_get import get_account_number, is_menu_presented, get_kyc_status, get_anti_fraud_stage, get_buyer_bank, get_order_details, has_specific_bank_identifiers, get_order_details, get_account_number
+from binance_db_get import get_account_number, is_menu_presented, get_kyc_status, get_anti_fraud_stage, get_buyer_bank, get_order_details, has_specific_bank_identifiers, get_account_number
 from binance_bank_deposit_db import log_deposit
 from binance_messages import send_messages
 from binance_orders import binance_buy_order
@@ -85,8 +85,8 @@ class MerchantAccount:
             return
         
         await update_order_status(conn, order_data.order_no, order_status)
-        updated_order_data = await get_order_details(conn, order_data.order_no)
-        await self.handle_system_notifications(connection_manager, account, updated_order_data, conn, order_status)
+        order_data.order_status = order_status
+        await self.handle_system_notifications(connection_manager, account, order_data, conn, order_status)
 
     async def _handle_other_types(self, connection_manager, account, msg_json, conn, order_data: OrderData):
         if msg_json.get('status') == 'read':    
