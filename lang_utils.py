@@ -1,3 +1,5 @@
+# bpa/binance_db_get.py
+from typing import Callable, Dict, Union
 from common_vars import ProhibitedPaymentTypes
 import logging
 from logging_config import setup_logging
@@ -254,3 +256,43 @@ async def verified_customer_greeting(buyer_name):
         f"¡Hola {buyer_name}!\n\n"
         f"Es un placer atenderte. Estoy en linea y al pendiente. En un momento te envio los detalles del pago."
     )
+
+MessageTemplate = Callable[[str], str]
+MessagesDict = Dict[str, Union[str, MessageTemplate]]
+
+ANTI_FRAUD_MESSAGES: MessagesDict = {
+    "employment_check": (
+        "¿Esta usted comprando porque le han ofrecido empleo, inversión con altos retornos "
+        "o promesas de ganancias a cambio de que usted les envie estas criptomonedas? (1/3)"
+    ),
+    "pressure_check": (
+        "¿Siente presión o urgencia inusual por parte de alguien para completar este pago de inmediato? (2/3)"
+    ),
+    "refund_agreement": lambda order_no: (
+        f"¿Está usted de acuerdo que una vez completada la orden({order_no}) exitosamente, "
+        "no hay posibilidad de reembolso o devolucion por parte del vendedor? (3/3)"
+    ),
+    "bank_request": (
+        "Muchas gracias por completar las preguntas, ahora para brindarle un servicio más eficiente, "
+        "¿podría indicarnos el nombre del banco que utilizará para realizar el pago?"
+    ),
+    "account_ownership": lambda buyer_name: (
+        f"Perfecto si aceptamos su banco. Por ultimo, la cuenta bancaria que utilizará "
+        f"para realizar el pago, ¿está a su nombre? ({buyer_name})"
+    ),
+    "oxxo_cash_payment": "Para el método de pago OXXO, ¿está realizando el pago en efectivo?",
+    "bank_verification_failed": lambda banks_list: (
+        f"No pudimos verificar el banco proporcionado. Por favor, asegúrese de elegir "
+        f"uno de los siguientes bancos aceptados: {banks_list}"
+    )
+}
+
+BankMessageTemplate = Callable[[str], str]
+MessageTemplate = Dict[str, Union[str, BankMessageTemplate]]
+
+CUSTOMER_VERIFICATION_MESSAGES = {
+    "bank_confirmation": lambda buyer_bank: f"Solo para confirmar, estara usted enviado el pago desde {buyer_bank}? (si/no)",
+    "bank_request": "No hay problema. ¿Podría indicarnos el nombre del banco que utilizará para realizar el pago?",
+    "account_ownership": lambda buyer_name: f"Perfecto si aceptamos su banco. Por ultimo, la cuenta bancaria que utilizará para realizar el pago, ¿está a su nombre? ({buyer_name})",
+    "bank_verification_failed": lambda accepted_banks_list: f"No pudimos verificar el banco proporcionado. Por favor, asegúrese de elegir uno de los siguientes bancos aceptados: {accepted_banks_list}"
+}

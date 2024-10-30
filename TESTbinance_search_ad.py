@@ -25,7 +25,7 @@ if __name__ == "__main__":
         async def main():
             binance_api = await BinanceAPI.get_instance()
             search_params = [
-                {'asset_type': 'USDT', 'fiat': 'MXN', 'transAmount': '2000', 'payTypes': ['OXXO'], 'page': 1},
+                {'asset_type': 'USDT', 'fiat': 'USD', 'transAmount': '100', 'payTypes': ['SkrillMoneybookers'], 'page': 1},
             ]
 
             tasks = [binance_api.fetch_ads_search(KEY, SECRET, 'BUY', param['asset_type'], param['fiat'], param['transAmount'], param['payTypes'], param['page']) for param in search_params]

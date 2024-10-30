@@ -1,3 +1,4 @@
+#bpa/binance_bank_deposit.py
 import asyncio
 import datetime
 import logging
@@ -5,8 +6,8 @@ from typing import Dict, Optional, Any
 
 from binance_db_get import get_buyer_bank, get_order_amount
 from binance_db_set import update_order_details
-from binance_bank_deposit_db import update_last_used_timestamp, sum_recent_deposits
-
+from binance_bank_deposit_db import update_last_used_timestamp, sum_recent_deposits, sum_monthly_deposits
+from common_utils_db import create_connection, DB_FILE, execute_and_commit
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -47,7 +48,11 @@ class PaymentManager:
                 return await self._get_account_details(conn, assigned_account_number, buyer_name, order_no)
 
             buyer_bank = await get_buyer_bank(conn, buyer_name)
-            if buyer_bank.lower() not in SUPPORTED_BANKS:
+            logger.info(f"Retrieved buyer_bank: {buyer_bank}")  # Add logging
+            
+            # Default to NVIO_BANK if buyer_bank is None or not supported
+            if buyer_bank is None or buyer_bank.lower() not in SUPPORTED_BANKS:
+                logger.info(f"Using default bank (NVIO) for buyer {buyer_name}")
                 buyer_bank = NVIO_BANK
 
             account_details = await self._assign_account(conn, buyer_bank, order_no, buyer_name)
@@ -59,7 +64,6 @@ class PaymentManager:
 
             logger.warning("No suitable account found or all accounts exceed the limit.")
             return None
-
     async def _get_assigned_account(self, conn, order_no: str) -> Optional[str]:
         cursor = await conn.execute('SELECT account_number FROM orders WHERE order_no = ?', (order_no,))
         result = await cursor.fetchone()
@@ -72,9 +76,12 @@ class PaymentManager:
         for account in accounts_copy:
             if await self._check_deposit_limit(conn, account['account_number'], order_no, buyer_name):
                 assigned_account_number = account['account_number']
-                await update_order_details(conn, order_no, assigned_account_number)
+                seller_bank = account['bank_name']
+                
+                # Single update call for both fields
+                await update_order_details(conn, order_no, assigned_account_number, seller_bank)
+                
                 await update_last_used_timestamp(conn, assigned_account_number)
-
                 self._update_account_balance(buyer_bank, assigned_account_number, amount_to_deposit)
 
                 return await self._get_account_details(conn, assigned_account_number, buyer_name, order_no, buyer_bank)
@@ -106,6 +113,8 @@ class PaymentManager:
             total_deposited_this_month = (await cursor.fetchone())[0]
             total_after_deposit = total_deposited_this_month + amount_to_deposit
             
+            logger.info(f"Total deposited this month for account {account_number}: {total_deposited_this_month:.2f}")
+            
             if total_after_deposit <= MONTHLY_LIMIT:
                 return True
             else:
@@ -129,7 +138,9 @@ class PaymentManager:
             account_details = []
             for acc in accounts:
                 daily_balance = await sum_recent_deposits(conn, acc[0])
-                if daily_balance <= acc[3]:  
+                monthly_balance = await sum_monthly_deposits(conn, acc[0])
+                logger.info(f"Monthly balance for account {acc[0]}: {monthly_balance:.2f}")
+                if daily_balance <= acc[3] and monthly_balance <= acc[4]:  
                     account_details.append({
                         'account_number': acc[0],
                         'bank_name': acc[1],
@@ -156,6 +167,10 @@ class PaymentManager:
             cursor = await conn.execute(query, (account_number,))
             account_details = await cursor.fetchone()
             if account_details:
+                # Update the seller_bank if it's not set
+                sql = "UPDATE orders SET seller_bank = ? WHERE order_no = ? AND (seller_bank IS NULL OR seller_bank = '')"
+                await execute_and_commit(conn, sql, (account_details[0], order_no))
+                
                 return self._format_account_details(account_details, buyer_bank, order_no)
             else:
                 logger.warning(f"No details found for account {account_number}")
@@ -165,6 +180,8 @@ class PaymentManager:
             raise
 
     def _format_account_details(self, account_details: tuple, buyer_bank: str, order_no: str) -> str:
+        buyer_bank = buyer_bank or NVIO_BANK
+
         if buyer_bank.lower() in [OXXO_BANK]:
             return (
                 f"Muestra el numero de tarjeta de debito junto con el efectivo que vas a depositar:\n\n"
@@ -189,7 +206,43 @@ class PaymentManager:
         self.bank_accounts[NVIO_BANK] = await self._populate_bank_account_cache(conn, NVIO_BANK)
         if self.bank_accounts[NVIO_BANK]:
             assigned_account_number = self.bank_accounts[NVIO_BANK][0]['account_number']
-            await update_order_details(conn, order_no, assigned_account_number)
+            # Single update call for both fields
+            await update_order_details(conn, order_no, assigned_account_number, NVIO_BANK)
             await update_last_used_timestamp(conn, assigned_account_number)
             return await self._get_account_details(conn, assigned_account_number, buyer_name, order_no, NVIO_BANK)
         return None
+    
+async def main():
+    conn = await create_connection(DB_FILE)
+    payment_manager = await PaymentManager.get_instance()
+    await payment_manager.initialize_bank_account_cache(conn)
+    
+    for bank in payment_manager.bank_accounts.keys():
+        logger.info(f"Accounts for bank {bank}: {payment_manager.bank_accounts[bank]}")
+    
+    order_no = '22663322577624915969'
+    buyer_name = 'OSUNA ROBLES GABRIEL HIRAM'
+    
+    # Log current order details before update
+    async with conn.cursor() as cursor:
+        await cursor.execute("SELECT account_number, seller_bank FROM orders WHERE order_no = ?", (order_no,))
+        current_details = await cursor.fetchone()
+        logger.info(f"Current order details - Account: {current_details[0] if current_details else 'None'}, Seller Bank: {current_details[1] if current_details else 'None'}")
+    
+    payment_details = await payment_manager.get_payment_details(conn, order_no, buyer_name)
+    
+    # Log order details after update
+    async with conn.cursor() as cursor:
+        await cursor.execute("SELECT account_number, seller_bank FROM orders WHERE order_no = ?", (order_no,))
+        updated_details = await cursor.fetchone()
+        logger.info(f"Updated order details - Account: {updated_details[0] if updated_details else 'None'}, Seller Bank: {updated_details[1] if updated_details else 'None'}")
+    
+    if payment_details:
+        logger.info(payment_details)
+    else:
+        logger.warning("No suitable account found.")
+    
+    await conn.close()
+
+if __name__ == "__main__":
+    asyncio.run(main())

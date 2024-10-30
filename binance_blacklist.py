@@ -80,6 +80,7 @@ async def main():
 
     # await remove_from_blacklist_accepted_countries(conn, accepted_countries_for_oxxo)
     # await remove_from_blacklist_no_country(conn)
+    await remove_from_blacklist(conn, 'LOPEZ GUERRERO FRANCISCO JAVIER')
     await print_table_contents(conn, 'P2PBlacklist')
     
 

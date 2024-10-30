@@ -1,3 +1,4 @@
+#bpa/binance_api.py
 import json
 import aiohttp
 import asyncio
@@ -62,6 +63,7 @@ class BinanceAPI:
 
         for attempt in range(retries):
             try:
+                await self._apply_rate_limit(endpoint)
                 params['timestamp'] = await get_server_timestamp()
                 query_string = urlencode(params)
                 signature = self._generate_signature(query_string, api_secret)
@@ -85,7 +87,7 @@ class BinanceAPI:
                     if response.status == 200:
                         return resp_json
                     else:
-                        if await self._handle_error(resp_json):
+                        if await self._handle_error(resp_json, endpoint, method, body, params):
                             continue
                         return resp_json
 
@@ -110,9 +112,35 @@ class BinanceAPI:
 
         logger.error(f"Exceeded max retries for URL: {url}")
         return None
+    
+    async def _apply_rate_limit(self, endpoint):
+        async with BinanceAPI.request_lock:
+            if endpoint in ['/sapi/v1/c2c/ads/update', '/sapi/v1/c2c/ads/search']:
+                BinanceAPI.rate_limit_delay = 0.6 if endpoint == '/sapi/v1/c2c/ads/update' else 0.1
 
-    async def _handle_error(self, resp_json):
+                current_time = time.time()
+                time_since_last_request = current_time - BinanceAPI.last_request_time
+                if time_since_last_request < BinanceAPI.rate_limit_delay:
+                    wait_time = BinanceAPI.rate_limit_delay - time_since_last_request
+                    await asyncio.sleep(wait_time)
+
+                BinanceAPI.last_request_time = time.time()
+
+    async def _handle_error(self, resp_json, endpoint, method=None, body=None, params=None):
         error_code = resp_json.get('code')
+        error_msg = resp_json.get('msg', 'No error message provided')
+        
+        # Log detailed information only when we get an error
+        logger.error(f"Binance API Error:")
+        logger.error(f"  Endpoint: {endpoint}")
+        logger.error(f"  Method: {method}")
+        logger.error(f"  Error Code: {error_code}")
+        logger.error(f"  Error Message: {error_msg}")
+        if body:
+            logger.error(f"  Request Body: {json.dumps(body, indent=2)}")
+        if params:
+            logger.error(f"  Request Params: {json.dumps(params, indent=2)}")
+        
         if error_code == -1021:
             await get_server_timestamp(resync=True)
             return True
@@ -123,9 +151,11 @@ class BinanceAPI:
             return True
         elif error_code == 83015:
             return True
-        else:
-            logger.error(f"Error response: {resp_json}")
-            return False
+        elif error_code == -9000:
+            logger.error("  System Error (-9000) detected - adding 5s delay before retry")
+            await asyncio.sleep(5)
+            return True
+        return False
 
     async def _handle_cache(self, cache_dict, cache_key, func, ttl, *args, **kwargs):
         current_time = datetime.now()
@@ -170,7 +200,7 @@ class BinanceAPI:
         }
         if pay_types:
             body['payTypes'] = pay_types
-        return await self._handle_cache(BinanceAPI.cache, cache_key, self._make_request, 0.10, 'POST', endpoint, api_key, api_secret, body=body)
+        return await self._handle_cache(BinanceAPI.cache, cache_key, self._make_request, 0.01, 'POST', endpoint, api_key, api_secret, body=body)
     
     async def fetch_order_details(self, api_key, api_secret, order_no):
         endpoint = "/sapi/v1/c2c/orderMatch/getUserOrderDetail"
@@ -221,6 +251,19 @@ class BinanceAPI:
     async def check_if_can_release_coin(self, api_key, api_secret, confirm_order_paid_req):
         endpoint = "/sapi/v1/c2c/orderMatch/checkIfCanReleaseCoin"
         return await self._make_request('POST', endpoint,  api_key, api_secret, body=confirm_order_paid_req)
+    
+    async def get_reference_price(self, api_key, api_secret):
+        endpoint = "/sapi/v1/c2c/ads/getReferencePrice"
+        body =  { 
+            "assets": [ 
+                "USDT",
+                "USDC" 
+            ], 
+            "fiatCurrency": "MXN",
+            "payType": "string", 
+            "tradeType": "BUY" 
+        }
+        return await self._make_request('POST', endpoint, api_key, api_secret, body=body)
 
     async def close_session(self):
         if self.session:

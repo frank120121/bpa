@@ -1,3 +1,4 @@
+#bpa/binance_db_set.py
 import aiosqlite
 from typing import Any, Dict, Union
 import logging
@@ -66,6 +67,12 @@ async def update_anti_fraud_stage(conn, buyer_name, new_stage):
     except Exception as e:
         logger.error(f"Error updating anti-fraud stage for user {buyer_name}: {e}")
 
+async def update_returning_customer_stage(conn, buyer_name, new_stage):
+    try:
+        await update_table_column(conn, "users", "returning_customer_stage", new_stage, "name", buyer_name)
+    except Exception as e:
+        logger.error(f"Error updating returning customer stage for user {buyer_name}: {e}")
+
 async def set_menu_presented(conn, order_no, value):
     try:
         await update_table_column(conn, "orders", "menu_presented", value, "order_no", order_no)
@@ -78,9 +85,11 @@ async def update_order_status(conn, order_no, order_status):
     except Exception as e:
         logger.error(f"Error updating order status for order_no {order_no}: {e}")
 
-async def update_order_details(conn, order_no, account_number):
+async def update_order_details(conn, order_no, account_number, seller_bank):
     try:
-        await update_table_column(conn, "orders", "account_number", account_number, "order_no", order_no)
+        sql = "UPDATE orders SET account_number = ?, seller_bank = ? WHERE order_no = ?"
+        params = (account_number, seller_bank, order_no)
+        await execute_and_commit(conn, sql, params)
     except Exception as e:
         logger.error(f"Error updating order details for order_no {order_no}: {e}")
 
@@ -114,7 +123,9 @@ ALLOWED_TABLES: Dict[str, Dict[str, Union[type, tuple]]] = {
         "payment_screenshoot": bool,
         "payment_image_url": str,
         "paid": bool,
-        "clave_de_rastreo": str
+        "clave_de_rastreo": str,
+        "seller_bank": str,
+        "order_date": str
     },
     "users": {
         "name": str,
@@ -123,7 +134,8 @@ ALLOWED_TABLES: Dict[str, Dict[str, Union[type, tuple]]] = {
         "anti_fraud_stage": int,
         "rfc": str,
         "codigo_postal": str,
-        "user_bank": str
+        "user_bank": str,
+        "returning_customer_stage": int
     },
     "merchants": {
         "sellerName": str,

@@ -1,3 +1,5 @@
+#bpa/TEST_binance_cep.py
+
 import sys
 import asyncio
 import aiohttp
@@ -83,6 +85,7 @@ async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, mont
         fecha = datetime.strptime(fecha, '%Y-%m-%d').date()
     
     try:
+        # Validate the transfer
         tr = await asyncio.to_thread(Transferencia.validar,
             fecha=fecha,
             clave_rastreo=clave_rastreo,
@@ -91,17 +94,18 @@ async def validate_transfer(fecha, clave_rastreo, emisor, receptor, cuenta, mont
             cuenta=cuenta,
             monto=monto,
         )
+        
         if tr is not None:
-            pdf = await asyncio.to_thread(tr.descargar)
-            
-            file_path = rf"C:\Users\p7016\Downloads\{clave_rastreo}.pdf"
-            
-            async with aiofiles.open(file_path, 'wb') as f:
-                await f.write(pdf)
+            # Log successful validation without downloading the PDF
+            logger.info(f"Transfer validated successfully for clave: {clave_rastreo}")
             return True
         else:
+            # Log failure if transfer could not be validated
+            logger.info(f"Transfer validation failed for clave: {clave_rastreo}")
             return False
     except Exception as e:
+        # Log the exception for better traceability
+        logger.error(f"Error during transfer validation for clave {clave_rastreo}: {e}")
         return False
 
 async def retrieve_binance_messages(api_key, secret_key, order_no):
@@ -131,7 +135,7 @@ if __name__ == "__main__":
         try:
             from credentials import credentials_dict
         except ModuleNotFoundError:
-            logger.debug("Failed to import credentials. Please check the path and ensure credentials.py is in the specified directory.")
+            logger.info("Failed to import credentials. Please check the path and ensure credentials.py is in the specified directory.")
             sys.exit(1)
 
         api_key = credentials_dict['account_1']['KEY']
@@ -180,7 +184,7 @@ if __name__ == "__main__":
                     session = await SharedSession.get_session()
                     clave_de_rastreo = await extract_clave_de_rastreo(image_url, details['bank'])
                     if clave_de_rastreo:
-                        logger.debug(f"Extracted Clave de Rastreo: {clave_de_rastreo}")
+                        logger.info(f"Extracted Clave de Rastreo: {clave_de_rastreo}")
 
                         validation_successful = await validate_transfer(
                             fecha=details['fecha'],
@@ -191,15 +195,15 @@ if __name__ == "__main__":
                             monto=details['monto']
                         )
                         if validation_successful:
-                            logger.debug("Transfer validation and PDF download successful.")
+                            logger.info("Transfer validated successfully.")
                         else:
-                            logger.debug("Transfer validation failed.")
+                            logger.info("Transfer validation failed.")
                     else:
-                        logger.debug("No Clave de Rastreo found.")
+                        logger.info("No Clave de Rastreo found.")
                 else:
-                    logger.debug("No image message found.")
+                    logger.info("No image message found.")
             else:
-                logger.debug(f"Error: {data['msg']}")
+                logger.info(f"Error: {data['msg']}")
 
         await SharedSession.close_session()
 

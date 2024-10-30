@@ -133,6 +133,24 @@ async def sum_recent_deposits(conn, account_number):
     except Exception as e:
         logger.error(f"Error calculating sum of recent deposits: {e}")
         return 0
+    
+async def sum_monthly_deposits(conn, account_number):
+    current_time = datetime.datetime.now()
+    start_of_month = current_time.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    try:
+        query = '''
+            SELECT SUM(amount_deposited) FROM mxn_deposits
+            WHERE account_number = ? AND timestamp >= ?
+        '''
+        async with conn.execute(query, (account_number, start_of_month,)) as cursor:
+            sum_deposits = await cursor.fetchone()
+            sum_deposits = sum_deposits[0] if sum_deposits[0] is not None else 0
+        return sum_deposits
+        
+    except Exception as e:
+        logger.error(f"Error calculating sum of monthly deposits: {e}")
+        return 0
 
 async def clear_accounts(conn):
     try:
@@ -210,8 +228,8 @@ async def main():
     conn = await create_connection(DB_FILE)
     if conn is not None:
         # Initialize the database (create tables and insert initial data)
-        # await clear_accounts(conn)
-        # await initialize_database(conn)
+        await clear_accounts(conn)
+        await initialize_database(conn)
         # # Print table contents for verification
         await print_table_contents(conn, 'mxn_bank_accounts')
         # await print_table_contents(conn, 'oxxo_debit_cards')

@@ -5,7 +5,8 @@ import time
 import aiohttp
 import asyncio
 import logging
-
+from PIL import Image
+from io import BytesIO
 from binance_endpoints import TIME_ENDPOINT_V1, TIME_ENDPOINT_V3
 
 logger = logging.getLogger(__name__)
@@ -89,3 +90,44 @@ async def get_server_timestamp(resync=False):
     current_timestamp = int(time.time() * 1000) + ServerTimestampCache.offset + ServerTimestampCache.buffer_ms
     logger.debug(f"Returning server timestamp: {current_timestamp} (Local time: {int(time.time() * 1000)}, Offset: {ServerTimestampCache.offset}, Buffer: {ServerTimestampCache.buffer_ms} ms)")
     return current_timestamp
+
+async def download_image(url, retries=3, initial_delay=1):
+    delay = initial_delay
+    for attempt in range(retries):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    response.raise_for_status()
+                    img_data = await response.read()
+                    return Image.open(BytesIO(img_data))
+        except aiohttp.ClientResponseError as e:
+            logger.error(f"Attempt {attempt + 1} - Failed to download image: {e}")
+            if e.status == 403:
+                logger.error("Access denied. Check permissions or credentials.")
+                break
+            if attempt < retries - 1:
+                await asyncio.sleep(delay)
+                delay *= 2
+    logger.error(f"Failed to download image after {retries} attempts: {url}")
+    return None
+
+async def retrieve_binance_messages(api_key, secret_key, order_no):
+    timestamp = await get_server_timestamp()
+    params = {
+        'page': 1,
+        'rows': 20,
+        'orderNo': order_no,
+        'timestamp': timestamp
+    }
+    query_string = '&'.join([f"{key}={value}" for key, value in params.items()])
+    signature = hmac.new(secret_key.encode('utf-8'), query_string.encode('utf-8'), hashlib.sha256).hexdigest()
+    params['signature'] = signature
+
+    headers = {
+        'X-MBX-APIKEY': api_key,
+        'clientType': 'your_client_type',
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.get('https://api.binance.com/sapi/v1/c2c/chat/retrieveChatMessagesWithPagination', headers=headers, params=params) as response:
+            response.raise_for_status()
+            return await response.json()

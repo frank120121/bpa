@@ -1,21 +1,48 @@
 #binance_db.py
 import asyncio
 import logging
-
+import pytz
+import aiosqlite
+from datetime import datetime, timezone
 
 from common_vars import DB_FILE
 from common_utils_db import create_connection, execute_and_commit, print_table_contents, print_table_schema, add_column_if_not_exists, remove_from_table
 from binance_share_data import SharedData
 
-
 logger = logging.getLogger(__name__)
+
+def convert_utc_to_local(utc_dt):
+    """Convert UTC datetime to local time zone."""
+    local_tz = pytz.timezone("America/Mexico_City")  # Replace with your local timezone
+    return utc_dt.replace(tzinfo=timezone.utc).astimezone(local_tz)
+
+async def update_existing_order_dates():
+    async with aiosqlite.connect(DB_FILE) as conn:
+        async with conn.cursor() as cursor:
+            await cursor.execute("SELECT id, order_date FROM orders")
+            rows = await cursor.fetchall()
+
+            for row in rows:
+                order_id, utc_order_date = row
+                # Parse the existing order_date to a datetime object if it's a string
+                if isinstance(utc_order_date, str):
+                    utc_order_date = datetime.strptime(utc_order_date, '%Y-%m-%d %H:%M:%S')
+                
+                # Convert to local time
+                local_order_date = convert_utc_to_local(utc_order_date)
+
+                # Update the order_date column to the new local time
+                await cursor.execute(
+                    "UPDATE orders SET order_date = ? WHERE id = ?",
+                    (local_order_date.strftime('%Y-%m-%d %H:%M:%S'), order_id)
+                )
+            await conn.commit()
 
 async def order_exists(conn, order_no):
     async with conn.cursor() as cursor:
         await cursor.execute("SELECT id FROM orders WHERE order_no = ?", (order_no,))
         row = await cursor.fetchone()
         return bool(row)
-
 
 async def find_or_insert_buyer(conn, buyer_name):
     async with conn.cursor() as cursor:
@@ -65,6 +92,7 @@ async def insert_or_update_order(conn, order_details):
             price_floating_ratio = 0.0
 
         logger.debug(f"Extracted values: seller_name={seller_name}, buyer_name={buyer_name}, order_no={order_no}, trade_type={trade_type}, order_status={order_status}, total_price={total_price}, fiat_unit={fiat_unit}, asset={asset}, amount={amount}, currency_rate={currency_rate}, advNo={advNo}, price_floating_ratio={price_floating_ratio}")
+        
         # Check if order exists and update or insert accordingly
         if await order_exists(conn, order_no):
             logger.debug("Updating existing order...")
@@ -80,8 +108,11 @@ async def insert_or_update_order(conn, order_details):
             logger.debug(f'Price Floating Ratio: {price_floating_ratio}')
             await find_or_insert_buyer(conn, buyer_name)
             sql = """
-                INSERT INTO orders (order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount, currency_rate, advNo, priceFloatingRatio)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO orders (
+                    order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount, currency_rate, advNo, priceFloatingRatio, order_date
+                ) VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now', 'localtime')
+                )
             """
             params = (order_no, buyer_name, seller_name, trade_type, order_status, total_price, fiat_unit, asset, amount, currency_rate, advNo, price_floating_ratio)
             await execute_and_commit(conn, sql, params)
@@ -105,9 +136,11 @@ async def insert_or_update_order(conn, order_details):
 async def remove(conn, order_no):
     await conn.execute("DELETE FROM orders WHERE order_no = ?", (order_no,))
     await conn.commit()
+
 async def remove_user(conn, name):
     await conn.execute("DELETE FROM users WHERE name = ?", (name,))
     await conn.commit()
+
 async def get_orders_by_total_price(conn, total_price):
     try:
         async with conn.cursor() as cursor:
@@ -148,6 +181,7 @@ async def main():
                             rfc TEXT NULL,  -- RFC can be NULL
                             codigo_postal TEXT NULL,  -- Codigo Postal can be NULL
                             user_bank TEXT NULL,  -- Name of the user's bank
+                            returning_customer_stage INTEGER DEFAULT 0
                             );"""
 
     sql_create_transactions_table = """CREATE TABLE IF NOT EXISTS transactions (
@@ -158,9 +192,10 @@ async def main():
                                     order_date TIMESTAMP,
                                     merchant_id INTEGER REFERENCES merchants(id) 
                                     );"""
+    
     sql_create_orders_table = """CREATE TABLE IF NOT EXISTS orders (
-                            id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            order_no TEXT NOT NULL UNIQUE,
+                            id INTEGER PRIMARY KEY,
+                            order_no TEXT,
                             buyer_name TEXT,
                             seller_name TEXT,
                             trade_type TEXT,
@@ -169,18 +204,23 @@ async def main():
                             fiat_unit TEXT,
                             asset TEXT,
                             amount REAL,
-                            account_number TEXT,
                             menu_presented BOOLEAN DEFAULT FALSE,
+                            ignore_count INTEGER DEFAULT 0,
                             order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                            buyer_bank TEXT, 
+                            account_number TEXT,
+                            buyer_bank TEXT,
                             seller_bank_account TEXT,
-                            merchant_id INTEGER REFERENCES merchants(id),
+                            merchant_id INTEGER,
                             currency_rate REAL,
                             priceFloatingRatio REAL DEFAULT 0.0,
-                            advNo TEXT NULL,
+                            advNo TEXT,
                             payment_screenshoot BOOLEAN DEFAULT FALSE,
-                            payment_image_url TEXT NULL 
+                            payment_image_url TEXT,
+                            paid BOOLEAN DEFAULT FALSE,
+                            clave_de_rastreo TEXT,
+                            seller_bank TEXT
                             );"""
+    
     sql_create_order_bank_identifiers_table = """CREATE TABLE IF NOT EXISTS order_bank_identifiers (
                             id INTEGER PRIMARY KEY AUTOINCREMENT,
                             order_no TEXT NOT NULL,
@@ -197,25 +237,10 @@ async def main():
 
     conn = await create_connection(DB_FILE)
     if conn is not None:
-
-        #log orders with a given order status
-        # order_status = 8
-        # orders = await log_orders_by_status(conn, order_status)
-        # for order in orders:
-        #     print(order)
-        # total_price = 10921.00  # Example total price to search for
-        # orders = await get_orders_by_total_price(conn, total_price)
-        # for order in orders:
-        #     print(order)
-        
-        # await remove(conn, '22652510077736411136')
-        await print_table_contents(conn, 'users')
-        await print_table_schema(conn, 'users')
+        await print_table_schema(conn, 'orders')
         await conn.close()
     else:
         logger.error("Error! Cannot create the database connection.")
     
-    
-            
 if __name__ == '__main__':
     asyncio.run(main())

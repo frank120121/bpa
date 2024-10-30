@@ -1,5 +1,7 @@
+# bpa/binance_db_get.py
+from datetime import datetime
 import aiosqlite
-from common_vars import DB_FILE
+from common_vars import DB_FILE, BBVA_BANKS
 from common_utils_db import create_connection
 import logging
 logger = logging.getLogger(__name__)
@@ -59,6 +61,13 @@ async def get_kyc_status(conn, name):
 async def get_anti_fraud_stage(conn, name):
     async with conn.cursor() as cursor:
         await cursor.execute("SELECT anti_fraud_stage FROM users WHERE name=?", (name,))
+        result = await cursor.fetchone()
+        if result:
+            return result[0]
+        return None
+async def get_returning_customer_stage(conn, name):
+    async with conn.cursor() as cursor:
+        await cursor.execute("SELECT returning_customer_stage FROM users WHERE name=?", (name,))
         result = await cursor.fetchone()
         if result:
             return result[0]
@@ -145,6 +154,87 @@ async def has_specific_bank_identifiers(conn, order_no, identifiers):
     except Exception as e:
         logger.error(f"Error checking bank identifiers for order {order_no}: {e}")
         return False  # Consider how to handle exceptions; returning False is cautious
+    
+async def get_test_orders_from_db():
+    """
+    Fetch orders from database without depending on screenshot flags
+    """
+    try:
+        async with aiosqlite.connect(DB_FILE) as conn:
+            async with conn.cursor() as cursor:
+                bbva_variations = ', '.join(f"'{bank}'" for bank in BBVA_BANKS)
+                
+                query = f"""
+                SELECT 
+                    o.order_no,
+                    o.order_date,
+                    o.total_price,
+                    o.account_number,
+                    o.payment_image_url,
+                    o.clave_de_rastreo,
+                    u.user_bank
+                FROM orders o
+                JOIN users u ON o.buyer_name = u.name
+                WHERE o.seller_name = 'GUERRERO LOPEZ MARTHA'
+                AND LOWER(u.user_bank) IN ({bbva_variations})
+                AND o.order_status = 4
+                AND o.order_date <= '2024-10-25'
+                ORDER BY o.order_date DESC
+                LIMIT 10  -- Start with 10 most recent orders
+                """
+                
+                await cursor.execute(query)
+                rows = await cursor.fetchall()
+                
+                order_details = {}
+                skipped_count = 0
+                existing_clave_count = 0
+                for row in rows:
+                    order_no, order_date, amount, account_number, payment_image_url, existing_clave, user_bank = row
+                    
+                    # Skip if we already have a clave
+                    if existing_clave:
+                        existing_clave_count += 1
+                        continue
+                        
+                    # Convert order_date string to datetime object
+                    if isinstance(order_date, str):
+                        date_obj = datetime.strptime(order_date, '%Y-%m-%d %H:%M:%S')
+                    else:
+                        date_obj = order_date
+                    
+                    order_details[order_no] = {
+                        'fecha': date_obj.date(),
+                        'emisor': '40012',  # BBVA MEXICO
+                        'receptor': '90710',  # NVIO
+                        'cuenta': account_number,
+                        'monto': float(amount),
+                        'bank': 'BBVA',
+                        'payment_image_url': payment_image_url,
+                        'existing_clave': existing_clave,
+                        'user_bank': user_bank
+                    }
+                
+                logger.info(f"Database Query Summary:")
+                logger.info(f"  Total rows found: {len(rows)}")
+                logger.info(f"  Orders with existing claves (skipped): {existing_clave_count}")
+                logger.info(f"  Orders to process: {len(order_details)}")
+                
+                if order_details:
+                    logger.info("\nOrders to be processed:")
+                    for order_no, details in order_details.items():
+                        logger.info(
+                            f"Order: {order_no}\n"
+                            f"  Date: {details['fecha']}\n"
+                            f"  Amount: {details['monto']}\n"
+                            f"  Account: {details['cuenta']}\n"
+                            f"  User Bank: {details['user_bank']}"
+                        )
+                return order_details
+                
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+        return {}
 
 async def main():
     conn = await create_connection(DB_FILE)

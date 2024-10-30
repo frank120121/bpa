@@ -104,7 +104,7 @@ async def outlook_fetch_ip(last_four):
                     "Authorization": f"Bearer {access_token}",
                     "Content-Type": "application/json"
                 }
-                response = await session.get("https://graph.microsoft.com/v1.0/me/messages?$top=2", headers=headers)
+                response = await session.get("https://graph.microsoft.com/v1.0/me/messages?$top=20", headers=headers)
                 emails_data = await response.json()
                 emails = emails_data.get('value', [])
                 for email in emails:

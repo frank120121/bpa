@@ -15,14 +15,14 @@ logger = logging.getLogger(__name__)
 # Constants
 SELL_PRICE_THRESHOLD = 0.9945
 SELL_PRICE_ADJUSTMENT = 0
-BUY_PRICE_THRESHOLD = 1.0128  
-PRICE_THRESHOLD_2 = 1.0148
+BUY_PRICE_THRESHOLD = 1.0065  
+PRICE_THRESHOLD_2 = 1.0243
 MIN_RATIO = 90.00
 MAX_RATIO = 110.00
 RATIO_ADJUSTMENT = 0.05
 DIFF_THRESHOLD = 0.15
 BASE = 0.005
-OXXO_PRICE_THRESHOLD = 1.0248
+BASE_PRICE = None
 
 def filter_ads(ads_data, base_price, own_ads, trans_amount_threshold, price_threshold, minTransAmount, is_buy=True):
     own_adv_nos = [ad['advNo'] for ad in own_ads]
@@ -36,8 +36,6 @@ def determine_price_threshold(payTypes, is_buy=True):
     special_payTypes = ['OXXO', 'BANK', 'ZELLE', 'SkrillMoneybookers']
     if payTypes is not None and any(payType in payTypes for payType in special_payTypes):
         return PRICE_THRESHOLD_2 if is_buy else SELL_PRICE_THRESHOLD
-    elif payTypes == 'OXXO':
-        return OXXO_PRICE_THRESHOLD if is_buy else SELL_PRICE_THRESHOLD
     else:
         return BUY_PRICE_THRESHOLD if is_buy else SELL_PRICE_THRESHOLD
 
@@ -50,16 +48,6 @@ def check_if_ads_avail(ads_list, adjusted_target_spot):
         return adjusted_target_spot
     else:
         return adjusted_target_spot
-    
-def adjust_ratio(new_ratio_unbounded, is_buy):
-    if is_buy:
-        THRESHOLD = round((BUY_PRICE_THRESHOLD * 100), 2)
-        new_ratio = max(THRESHOLD, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
-    else:
-        THRESHOLD = round((SELL_PRICE_THRESHOLD * 100), 2)
-        new_ratio = max(MIN_RATIO, min(THRESHOLD, round(new_ratio_unbounded, 2)))
-    
-    return new_ratio
     
 async def retry_fetch_ads(binance_api, KEY, SECRET, ad, is_buy, page_start=1, page_end=10):
     advNo = ad.get('advNo')
@@ -103,7 +91,8 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
     fiat = ad.get('fiat')
     transAmount = ad.get('transAmount')
     minTransAmount = ad.get('minTransAmount')
-        
+
+
     try:
         our_ad_data = next((item for item in ads_data if item['adv']['advNo'] == advNo), None)
         if our_ad_data:
@@ -121,50 +110,22 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
                     return
 
         base_price = compute_base_price(our_current_price, current_priceFloatingRatio)
-
-        
-        ask = reference_prices.get("lowest_ask")
-        bid = reference_prices.get("highest_bid")
-
-        if ask is not None and bid is not None and asset_type == 'USDT'and fiat != 'USD':
-            global BUY_PRICE_THRESHOLD
-            global SELL_PRICE_THRESHOLD
-
-            previous_sell_price_threshold = SELL_PRICE_THRESHOLD
-            previous_buy_price_threshold = BUY_PRICE_THRESHOLD
-            min_diff = 0.0005
-            if base_price < bid:
-                new_sell_price_threshold = 0.9935
-            else:
-                new_sell_price_threshold = round(((bid * 0.9935) / base_price), 4)
-            if base_price > ask:
-                new_buy_price_threshold = 1.0110
-            else:
-                price_diff = round((ask / base_price), 4)
-                if price_diff > 1.010:
-                    new_buy_price_threshold = price_diff
-                else:
-                    new_buy_price_threshold = round((base_price * 1.0110), 4)
-            current_diff = 0
-
-            if is_buy:
-                current_diff = abs(new_buy_price_threshold - previous_buy_price_threshold)
-                if current_diff > min_diff:
-                    BUY_PRICE_THRESHOLD = new_buy_price_threshold
-            else:
-                current_diff = abs(new_sell_price_threshold - previous_sell_price_threshold)
-                if current_diff > min_diff:
-                    SELL_PRICE_THRESHOLD = new_sell_price_threshold
+        if asset_type == 'USDT':
+            global BASE_PRICE  
+            BASE_PRICE = base_price
 
         custom_price_threshold = round(determine_price_threshold(ad['payTypes'], is_buy), 4)
-        
+
+
         filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
         if not filtered_ads:
             ads_data = await retry_fetch_ads(binance_api, KEY, SECRET, ad, is_buy)
             if not ads_data:
+                logger.error(f"Retry_fetch ads failed.")
                 return
             filtered_ads = filter_ads(ads_data, base_price, all_ads, transAmount, custom_price_threshold, minTransAmount, is_buy)
             if not filtered_ads:
+                logger.error(f"Filtered ads is empty after retry_fetch_ads.") 
                 return
 
         adjusted_target_spot = check_if_ads_avail(filtered_ads, target_spot)
@@ -172,9 +133,7 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
         competitor_price = float(competitor_ad['adv']['price'])
         competitor_ratio = round(((competitor_price / base_price) * 100), 2)
 
-        if is_buy and asset_type == 'BTC':
-            logger.debug(f"Competitor price: {competitor_price}, Our ratio: {current_priceFloatingRatio}, Our Price: {our_current_price}")
-        
+
         if (our_current_price >= competitor_price and is_buy) or (our_current_price <= competitor_price and not is_buy):
             new_ratio_unbounded = competitor_ratio - RATIO_ADJUSTMENT if is_buy else competitor_ratio + RATIO_ADJUSTMENT
         else:
@@ -183,8 +142,7 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
                 new_ratio_unbounded = competitor_ratio - RATIO_ADJUSTMENT if is_buy else competitor_ratio + RATIO_ADJUSTMENT
             else:
                 return
-        
-        new_ratio = adjust_ratio(new_ratio_unbounded, is_buy)
+        new_ratio = max(MIN_RATIO, min(MAX_RATIO, round(new_ratio_unbounded, 2)))
         new_diff = abs(new_ratio - current_priceFloatingRatio)
         if new_ratio == current_priceFloatingRatio and new_diff < 0.001:
             return
@@ -224,6 +182,7 @@ async def analyze_and_update_ads(ad, binance_api, KEY, SECRET, ads_data, all_ads
 
 async def main_loop(binance_api, is_buy=True, batch_updates=None, shared_data_updates=None):
     all_ads = await SharedData.fetch_all_ads('BUY' if is_buy else 'SELL')
+    
     grouped_ads = {}
     tasks = []
     for ad in all_ads:
@@ -232,7 +191,7 @@ async def main_loop(binance_api, is_buy=True, batch_updates=None, shared_data_up
         
     for group_key, ads_group in grouped_ads.items():
         tasks.append(process_ads(ads_group, binance_api, all_ads, is_buy, batch_updates, shared_data_updates))
-    
+
     if tasks:
         await asyncio.gather(*tasks)
 
@@ -240,35 +199,29 @@ async def process_ads(ads_group, binance_api, all_ads, is_buy=True, batch_update
     if not ads_group:
         logger.error("No ads to process.")
         return
-    
+
     tasks = []
     for ad in ads_group:
         account = ad['account']
         KEY = credentials_dict[account]['KEY']
         SECRET = credentials_dict[account]['SECRET']
         payTypes_list = ad['payTypes'] if ad['payTypes'] is not None else []
-
         ads_data = await binance_api.fetch_ads_search(
             KEY, SECRET,
             'BUY' if is_buy else 'SELL',
             ad['asset_type'], ad['fiat'],
             ad['transAmount'], payTypes_list, page=1
         )
-        
-        if isinstance(ads_data, str):
-            logger.error(f"Received unexpected string response: {ads_data}")
-            continue
 
         if ads_data is None or ads_data.get('code') != '000000' or 'data' not in ads_data:
-            logger.error(f"Invalid ads_data response: {ads_data}")
             continue
-
         current_ads_data = ads_data['data']
         if not isinstance(current_ads_data, list):
             logger.error(f'Current ads data is not a list: {current_ads_data}. API response: {ads_data}')
             continue
         if not current_ads_data:
             continue
+        
         tasks.append(analyze_and_update_ads(ad, binance_api, KEY, SECRET, current_ads_data, all_ads, is_buy, batch_updates, shared_data_updates))
     
     if tasks:
@@ -279,15 +232,80 @@ async def batch_update(updates, update_function, description=""):
         if updates:
             for update in updates:
                 await update_function(**update)
+            logger.info(f"Successfully updated {len(updates)} {description}.")
     except Exception as e:
         logger.error(f"An error occurred while performing batch {description} update: {e}")
         traceback.print_exc()
 
+async def calculate_price_thresholds(reference_prices, interval=10):
+    global BUY_PRICE_THRESHOLD, SELL_PRICE_THRESHOLD, BASE_PRICE
+
+    while True:
+        try:
+            if BASE_PRICE is None:
+                logger.error("Base price is not set; cannot calculate thresholds.")
+                await asyncio.sleep(interval)
+                continue
+            logger.debug(f"Base price: {BASE_PRICE}")
+            ask = reference_prices.get("lowest_ask")
+            bid = reference_prices.get("highest_bid")
+            if ask is None or bid is None:
+                logger.warning("Could not retrieve ask/bid prices; thresholds were not updated.")
+                await asyncio.sleep(interval)
+                continue
+
+            update_thresholds(BASE_PRICE, ask, bid)
+            
+        except Exception as e:
+            logger.error(f"An error occurred during threshold calculation: {e}")
+
+        await asyncio.sleep(interval) 
+
+def update_thresholds(BASE_PRICE, ask, bid):
+    global BUY_PRICE_THRESHOLD, SELL_PRICE_THRESHOLD
+
+    previous_sell_price_threshold = SELL_PRICE_THRESHOLD
+    previous_buy_price_threshold = BUY_PRICE_THRESHOLD
+    min_diff = 0.0005
+
+    new_sell_price_threshold = round(((bid * 0.9989) / BASE_PRICE), 4)
+    new_buy_price_threshold = round(((ask * 1.017) / BASE_PRICE), 4)
+
+    if abs(new_buy_price_threshold - previous_buy_price_threshold) > min_diff:
+        BUY_PRICE_THRESHOLD = new_buy_price_threshold
+
+    if abs(new_sell_price_threshold - previous_sell_price_threshold) > min_diff:
+        SELL_PRICE_THRESHOLD = new_sell_price_threshold
+
+    logger.debug(f"Updated thresholds: BUY_PRICE_THRESHOLD={BUY_PRICE_THRESHOLD}, SELL_PRICE_THRESHOLD={SELL_PRICE_THRESHOLD}")
+
+async def initial_base_price(binance_api):
+    global BASE_PRICE
+    account = 'account_1'
+    KEY = credentials_dict[account]['KEY']
+    SECRET = credentials_dict[account]['SECRET']
+    response = await binance_api.get_reference_price(KEY, SECRET)
+    if response.get('code') == '000000' and response.get('success'):
+        data = response.get('data', [])
+        prices = [float(item['referencePrice']) for item in data if item['asset'] in ['USDT', 'USDC']]
+        if prices:
+            BASE_PRICE = sum(prices) / len(prices)
+            logger.debug(f"Initial base price set to: {BASE_PRICE}")
+        else:
+            logger.error("No valid reference prices retrieved; could not set initial base price.")
+            return
+    else:
+        logger.error(f"Failed to fetch initial reference prices from Binance API: {response.get('message')}")
+        return
+    
 async def update_ads_main(binance_api):
+    tasks = []
+    await initial_base_price(binance_api)
+    await asyncio.sleep(3)
+    tasks.append(asyncio.create_task(calculate_price_thresholds(reference_prices, interval=10)))
     while True:
         batch_updates = []
-        shared_data_updates = []
-        tasks = []
+        shared_data_updates = []        
         tasks.append(asyncio.create_task(main_loop(binance_api, is_buy=True, batch_updates=batch_updates, shared_data_updates=shared_data_updates)))
         tasks.append(asyncio.create_task(main_loop(binance_api, is_buy=False, batch_updates=batch_updates, shared_data_updates=shared_data_updates)))
         await asyncio.gather(*tasks)

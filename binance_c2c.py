@@ -1,3 +1,4 @@
+#bpa/binance_c2c.py
 import asyncio
 import json
 import logging
@@ -163,11 +164,20 @@ class ConnectionManager:
 async def main_binance_c2c(payment_manager, binance_api):
     connection_manager = ConnectionManager(payment_manager, binance_api, credentials_dict)
     merchant_account = MerchantAccount(payment_manager, binance_api)
+    # Initialize the validator with the connection_manager
+    merchant_account.initialize_validator(connection_manager)
+    
+    # Start the validation processor
+    validation_processor_task = await merchant_account.start_validation_processor()
     tasks = [
         asyncio.create_task(connection_manager.run_websocket(account, merchant_account))
         for account in credentials_dict.keys()
     ]
     tasks.append(asyncio.create_task(connection_manager.check_connections()))
+    
+    # Add the validation processor task to the list of tasks
+    tasks.append(validation_processor_task)
+    
     await asyncio.gather(*tasks)
 
 if __name__ == "__main__":
