@@ -35,7 +35,7 @@ dependencies = [
     "pandas==2.3.2",
     "pandas-ta==0.4.71b0",
     "pillow==11.3.0",
-    "protobuf==6.32.1",
+    "protobuf==6.33.5",
     "py-clob-client==0.25.0",
     "pytesseract==0.3.13",
     "python-dotenv==1.1.1",
